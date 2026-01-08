@@ -16,7 +16,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Serve banner image for Telegram
   app.get("/banner.png", (req, res) => {
-    res.sendFile(path.resolve(process.cwd(), "attached_assets/generated_images/telegram_banner_640x360.png"));
+    res.sendFile(path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png"));
   });
 
   // Scores - GET all scores
