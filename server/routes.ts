@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
+import path from "path";
 
 const ENTRY_FEE = 1;
 const REFERRAL_PERCENT = 0.10;
@@ -13,6 +14,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Serve banner image for Telegram
+  app.get("/banner.png", (req, res) => {
+    res.sendFile(path.resolve(process.cwd(), "attached_assets/generated_images/telegram_banner_640x360.png"));
+  });
+
   // Scores - GET all scores
   app.get("/api/scores", async (req, res) => {
     try {
