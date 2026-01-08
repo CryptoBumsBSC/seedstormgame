@@ -116,38 +116,38 @@ class SoundSystem {
   }
 
   shoot() {
-    this.playTone(800, 0.05, "square", 0.08);
+    this.playTone(800, 0.05, "square", 0.10);
   }
 
   hit() {
-    this.playTone(200, 0.1, "sawtooth", 0.1);
+    this.playTone(200, 0.1, "sawtooth", 0.125);
   }
 
   explosion() {
-    this.playTone(100, 0.2, "sawtooth", 0.15);
-    setTimeout(() => this.playTone(80, 0.15, "sawtooth", 0.1), 50);
+    this.playTone(100, 0.2, "sawtooth", 0.19);
+    setTimeout(() => this.playTone(80, 0.15, "sawtooth", 0.125), 50);
   }
 
   powerUp() {
-    this.playTone(523, 0.1, "sine", 0.1);
-    setTimeout(() => this.playTone(659, 0.1, "sine", 0.1), 100);
-    setTimeout(() => this.playTone(784, 0.15, "sine", 0.1), 200);
+    this.playTone(523, 0.1, "sine", 0.125);
+    setTimeout(() => this.playTone(659, 0.1, "sine", 0.125), 100);
+    setTimeout(() => this.playTone(784, 0.15, "sine", 0.125), 200);
   }
 
   damage() {
-    this.playTone(150, 0.2, "square", 0.15);
+    this.playTone(150, 0.2, "square", 0.19);
   }
 
   gameOver() {
-    this.playTone(200, 0.3, "square", 0.1);
-    setTimeout(() => this.playTone(150, 0.3, "square", 0.1), 300);
-    setTimeout(() => this.playTone(100, 0.5, "square", 0.1), 600);
+    this.playTone(200, 0.3, "square", 0.125);
+    setTimeout(() => this.playTone(150, 0.3, "square", 0.125), 300);
+    setTimeout(() => this.playTone(100, 0.5, "square", 0.125), 600);
   }
 
   newHighScore() {
     const notes = [523, 659, 784, 1047];
     notes.forEach((freq, i) => {
-      setTimeout(() => this.playTone(freq, 0.2, "sine", 0.12), i * 150);
+      setTimeout(() => this.playTone(freq, 0.2, "sine", 0.15), i * 150);
     });
   }
 }
@@ -362,10 +362,10 @@ export default function Game() {
   }, []);
 
   const createExplosion = useCallback((x: number, y: number, color: string) => {
-    const particleCount = 12;
+    const particleCount = 16;
     for (let i = 0; i < particleCount; i++) {
       const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 2 + Math.random() * 3;
+      const speed = 2.5 + Math.random() * 4;
       particlesRef.current.push({
         x,
         y,
@@ -374,7 +374,7 @@ export default function Game() {
         life: 1,
         maxLife: 1,
         color,
-        size: 3 + Math.random() * 3,
+        size: 4 + Math.random() * 4,
       });
     }
     soundSystem.explosion();
