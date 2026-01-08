@@ -112,6 +112,7 @@ export default function Game() {
     fire: false,
   });
   const shootCooldownRef = useRef<number>(0);
+  const invincibilityRef = useRef<number>(0);
   const spawnCooldownRef = useRef<number>(0);
   const hazardCooldownRef = useRef<number>(0);
   const difficultyRef = useRef<number>(1);
@@ -291,6 +292,7 @@ export default function Game() {
     spawnCooldownRef.current = 0;
     hazardCooldownRef.current = 0;
     weaponLevelRef.current = 0;
+    invincibilityRef.current = 0;
     
     setGameState({
       score: 0,
@@ -378,6 +380,8 @@ export default function Game() {
     }
 
     shootCooldownRef.current -= deltaTime;
+    invincibilityRef.current = Math.max(0, invincibilityRef.current - deltaTime);
+    
     // Faster shooting with machine gun (level 3)
     const shootDelay = weaponLevelRef.current >= 3 ? 120 : 200;
     if ((keysRef.current.has(" ") || keysRef.current.has("ArrowUp") || touchRef.current.fire) && 
@@ -409,9 +413,10 @@ export default function Game() {
       return hazard.y < CANVAS_HEIGHT + hazard.height;
     });
 
-    // Check hazard collisions with player
+    // Check hazard collisions with player (only if not invincible)
     hazardsRef.current = hazardsRef.current.filter(hazard => {
-      if (checkCollision(hazard, player)) {
+      if (invincibilityRef.current <= 0 && checkCollision(hazard, player)) {
+        invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -456,7 +461,8 @@ export default function Game() {
           }
         }
       } else {
-        if (checkCollision(proj, player)) {
+        if (invincibilityRef.current <= 0 && checkCollision(proj, player)) {
+          invincibilityRef.current = 1500; // 1.5 seconds of invincibility
           setGameState(prev => {
             const newLives = prev.lives - 1;
             if (newLives <= 0) {
@@ -471,7 +477,8 @@ export default function Game() {
     });
 
     enemiesRef.current = enemiesRef.current.filter(enemy => {
-      if (checkCollision(enemy, player)) {
+      if (invincibilityRef.current <= 0 && checkCollision(enemy, player)) {
+        invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -759,7 +766,12 @@ export default function Game() {
     });
 
     if (gameState.isPlaying && !gameState.isGameOver) {
-      drawPlayer(ctx, playerRef.current);
+      // Flash player when invincible (show every other 100ms)
+      const shouldDrawPlayer = invincibilityRef.current <= 0 || 
+        Math.floor(invincibilityRef.current / 100) % 2 === 0;
+      if (shouldDrawPlayer) {
+        drawPlayer(ctx, playerRef.current);
+      }
       
       enemiesRef.current.forEach(enemy => drawEnemy(ctx, enemy));
       hazardsRef.current.forEach(hazard => drawHazard(ctx, hazard));
