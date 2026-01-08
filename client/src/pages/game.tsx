@@ -1690,7 +1690,7 @@ export default function Game() {
 
   if (screen === "game") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center py-2 px-2 select-none">
+      <div className="min-h-screen bg-background flex flex-col items-center py-2 px-2 select-none overflow-x-hidden overflow-y-auto">
         <div 
           className="w-full max-w-[400px] flex items-center justify-between px-2 py-2 mb-2 border-b-2"
           style={{ borderColor: "#ff00ff" }}
@@ -1721,15 +1721,17 @@ export default function Game() {
           </div>
         </div>
 
-        <div className="relative" style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}>
+        <div className="relative w-full flex justify-center" style={{ maxWidth: CANVAS_WIDTH }}>
           <canvas
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border-2 rounded-sm"
+            className="border-2 rounded-sm w-full h-auto"
             style={{ 
               borderColor: "#ff00ff",
-              imageRendering: "pixelated"
+              imageRendering: "pixelated",
+              maxWidth: CANVAS_WIDTH,
+              aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`
             }}
             data-testid="canvas-game"
           />
@@ -1760,21 +1762,7 @@ export default function Game() {
         <div className="w-full max-w-[400px] flex items-center justify-between gap-4 mt-4 px-4">
           <Button
             size="lg"
-            className="flex-1 h-16"
-            style={{ background: "#333", color: "#00ffff" }}
-            onTouchStart={() => (touchRef.current.left = true)}
-            onTouchEnd={() => (touchRef.current.left = false)}
-            onMouseDown={() => (touchRef.current.left = true)}
-            onMouseUp={() => (touchRef.current.left = false)}
-            onMouseLeave={() => (touchRef.current.left = false)}
-            data-testid="button-move-left"
-          >
-            <ChevronLeft className="w-8 h-8" />
-          </Button>
-          
-          <Button
-            size="lg"
-            className="flex-1 h-16"
+            className="h-16 px-8"
             style={{ 
               background: "linear-gradient(135deg, #00ff00, #22c55e)",
               color: "#000",
@@ -1790,19 +1778,35 @@ export default function Game() {
             <Target className="w-8 h-8" />
           </Button>
           
-          <Button
-            size="lg"
-            className="flex-1 h-16"
-            style={{ background: "#333", color: "#00ffff" }}
-            onTouchStart={() => (touchRef.current.right = true)}
-            onTouchEnd={() => (touchRef.current.right = false)}
-            onMouseDown={() => (touchRef.current.right = true)}
-            onMouseUp={() => (touchRef.current.right = false)}
-            onMouseLeave={() => (touchRef.current.right = false)}
-            data-testid="button-move-right"
-          >
-            <ChevronRight className="w-8 h-8" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="lg"
+              className="h-16 px-6"
+              style={{ background: "#333", color: "#00ffff" }}
+              onTouchStart={() => (touchRef.current.left = true)}
+              onTouchEnd={() => (touchRef.current.left = false)}
+              onMouseDown={() => (touchRef.current.left = true)}
+              onMouseUp={() => (touchRef.current.left = false)}
+              onMouseLeave={() => (touchRef.current.left = false)}
+              data-testid="button-move-left"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </Button>
+            
+            <Button
+              size="lg"
+              className="h-16 px-6"
+              style={{ background: "#333", color: "#00ffff" }}
+              onTouchStart={() => (touchRef.current.right = true)}
+              onTouchEnd={() => (touchRef.current.right = false)}
+              onMouseDown={() => (touchRef.current.right = true)}
+              onMouseUp={() => (touchRef.current.right = false)}
+              onMouseLeave={() => (touchRef.current.right = false)}
+              data-testid="button-move-right"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </Button>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-4">
@@ -2171,7 +2175,7 @@ export default function Game() {
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
               <p><span style={{ color: "#ffff00" }}>Desktop:</span> Arrow keys or WASD to move, Space to shoot</p>
-              <p><span style={{ color: "#ffff00" }}>Mobile:</span> Tap LEFT/RIGHT buttons to move, FIRE to shoot</p>
+              <p><span style={{ color: "#ffff00" }}>Mobile:</span> FIRE on left, LEFT/RIGHT buttons on right</p>
               <p><span style={{ color: "#ffff00" }}>Pause:</span> Press Escape key</p>
             </div>
           </Card>
