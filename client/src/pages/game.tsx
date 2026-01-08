@@ -15,7 +15,7 @@ import type {
   StrainType,
   Score 
 } from "@shared/schema";
-import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Copy, Check, Users } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Copy, Check, Users, Gamepad2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Screen = "title" | "game" | "gameover" | "leaderboard";
@@ -661,6 +661,30 @@ export default function Game() {
             >
               <Play className="w-4 h-4 mr-2" />
               START GAME
+            </Button>
+          )}
+
+          {!sessionId && (
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await apiRequest("POST", "/api/sessions/demo", {});
+                  const data = await response.json();
+                  if (data.success) {
+                    setSessionId(data.sessionId);
+                    toast({ title: "Demo mode activated!" });
+                  }
+                } catch {
+                  toast({ title: "Failed to start demo", variant: "destructive" });
+                }
+              }}
+              variant="outline"
+              className="w-full py-4 text-sm border-2"
+              style={{ borderColor: "#ffff00", color: "#ffff00" }}
+              data-testid="button-demo-play"
+            >
+              <Gamepad2 className="w-4 h-4 mr-2" />
+              DEMO PLAY (FREE)
             </Button>
           )}
           

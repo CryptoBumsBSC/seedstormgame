@@ -60,6 +60,27 @@ export async function registerRoutes(
     }
   });
 
+  // DEMO: Create free demo session for testing (no payment required)
+  app.post("/api/sessions/demo", async (req, res) => {
+    try {
+      const demoWallet = "0xDEMO" + Date.now().toString(16).padStart(36, "0");
+      const demoTxHash = "0xdemo" + Date.now().toString(16).padStart(60, "0");
+      
+      const session = sessionManager.createSession(demoWallet, demoTxHash);
+      sessionManager.verifyPayment(session.id);
+      
+      res.status(201).json({ 
+        success: true, 
+        sessionId: session.id,
+        verified: true,
+        message: "Demo mode - Free play!"
+      });
+    } catch (error) {
+      console.error("Demo session error:", error);
+      res.status(500).json({ error: "Failed to create demo session" });
+    }
+  });
+
   // SECURE: Create payment session with blockchain verification
   app.post("/api/sessions/create", async (req, res) => {
     try {
