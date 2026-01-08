@@ -45,17 +45,75 @@ shared/
 - **Difficulty Scaling**: Every 15 seconds enemies get stronger
 - **3 Lives System**: Game over when all lives lost
 - **Score System**: Points = hits needed to kill enemy
-- **Leaderboard**: Persistent high scores
+- **Leaderboard**: Persistent high scores with permanent all-time top 3
 
 ## Screens
-1. **Title Screen**: Start game, view leaderboard, high score display
+1. **Title Screen**: Start game, view leaderboard, how to play, high score display
 2. **Game Screen**: Canvas game, HUD (score/lives/wave), touch controls
 3. **Game Over Screen**: Final score, save to leaderboard, play again
 4. **Leaderboard Screen**: Top 10 scores with rank/name/score/wave
+5. **How To Play Screen**: Complete game rules and tips
 
 ## Controls
 - **Desktop**: Arrow keys or WASD to move, Space to shoot, Escape to pause
 - **Mobile**: Touch buttons for left/right movement and fire
+
+## Complete Game Rules
+
+### Objective
+- Survive as long as possible while shooting down enemy buds
+- Get the highest score to make the leaderboard
+
+### Lives & Damage
+- Start with 3 lives
+- When hit, flash for 1.5 seconds (invincible during this time)
+- Game Over when all lives are lost
+
+### Enemies
+- **Purple (Indica)**: 1 hit to kill = 1 point
+- **Green (Sativa)**: 2 hits to kill = 2 points
+- **Orange (Hybrid)**: 3 hits to kill = 3 points
+- Enemies shoot back at you
+- Difficulty increases every 15 seconds
+
+### Weapon Upgrades (automatic)
+- **Start**: Single center cannon
+- **60 seconds**: Left side gun added
+- **90 seconds**: Right side gun added
+- **4 minutes**: Double barrel machine guns
+
+### Hazards (start after 20 seconds)
+- **Bong** (blue) - damages on contact
+- **Lit Joint** (orange) - damages on contact
+- **Matches** (red) - damages on contact
+- Spawn rate increases over time
+
+### Bud Angel (special helper)
+- Glowing angelic bud with wings and halo
+- Appears after 90 seconds of continuous play
+- 5% spawn chance, minimum 20 seconds between spawns
+- Collect it: Grants 15 seconds of shield protection
+- Shield protects from all damage
+
+### Skull & Crossbones (deadly hazard)
+- Dark green skull with red glowing eyes
+- Spawns max once every 30 seconds (3% chance)
+- If touched without shield: INSTANT GAME OVER
+- Shield protects you from this hazard
+
+### Power-Ups (dropped by destroyed enemies)
+- **Speed Boost (S)**: Faster movement
+- **Double Damage (D)**: Shots do 2x damage
+- **Rapid Fire (R)**: Faster shooting
+- **Extra Life (+)**: Gain 1 life
+
+### Tips
+- Keep moving - standing still makes you a target
+- Clear enemies before they reach the bottom
+- Watch for hazards after 20 seconds
+- Survive to 4 minutes for max firepower
+- Grab the Bud Angel for shield protection
+- Avoid the Skull unless you have a shield
 
 ## API Endpoints
 - `GET /api/scores` - Fetch all scores (sorted by score desc)
