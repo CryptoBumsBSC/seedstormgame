@@ -15,17 +15,17 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Serve banner image for Telegram
+  // Serve banner image for Telegram (must be exactly 640x360)
   app.get("/banner.png", (req, res) => {
-    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png");
+    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/seed_storm_telegram_640x360.png");
     res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'no-cache');
     fs.createReadStream(filePath).pipe(res);
   });
 
-  // Download page for banner
+  // Download page for banner (640x360 for Telegram)
   app.get("/download", (req, res) => {
-    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png");
+    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/seed_storm_telegram_640x360.png");
     const imageData = fs.readFileSync(filePath).toString('base64');
     res.send(`
       <!DOCTYPE html>
