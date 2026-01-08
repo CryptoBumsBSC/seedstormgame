@@ -1307,7 +1307,7 @@ export default function Game() {
 
   if (screen === "gameover") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-start p-4 pt-6 pb-8 overflow-y-auto">
         {isNewHighScore && (
           <div 
             className="text-xl mb-4 animate-bounce"
@@ -1322,7 +1322,7 @@ export default function Game() {
         )}
         
         <h1 
-          className="text-2xl mb-8 animate-pulse"
+          className="text-2xl mb-4 animate-pulse"
           style={{ 
             color: "#ff0000",
             textShadow: "0 0 10px #ff0000, 0 0 20px #ff0000"
@@ -1332,7 +1332,7 @@ export default function Game() {
           GAME OVER
         </h1>
 
-        <Card className="p-6 mb-8 border-2 bg-card/80" style={{ borderColor: isNewHighScore ? "#ffff00" : "#ff00ff" }}>
+        <Card className="p-4 mb-4 border-2 bg-card/80" style={{ borderColor: isNewHighScore ? "#ffff00" : "#ff00ff" }}>
           <div className="text-center space-y-4">
             <div>
               <p className="text-[10px]" style={{ color: "#00ffff" }}>FINAL SCORE</p>
@@ -1359,10 +1359,10 @@ export default function Game() {
         </Card>
 
         {!showNameInput ? (
-          <div className="flex flex-col gap-4 w-full max-w-xs">
+          <div className="flex flex-col gap-3 w-full max-w-xs">
             <Button
               onClick={() => setShowNameInput(true)}
-              className="w-full py-6 text-sm"
+              className="w-full py-4 text-sm"
               style={{ 
                 background: "linear-gradient(135deg, #ffff00, #f97316)",
                 color: "#000",
@@ -1380,7 +1380,7 @@ export default function Game() {
                 resetGame();
                 setScreen("game");
               }}
-              className="w-full py-6 text-sm"
+              className="w-full py-4 text-sm"
               style={{ 
                 background: "linear-gradient(135deg, #00ff00, #22c55e)",
                 color: "#000"
@@ -1394,7 +1394,7 @@ export default function Game() {
             <Button
               onClick={() => setScreen("title")}
               variant="outline"
-              className="w-full py-6 text-sm border-2"
+              className="w-full py-4 text-sm border-2"
               style={{ borderColor: "#00ffff", color: "#00ffff" }}
               data-testid="button-main-menu"
             >
