@@ -5,6 +5,7 @@ import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
 import path from "path";
+import fs from "fs";
 
 const ENTRY_FEE = 1;
 const REFERRAL_PERCENT = 0.10;
@@ -16,7 +17,33 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Serve banner image for Telegram
   app.get("/banner.png", (req, res) => {
-    res.sendFile(path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png"));
+    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png");
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', 'inline');
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  // Download page for banner
+  app.get("/download", (req, res) => {
+    const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/banner_630x350.png");
+    const imageData = fs.readFileSync(filePath).toString('base64');
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Download Banner</title></head>
+      <body style="background:#000;color:#fff;text-align:center;padding:20px;font-family:sans-serif;">
+        <h1>SEED STORM Banner</h1>
+        <p>630 x 350 pixels</p>
+        <img src="data:image/png;base64,${imageData}" style="border:2px solid #0f0;margin:20px;"/>
+        <br/>
+        <a href="data:image/png;base64,${imageData}" download="seed_storm_banner.png" 
+           style="display:inline-block;padding:15px 30px;background:#0f0;color:#000;text-decoration:none;font-weight:bold;border-radius:5px;">
+           DOWNLOAD IMAGE
+        </a>
+        <p style="margin-top:20px;">Long-press image or click button to save</p>
+      </body>
+      </html>
+    `);
   });
 
   // Scores - GET all scores
