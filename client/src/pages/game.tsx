@@ -603,46 +603,26 @@ export default function Game() {
 
   if (screen === "title") {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 overflow-hidden">
-        <div className="relative">
-          <h1 
-            className="text-2xl md:text-4xl text-center mb-2 animate-pulse"
-            style={{ 
-              color: "#00ffff", 
-              textShadow: "0 0 10px #00ffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff" 
-            }}
-            data-testid="text-title"
-          >
-            SEED STORM
-          </h1>
-          <p 
-            className="text-xs text-center mb-8"
-            style={{ color: "#ff00ff" }}
-            data-testid="text-subtitle"
-          >
-            A DUDLEY BUD ADVENTURE
-          </p>
-        </div>
+      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
+        <h1 
+          className="text-2xl md:text-4xl text-center mb-2 mt-4 animate-pulse"
+          style={{ 
+            color: "#00ffff", 
+            textShadow: "0 0 10px #00ffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff" 
+          }}
+          data-testid="text-title"
+        >
+          SEED STORM
+        </h1>
+        <p 
+          className="text-xs text-center mb-4"
+          style={{ color: "#ff00ff" }}
+          data-testid="text-subtitle"
+        >
+          A DUDLEY BUD ADVENTURE
+        </p>
 
-        <Card className="p-6 mb-6 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
-          <div className="flex flex-col items-center gap-4">
-            <div 
-              className="w-16 h-16 rounded-md flex items-center justify-center"
-              style={{ 
-                background: "linear-gradient(135deg, #22c55e, #15803d)",
-                boxShadow: "0 0 15px #00ff00" 
-              }}
-            >
-              <Target className="w-8 h-8" style={{ color: "#000" }} />
-            </div>
-            <div className="text-center">
-              <p className="text-xs mb-2" style={{ color: "#00ffff" }}>PLAY AS DUDLEY BUD</p>
-              <p className="text-[10px]" style={{ color: "#ff00ff" }}>SHOOT SEEDS AT ENEMY BUDS</p>
-            </div>
-          </div>
-        </Card>
-
-        <div className="flex flex-col gap-4 w-full max-w-xs">
+        <div className="flex flex-col gap-4 w-full max-w-xs mb-6">
           {!sessionId && (
             <Button
               onClick={async () => {
@@ -651,37 +631,39 @@ export default function Game() {
                   const data = await response.json();
                   if (data.success) {
                     setSessionId(data.sessionId);
-                    toast({ title: "Demo mode activated!" });
+                    initStars();
+                    resetGame();
+                    setScreen("game");
                   }
                 } catch {
-                  toast({ title: "Failed to start demo", variant: "destructive" });
+                  toast({ title: "Failed to start", variant: "destructive" });
                 }
               }}
-              className="w-full py-6 text-sm"
+              className="w-full py-8 text-lg font-bold animate-bounce"
               style={{ 
-                background: "linear-gradient(135deg, #ffff00, #f59e0b)",
+                background: "linear-gradient(135deg, #00ff00, #22c55e)",
                 color: "#000",
-                boxShadow: "0 0 20px #ffff00"
+                boxShadow: "0 0 30px #00ff00, 0 0 60px #00ff00"
               }}
               data-testid="button-demo-play"
             >
-              <Gamepad2 className="w-4 h-4 mr-2" />
-              PLAY NOW (FREE DEMO)
+              <Play className="w-6 h-6 mr-2" />
+              PLAY NOW
             </Button>
           )}
 
           {sessionId && (
             <Button
               onClick={startGame}
-              className="w-full py-6 text-sm animate-pulse"
+              className="w-full py-8 text-lg font-bold animate-pulse"
               style={{ 
                 background: "linear-gradient(135deg, #00ff00, #22c55e)",
                 color: "#000",
-                boxShadow: "0 0 20px #00ff00, inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.3)"
+                boxShadow: "0 0 30px #00ff00"
               }}
               data-testid="button-start-game"
             >
-              <Play className="w-4 h-4 mr-2" />
+              <Play className="w-6 h-6 mr-2" />
               START GAME
             </Button>
           )}
@@ -696,38 +678,21 @@ export default function Game() {
             <Trophy className="w-4 h-4 mr-2" />
             LEADERBOARD
           </Button>
-
-          {isConnected && address && (
-            <Button
-              onClick={copyReferralLink}
-              variant="outline"
-              className="w-full py-4 text-xs border-2"
-              style={{ borderColor: "#ff00ff", color: "#ff00ff" }}
-              data-testid="button-copy-referral"
-            >
-              {copiedReferral ? (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  COPIED!
-                </>
-              ) : (
-                <>
-                  <Users className="w-4 h-4 mr-2" />
-                  SHARE REFERRAL LINK (10% BACK)
-                </>
-              )}
-            </Button>
-          )}
         </div>
 
-        <div className="mt-8 text-center">
-          <p className="text-[8px] mb-1" style={{ color: "#666" }}>CONTROLS</p>
-          <p className="text-[8px]" style={{ color: "#888" }}>ARROWS / WASD TO MOVE</p>
-          <p className="text-[8px]" style={{ color: "#888" }}>SPACE TO SHOOT</p>
+        <Card className="p-4 mb-4 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
+          <div className="flex flex-col items-center gap-2">
+            <Target className="w-8 h-8" style={{ color: "#00ff00" }} />
+            <p className="text-[10px] text-center" style={{ color: "#00ffff" }}>SHOOT SEEDS AT ENEMY BUDS</p>
+          </div>
+        </Card>
+
+        <div className="text-center">
+          <p className="text-[8px]" style={{ color: "#888" }}>ARROWS/WASD TO MOVE - SPACE TO SHOOT</p>
         </div>
 
         {scores.length > 0 && (
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
             <p className="text-[8px]" style={{ color: "#ff00ff" }}>HIGH SCORE</p>
             <p className="text-sm" style={{ color: "#ffff00" }} data-testid="text-high-score">
               {Math.max(...scores.map(s => s.score))}
