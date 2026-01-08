@@ -643,11 +643,33 @@ export default function Game() {
         </Card>
 
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          <WalletConnect 
-            onPaymentSuccess={handlePaymentSuccess}
-            referrerAddress={referrerAddress}
-          />
-          
+          {!sessionId && (
+            <Button
+              onClick={async () => {
+                try {
+                  const response = await apiRequest("POST", "/api/sessions/demo", {});
+                  const data = await response.json();
+                  if (data.success) {
+                    setSessionId(data.sessionId);
+                    toast({ title: "Demo mode activated!" });
+                  }
+                } catch {
+                  toast({ title: "Failed to start demo", variant: "destructive" });
+                }
+              }}
+              className="w-full py-6 text-sm"
+              style={{ 
+                background: "linear-gradient(135deg, #ffff00, #f59e0b)",
+                color: "#000",
+                boxShadow: "0 0 20px #ffff00"
+              }}
+              data-testid="button-demo-play"
+            >
+              <Gamepad2 className="w-4 h-4 mr-2" />
+              PLAY NOW (FREE DEMO)
+            </Button>
+          )}
+
           {sessionId && (
             <Button
               onClick={startGame}
@@ -664,30 +686,6 @@ export default function Game() {
             </Button>
           )}
 
-          {!sessionId && (
-            <Button
-              onClick={async () => {
-                try {
-                  const response = await apiRequest("POST", "/api/sessions/demo", {});
-                  const data = await response.json();
-                  if (data.success) {
-                    setSessionId(data.sessionId);
-                    toast({ title: "Demo mode activated!" });
-                  }
-                } catch {
-                  toast({ title: "Failed to start demo", variant: "destructive" });
-                }
-              }}
-              variant="outline"
-              className="w-full py-4 text-sm border-2"
-              style={{ borderColor: "#ffff00", color: "#ffff00" }}
-              data-testid="button-demo-play"
-            >
-              <Gamepad2 className="w-4 h-4 mr-2" />
-              DEMO PLAY (FREE)
-            </Button>
-          )}
-          
           <Button
             onClick={() => setScreen("leaderboard")}
             variant="outline"
