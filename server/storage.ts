@@ -4,6 +4,7 @@ import {
   referrals,
   payments,
   weeklyPools,
+  allTimeScores,
   type Score,
   type InsertScore,
   type PlayerAccount,
@@ -11,7 +12,9 @@ import {
   type Payment,
   type InsertPayment,
   type Referral,
-  type WeeklyPrizePool
+  type WeeklyPrizePool,
+  type AllTimeScore,
+  type InsertAllTimeScore
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
@@ -20,6 +23,9 @@ export interface IStorage {
   getScores(): Promise<Score[]>;
   createScore(score: InsertScore): Promise<Score>;
   getTopScores(limit?: number): Promise<Score[]>;
+  
+  getAllTimeScores(): Promise<AllTimeScore[]>;
+  updateAllTimeScores(score: InsertAllTimeScore): Promise<void>;
   
   getPlayer(walletAddress: string): Promise<PlayerAccount | undefined>;
   createPlayer(player: InsertPlayer): Promise<PlayerAccount>;
@@ -63,6 +69,29 @@ export class DatabaseStorage implements IStorage {
 
   async getTopScores(limit: number = 10): Promise<Score[]> {
     return await db.select().from(scores).orderBy(desc(scores.score)).limit(limit);
+  }
+
+  async getAllTimeScores(): Promise<AllTimeScore[]> {
+    return await db.select().from(allTimeScores).orderBy(desc(allTimeScores.score)).limit(3);
+  }
+
+  async updateAllTimeScores(newScore: InsertAllTimeScore): Promise<void> {
+    const currentTop3 = await this.getAllTimeScores();
+    
+    // Check if this score qualifies for top 3
+    if (currentTop3.length < 3 || newScore.score > currentTop3[currentTop3.length - 1].score) {
+      // Add the new score
+      await db.insert(allTimeScores).values(newScore);
+      
+      // If we now have more than 3, remove the lowest
+      const updatedTop = await db.select().from(allTimeScores).orderBy(desc(allTimeScores.score));
+      if (updatedTop.length > 3) {
+        // Delete all scores beyond top 3
+        for (let i = 3; i < updatedTop.length; i++) {
+          await db.delete(allTimeScores).where(eq(allTimeScores.id, updatedTop[i].id));
+        }
+      }
+    }
   }
 
   async getPlayer(walletAddress: string): Promise<PlayerAccount | undefined> {

@@ -56,10 +56,23 @@ export const weeklyPools = pgTable("weekly_pools", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const allTimeScores = pgTable("all_time_scores", {
+  id: serial("id").primaryKey(),
+  playerName: text("player_name").notNull(),
+  score: integer("score").notNull(),
+  wave: integer("wave").notNull(),
+  playTime: integer("play_time").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Zod Schemas for validation
 export const insertScoreSchema = createInsertSchema(scores).omit({ id: true, createdAt: true });
 export type InsertScore = z.infer<typeof insertScoreSchema>;
 export type Score = typeof scores.$inferSelect;
+
+export const insertAllTimeScoreSchema = createInsertSchema(allTimeScores).omit({ id: true, createdAt: true });
+export type InsertAllTimeScore = z.infer<typeof insertAllTimeScoreSchema>;
+export type AllTimeScore = typeof allTimeScores.$inferSelect;
 
 export const insertPlayerSchema = z.object({
   walletAddress: z.string().min(42).max(42),

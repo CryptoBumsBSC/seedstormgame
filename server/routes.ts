@@ -56,6 +56,16 @@ export async function registerRoutes(
     }
   });
 
+  // All-time scores - GET top 3 all-time scores
+  app.get("/api/scores/all-time", async (req, res) => {
+    try {
+      const allTimeScores = await storage.getAllTimeScores();
+      res.json(allTimeScores);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch all-time scores" });
+    }
+  });
+
   // Scores - POST new score (free to play mode)
   app.post("/api/scores", async (req, res) => {
     try {
@@ -65,12 +75,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid score data" });
       }
       
-      const newScore = await storage.createScore({
+      const scoreData = {
         playerName: playerName.slice(0, 10).toUpperCase(),
         score,
         wave,
         playTime: playTime || 0,
-      });
+      };
+      
+      const newScore = await storage.createScore(scoreData);
+      
+      // Also update all-time leaderboard if this qualifies
+      await storage.updateAllTimeScores(scoreData);
       
       res.status(201).json(newScore);
     } catch (error) {
