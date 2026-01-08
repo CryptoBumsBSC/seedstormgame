@@ -1470,14 +1470,6 @@ export default function Game() {
         >
           SEED STORM
         </h1>
-        <p 
-          className="text-xs text-center mb-4"
-          style={{ color: "#ff00ff" }}
-          data-testid="text-subtitle"
-        >
-          A DUDLEY BUD ADVENTURE
-        </p>
-
         <div className="flex flex-col gap-4 w-full max-w-xs mb-6">
           <Button
             onClick={() => {
@@ -1507,6 +1499,14 @@ export default function Game() {
             <Trophy className="w-4 h-4 mr-2" />
             LEADERBOARD
           </Button>
+
+          <p 
+            className="text-xs text-center py-2"
+            style={{ color: "#ff00ff" }}
+            data-testid="text-subtitle"
+          >
+            A DUDLEY BUD ADVENTURE
+          </p>
 
           <Button
             onClick={() => setScreen("help")}
