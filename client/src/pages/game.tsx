@@ -209,12 +209,17 @@ export default function Game() {
     queryKey: ["/api/scores"],
   });
 
+  const { data: allTimeScores = [] } = useQuery<Score[]>({
+    queryKey: ["/api/scores/all-time"],
+  });
+
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
       return apiRequest("POST", "/api/scores", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/scores/all-time"] });
       setShowNameInput(false);
       setScreen("leaderboard");
     },
@@ -1541,9 +1546,9 @@ export default function Game() {
     const sortedScores = [...scores].sort((a, b) => b.score - a.score);
     
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center p-4">
+      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
-          className="text-xl mb-6"
+          className="text-xl mb-4"
           style={{ 
             color: "#ffff00",
             textShadow: "0 0 10px #ffff00"
@@ -1553,8 +1558,61 @@ export default function Game() {
           LEADERBOARD
         </h1>
 
+        {allTimeScores.length > 0 && (
+          <Card 
+            className="w-full max-w-md p-3 border-2 bg-card/80 mb-4"
+            style={{ borderColor: "#ffd700", boxShadow: "0 0 15px rgba(255, 215, 0, 0.3)" }}
+          >
+            <h2 
+              className="text-center text-[10px] mb-2"
+              style={{ color: "#ffd700", textShadow: "0 0 8px #ffd700" }}
+              data-testid="text-alltime-title"
+            >
+              ALL-TIME LEGENDS
+            </h2>
+            <div className="space-y-1">
+              {allTimeScores.map((score, index) => {
+                const trophyColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+                const trophyColor = trophyColors[index] || "#ffd700";
+                const trophyEmojis = ["1ST", "2ND", "3RD"];
+                
+                return (
+                  <div 
+                    key={score.id}
+                    className="flex items-center justify-between px-2 py-1 rounded-sm"
+                    style={{ 
+                      background: "rgba(255, 215, 0, 0.1)",
+                      borderLeft: `3px solid ${trophyColor}`
+                    }}
+                    data-testid={`row-alltime-${index}`}
+                  >
+                    <span 
+                      className="w-10 text-[9px] font-bold"
+                      style={{ color: trophyColor }}
+                    >
+                      {trophyEmojis[index]}
+                    </span>
+                    <span 
+                      className="flex-1 text-center text-[9px]"
+                      style={{ color: "#ffd700" }}
+                    >
+                      {score.playerName}
+                    </span>
+                    <span 
+                      className="w-16 text-right text-[9px] font-bold"
+                      style={{ color: "#00ff00" }}
+                    >
+                      {score.score.toString().padStart(6, "0")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
         <Card 
-          className="w-full max-w-md p-4 border-2 bg-card/80 mb-6"
+          className="w-full max-w-md p-4 border-2 bg-card/80 mb-4"
           style={{ borderColor: "#ff00ff" }}
         >
           <div className="space-y-2">
