@@ -2263,6 +2263,8 @@ export default function Game() {
               <p>Clear enemies before they reach the bottom</p>
               <p>Watch for hazards after 20 seconds</p>
               <p>Survive to 4 minutes for max firepower!</p>
+              <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
+              <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>
             </div>
           </Card>
         </div>
