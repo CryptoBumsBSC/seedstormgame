@@ -15,10 +15,10 @@ import type {
   StrainType,
   Score 
 } from "@shared/schema";
-import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Copy, Check, Users, Gamepad2 } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Copy, Check, Users, Gamepad2, HelpCircle, ArrowLeft, ArrowRight, Crosshair, Shield, Zap, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type Screen = "title" | "game" | "gameover" | "leaderboard";
+type Screen = "title" | "game" | "gameover" | "leaderboard" | "help";
 
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600;
@@ -932,6 +932,17 @@ export default function Game() {
             <Trophy className="w-4 h-4 mr-2" />
             LEADERBOARD
           </Button>
+
+          <Button
+            onClick={() => setScreen("help")}
+            variant="outline"
+            className="w-full py-4 text-sm border-2"
+            style={{ borderColor: "#ffff00", color: "#ffff00" }}
+            data-testid="button-how-to-play"
+          >
+            <HelpCircle className="w-4 h-4 mr-2" />
+            HOW TO PLAY
+          </Button>
         </div>
 
         <Card className="p-4 mb-4 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
@@ -1330,6 +1341,121 @@ export default function Game() {
             BACK TO MENU
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (screen === "help") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
+        <h1 
+          className="text-xl mb-4"
+          style={{ 
+            color: "#ffff00",
+            textShadow: "0 0 10px #ffff00"
+          }}
+          data-testid="text-help-title"
+        >
+          HOW TO PLAY
+        </h1>
+
+        <div className="w-full max-w-md space-y-4 mb-6">
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ffff" }}>
+              <Target className="w-4 h-4" />
+              OBJECTIVE
+            </h2>
+            <p className="text-[10px]" style={{ color: "#aaa" }}>
+              Survive as long as possible while shooting down enemy buds. Get the highest score!
+            </p>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ff00" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ff00" }}>
+              <Gamepad2 className="w-4 h-4" />
+              CONTROLS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffff00" }}>Desktop:</span> Arrow keys or WASD to move, Space to shoot</p>
+              <p><span style={{ color: "#ffff00" }}>Mobile:</span> Tap LEFT/RIGHT buttons to move, FIRE to shoot</p>
+              <p><span style={{ color: "#ffff00" }}>Pause:</span> Press Escape key</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
+              <Heart className="w-4 h-4" />
+              LIVES & DAMAGE
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>You have <span style={{ color: "#ff0000" }}>3 lives</span></p>
+              <p>When hit, you flash for 1.5 seconds (invincible)</p>
+              <p>Game Over when all lives are lost</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff6600" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff6600" }}>
+              <Crosshair className="w-4 h-4" />
+              ENEMIES
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#a855f7" }}>Purple (Indica):</span> 1 hit = 1 point</p>
+              <p><span style={{ color: "#22c55e" }}>Green (Sativa):</span> 2 hits = 2 points</p>
+              <p><span style={{ color: "#f97316" }}>Orange (Hybrid):</span> 3 hits = 3 points</p>
+              <p className="mt-1">Enemies shoot back at you!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ffff" }}>
+              <Zap className="w-4 h-4" />
+              WEAPON UPGRADES
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffff00" }}>Start:</span> Single center cannon</p>
+              <p><span style={{ color: "#ffff00" }}>60 sec:</span> Left side gun added</p>
+              <p><span style={{ color: "#ffff00" }}>90 sec:</span> Right side gun added</p>
+              <p><span style={{ color: "#ffff00" }}>4 min:</span> Double barrel machine guns!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff0000" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff0000" }}>
+              <AlertTriangle className="w-4 h-4" />
+              HAZARDS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>After 20 seconds, hazards start falling:</p>
+              <p><span style={{ color: "#4488ff" }}>Bong</span> - <span style={{ color: "#ff6600" }}>Lit Joint</span> - <span style={{ color: "#ff0000" }}>Matches</span></p>
+              <p>Avoid them! They damage you on contact.</p>
+              <p>Spawn rate increases over time!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
+              <Shield className="w-4 h-4" />
+              TIPS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>Keep moving - standing still makes you a target</p>
+              <p>Clear enemies before they reach the bottom</p>
+              <p>Watch for hazards after 20 seconds</p>
+              <p>Survive to 4 minutes for max firepower!</p>
+            </div>
+          </Card>
+        </div>
+
+        <Button
+          onClick={() => setScreen("title")}
+          variant="outline"
+          className="w-full max-w-xs py-6 text-sm border-2"
+          style={{ borderColor: "#00ffff", color: "#00ffff" }}
+          data-testid="button-back-from-help"
+        >
+          BACK TO MENU
+        </Button>
       </div>
     );
   }
