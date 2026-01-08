@@ -1,37 +1,37 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type Score, type InsertScore } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getScores(): Promise<Score[]>;
+  createScore(score: InsertScore): Promise<Score>;
+  getTopScores(limit?: number): Promise<Score[]>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private scores: Map<string, Score>;
 
   constructor() {
-    this.users = new Map();
+    this.scores = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getScores(): Promise<Score[]> {
+    return Array.from(this.scores.values()).sort((a, b) => b.score - a.score);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createScore(insertScore: InsertScore): Promise<Score> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const score: Score = { 
+      ...insertScore, 
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.scores.set(id, score);
+    return score;
+  }
+
+  async getTopScores(limit: number = 10): Promise<Score[]> {
+    const allScores = await this.getScores();
+    return allScores.slice(0, limit);
   }
 }
 
