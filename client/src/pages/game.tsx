@@ -1354,46 +1354,6 @@ export default function Game() {
       ctx.fillText("PAUSED", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     }
 
-    // Draw branding on left and right borders
-    ctx.save();
-    ctx.font = "8px 'Press Start 2P'";
-    ctx.fillStyle = "#ff00ff";
-    ctx.globalAlpha = 0.7;
-    
-    // Left border - vertical text going down
-    ctx.save();
-    ctx.translate(10, CANVAS_HEIGHT / 2 - 60);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.fillText("dudleybud.com", 0, 0);
-    ctx.restore();
-    
-    ctx.save();
-    ctx.translate(10, CANVAS_HEIGHT / 2 + 60);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#00ffff";
-    ctx.fillText("x.com/dudley420", 0, 0);
-    ctx.restore();
-    
-    // Right border - vertical text going up
-    ctx.save();
-    ctx.translate(CANVAS_WIDTH - 10, CANVAS_HEIGHT / 2 - 60);
-    ctx.rotate(Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#00ff00";
-    ctx.fillText("@dudley420", 0, 0);
-    ctx.restore();
-    
-    ctx.save();
-    ctx.translate(CANVAS_WIDTH - 10, CANVAS_HEIGHT / 2 + 80);
-    ctx.rotate(Math.PI / 2);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#ffff00";
-    ctx.fillText("TELEGRAM", 0, 0);
-    ctx.restore();
-    
-    ctx.restore();
   }, [gameState.isPlaying, gameState.isGameOver, gameState.isPaused]);
 
   const gameLoop = useCallback((timestamp: number) => {

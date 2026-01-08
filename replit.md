@@ -80,5 +80,5 @@ shared/
   - Cannabis seed projectiles have more tiger stripe detail and realistic mottling
   - Power-ups now have pulsing glow rings and type indicator letters (S/D/R/+)
 - 2026-01-08: Added permanent all-time leaderboard (top 3 scores that never reset)
-- 2026-01-08: Added branding text on canvas borders (dudleybud.com, x.com/dudley420, @dudley420, TELEGRAM)
+- 2026-01-08: Removed branding text from canvas borders (cleaner look)
 - 2026-01-08: Initial MVP complete with all core game mechanics
