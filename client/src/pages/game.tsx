@@ -694,54 +694,119 @@ export default function Game() {
     const { x, y, width, height } = player;
     
     ctx.shadowColor = "#00ff00";
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = 15;
     
-    // Cannabis leaves pointing out (iconic 5-point pattern)
-    // Left leaf
-    drawPixelRect(ctx, x - 4, y + height * 0.3, 6, 3, "#15803d");
-    drawPixelRect(ctx, x - 6, y + height * 0.25, 4, 2, "#166534");
-    drawPixelRect(ctx, x - 2, y + height * 0.4, 4, 2, "#22c55e");
+    // ===== ICONIC 5-POINT CANNABIS LEAF (Much clearer and more defined) =====
+    const leafCenterX = x + width / 2;
+    const leafBaseY = y + height * 0.15;
     
-    // Right leaf
-    drawPixelRect(ctx, x + width - 2, y + height * 0.3, 6, 3, "#15803d");
-    drawPixelRect(ctx, x + width + 2, y + height * 0.25, 4, 2, "#166534");
-    drawPixelRect(ctx, x + width - 2, y + height * 0.4, 4, 2, "#22c55e");
+    // CENTER LEAF (tallest, pointing up) - the iconic central finger
+    drawPixelRect(ctx, leafCenterX - 2, leafBaseY - 16, 4, 18, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 3, leafBaseY - 14, 6, 14, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 1, leafBaseY - 18, 2, 4, "#16a34a");
+    // Center leaf vein
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY - 15, 1, 14, "#0d5c28");
+    // Serrated edges on center leaf
+    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 10, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 12, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 6, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 8, 2, 2, "#22c55e");
     
-    // Top leaf
-    drawPixelRect(ctx, x + width * 0.4, y - 6, 3, 8, "#15803d");
-    drawPixelRect(ctx, x + width * 0.5, y - 4, 3, 6, "#166534");
+    // LEFT UPPER LEAF (angled out-left, second from center)
+    drawPixelRect(ctx, leafCenterX - 14, leafBaseY - 8, 12, 3, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 16, leafBaseY - 7, 8, 4, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 12, leafBaseY - 6, 10, 3, "#16a34a");
+    // Vein
+    drawPixelRect(ctx, leafCenterX - 13, leafBaseY - 6, 8, 1, "#0d5c28");
+    // Serrations
+    drawPixelRect(ctx, leafCenterX - 17, leafBaseY - 10, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 14, leafBaseY - 11, 2, 2, "#22c55e");
     
-    // Main bud body (dense, rounded shape)
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.1, width * 0.5, height * 0.2, "#22c55e");
-    drawPixelRect(ctx, x + width * 0.15, y + height * 0.2, width * 0.7, height * 0.35, "#16a34a");
-    drawPixelRect(ctx, x + width * 0.1, y + height * 0.35, width * 0.8, height * 0.35, "#15803d");
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.6, width * 0.6, height * 0.25, "#166534");
+    // RIGHT UPPER LEAF (angled out-right, second from center)
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 8, 12, 3, "#15803d");
+    drawPixelRect(ctx, leafCenterX + 8, leafBaseY - 7, 8, 4, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 6, 10, 3, "#16a34a");
+    // Vein
+    drawPixelRect(ctx, leafCenterX + 5, leafBaseY - 6, 8, 1, "#0d5c28");
+    // Serrations
+    drawPixelRect(ctx, leafCenterX + 15, leafBaseY - 10, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 12, leafBaseY - 11, 2, 2, "#22c55e");
     
-    // Orange pistils (hairs) scattered on bud
-    drawPixelRect(ctx, x + width * 0.3, y + height * 0.15, 2, 3, "#f97316");
-    drawPixelRect(ctx, x + width * 0.55, y + height * 0.2, 2, 3, "#ea580c");
-    drawPixelRect(ctx, x + width * 0.4, y + height * 0.35, 2, 2, "#f97316");
-    drawPixelRect(ctx, x + width * 0.65, y + height * 0.4, 2, 3, "#ea580c");
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.45, 2, 2, "#f97316");
-    drawPixelRect(ctx, x + width * 0.5, y + height * 0.5, 2, 3, "#ea580c");
+    // LEFT LOWER LEAF (angled down-left, outer finger)
+    drawPixelRect(ctx, leafCenterX - 12, leafBaseY + 2, 10, 3, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 14, leafBaseY + 3, 6, 3, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 10, leafBaseY + 4, 8, 2, "#16a34a");
+    // Vein
+    drawPixelRect(ctx, leafCenterX - 11, leafBaseY + 4, 7, 1, "#0d5c28");
     
-    // Trichome sparkles (frosty crystals)
+    // RIGHT LOWER LEAF (angled down-right, outer finger)
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 2, 10, 3, "#15803d");
+    drawPixelRect(ctx, leafCenterX + 8, leafBaseY + 3, 6, 3, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 4, 8, 2, "#16a34a");
+    // Vein
+    drawPixelRect(ctx, leafCenterX + 4, leafBaseY + 4, 7, 1, "#0d5c28");
+    
+    // LEAF STEM connecting to bud
+    drawPixelRect(ctx, leafCenterX - 1, leafBaseY, 2, 6, "#166534");
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY + 2, 1, 4, "#0d5c28");
+    
+    // ===== MAIN BUD BODY (enhanced detail) =====
+    // Outer shape layers
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.2, width * 0.4, height * 0.15, "#22c55e");
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.28, width * 0.6, height * 0.18, "#16a34a");
+    drawPixelRect(ctx, x + width * 0.12, y + height * 0.38, width * 0.76, height * 0.22, "#15803d");
+    drawPixelRect(ctx, x + width * 0.08, y + height * 0.48, width * 0.84, height * 0.2, "#166534");
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.62, width * 0.7, height * 0.18, "#14532d");
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.75, width * 0.56, height * 0.12, "#0f3d1f");
+    
+    // Calyx bumps (rounded bud structure)
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.32, width * 0.16, height * 0.12, "#22c55e");
+    drawPixelRect(ctx, x + width * 0.68, y + height * 0.32, width * 0.16, height * 0.12, "#22c55e");
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.25, width * 0.2, height * 0.1, "#22c55e");
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.52, width * 0.14, height * 0.1, "#16a34a");
+    drawPixelRect(ctx, x + width * 0.6, y + height * 0.52, width * 0.14, height * 0.1, "#16a34a");
+    
+    // Orange pistils (hairs) - more for realism
+    drawPixelRect(ctx, x + width * 0.28, y + height * 0.22, 2, 5, "#f97316");
+    drawPixelRect(ctx, x + width * 0.62, y + height * 0.24, 2, 4, "#ea580c");
+    drawPixelRect(ctx, x + width * 0.45, y + height * 0.28, 2, 4, "#fb923c");
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.38, 2, 3, "#f97316");
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.4, 2, 4, "#ea580c");
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.45, 2, 3, "#fb923c");
+    drawPixelRect(ctx, x + width * 0.72, y + height * 0.42, 2, 4, "#f97316");
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.55, 2, 3, "#ea580c");
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.58, 2, 3, "#fb923c");
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.62, 2, 3, "#f97316");
+    
+    // Trichome sparkles (frosty crystals) - enhanced
     ctx.shadowColor = "#ffffff";
-    ctx.shadowBlur = 3;
-    drawPixelRect(ctx, x + width * 0.35, y + height * 0.25, 2, 2, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.6, y + height * 0.3, 1, 1, "#e0ffe0");
-    drawPixelRect(ctx, x + width * 0.45, y + height * 0.45, 2, 2, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.7, y + height * 0.5, 1, 1, "#e0ffe0");
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.55, 1, 1, "#ffffff");
+    ctx.shadowBlur = 4;
+    drawPixelRect(ctx, x + width * 0.32, y + height * 0.3, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.32, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.45, y + height * 0.35, 2, 2, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.42, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.68, y + height * 0.45, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.38, y + height * 0.5, 1, 1, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.52, y + height * 0.52, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.28, y + height * 0.58, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.55, 1, 1, "#e0ffe0");
     
-    // Cool sunglasses on Dudley Bud
+    // Cool sunglasses on Dudley Bud - enhanced
     ctx.shadowBlur = 0;
-    drawPixelRect(ctx, x + width * 0.15, y + height * 0.38, width * 0.7, 3, "#000");
-    drawPixelRect(ctx, x + width * 0.18, y + height * 0.35, width * 0.25, 6, "#000");
-    drawPixelRect(ctx, x + width * 0.55, y + height * 0.35, width * 0.25, 6, "#000");
-    // Lens shine
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.36, 2, 2, "#4444ff");
-    drawPixelRect(ctx, x + width * 0.57, y + height * 0.36, 2, 2, "#4444ff");
+    ctx.shadowColor = "#000000";
+    // Frame
+    drawPixelRect(ctx, x + width * 0.12, y + height * 0.42, width * 0.76, 4, "#111");
+    // Left lens
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.38, width * 0.28, 8, "#000");
+    drawPixelRect(ctx, x + width * 0.14, y + height * 0.39, width * 0.3, 6, "#111");
+    // Right lens
+    drawPixelRect(ctx, x + width * 0.56, y + height * 0.38, width * 0.28, 8, "#000");
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.39, width * 0.3, 6, "#111");
+    // Lens shine/reflection
+    drawPixelRect(ctx, x + width * 0.18, y + height * 0.39, 3, 2, "#3333aa");
+    drawPixelRect(ctx, x + width * 0.59, y + height * 0.39, 3, 2, "#3333aa");
+    // Nose bridge
+    drawPixelRect(ctx, x + width * 0.44, y + height * 0.43, width * 0.12, 2, "#222");
     
     // Draw side guns based on weapon level
     const weaponLevel = weaponLevelRef.current;
@@ -749,27 +814,40 @@ export default function Game() {
     // Left gun (weapon level 1+)
     if (weaponLevel >= 1) {
       ctx.shadowColor = "#00ffff";
-      ctx.shadowBlur = 6;
-      drawPixelRect(ctx, x - 10, y + 6, 6, 12, "#444");
-      drawPixelRect(ctx, x - 9, y + 4, 4, 4, "#666");
-      drawPixelRect(ctx, x - 8, y + 8, 2, 8, "#00ffff");
+      ctx.shadowBlur = 8;
+      drawPixelRect(ctx, x - 12, y + 8, 8, 16, "#333");
+      drawPixelRect(ctx, x - 11, y + 6, 6, 4, "#555");
+      drawPixelRect(ctx, x - 10, y + 4, 4, 3, "#666");
+      drawPixelRect(ctx, x - 10, y + 10, 4, 12, "#444");
+      drawPixelRect(ctx, x - 9, y + 12, 2, 10, "#00ffff");
+      // Gun glow core
+      drawPixelRect(ctx, x - 9, y + 8, 2, 2, "#88ffff");
     }
     
     // Right gun (weapon level 2+)
     if (weaponLevel >= 2) {
       ctx.shadowColor = "#00ffff";
-      ctx.shadowBlur = 6;
-      drawPixelRect(ctx, x + width + 4, y + 6, 6, 12, "#444");
-      drawPixelRect(ctx, x + width + 5, y + 4, 4, 4, "#666");
-      drawPixelRect(ctx, x + width + 6, y + 8, 2, 8, "#00ffff");
+      ctx.shadowBlur = 8;
+      drawPixelRect(ctx, x + width + 4, y + 8, 8, 16, "#333");
+      drawPixelRect(ctx, x + width + 5, y + 6, 6, 4, "#555");
+      drawPixelRect(ctx, x + width + 6, y + 4, 4, 3, "#666");
+      drawPixelRect(ctx, x + width + 6, y + 10, 4, 12, "#444");
+      drawPixelRect(ctx, x + width + 7, y + 12, 2, 10, "#00ffff");
+      // Gun glow core
+      drawPixelRect(ctx, x + width + 7, y + 8, 2, 2, "#88ffff");
     }
     
     // Double barrel indicator (weapon level 3)
     if (weaponLevel >= 3) {
       ctx.shadowColor = "#ff0000";
-      ctx.shadowBlur = 8;
-      drawPixelRect(ctx, x + width * 0.35, y - 10, 4, 6, "#ff4444");
-      drawPixelRect(ctx, x + width * 0.55, y - 10, 4, 6, "#ff4444");
+      ctx.shadowBlur = 10;
+      drawPixelRect(ctx, x + width * 0.32, y - 12, 6, 10, "#cc2222");
+      drawPixelRect(ctx, x + width * 0.34, y - 14, 4, 4, "#ff4444");
+      drawPixelRect(ctx, x + width * 0.58, y - 12, 6, 10, "#cc2222");
+      drawPixelRect(ctx, x + width * 0.6, y - 14, 4, 4, "#ff4444");
+      // Energy cores
+      drawPixelRect(ctx, x + width * 0.35, y - 10, 2, 2, "#ffaaaa");
+      drawPixelRect(ctx, x + width * 0.61, y - 10, 2, 2, "#ffaaaa");
     }
     
     ctx.shadowBlur = 0;
@@ -779,101 +857,149 @@ export default function Game() {
     const { x, y, width, height, strain, health, maxHealth } = enemy;
     const colors = strainColors[strain];
     
-    // Different colors per strain for variety - more detailed color palette
-    const strainDetails: Record<StrainType, { dark: string; mid: string; pistil: string; pistil2: string }> = {
-      indica: { dark: "#581c87", mid: "#7c3aed", pistil: "#f472b6", pistil2: "#ec4899" },
-      sativa: { dark: "#14532d", mid: "#166534", pistil: "#fbbf24", pistil2: "#f59e0b" },
-      hybrid: { dark: "#7c2d12", mid: "#9a3412", pistil: "#fb923c", pistil2: "#f97316" },
+    // Different colors per strain for variety - enhanced color palette
+    const strainDetails: Record<StrainType, { dark: string; mid: string; light: string; pistil: string; pistil2: string; pistil3: string }> = {
+      indica: { dark: "#3b0764", mid: "#581c87", light: "#7c3aed", pistil: "#f472b6", pistil2: "#ec4899", pistil3: "#db2777" },
+      sativa: { dark: "#052e16", mid: "#14532d", light: "#166534", pistil: "#fbbf24", pistil2: "#f59e0b", pistil3: "#d97706" },
+      hybrid: { dark: "#431407", mid: "#7c2d12", light: "#9a3412", pistil: "#fb923c", pistil2: "#f97316", pistil3: "#ea580c" },
     };
     const details = strainDetails[strain];
     
     ctx.shadowColor = colors.glow;
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
     
-    // Cannabis leaves on enemy buds - more detailed with 3-point pattern
-    // Left leaf cluster
-    drawPixelRect(ctx, x - 6, y + height * 0.25, 4, 2, details.dark);
-    drawPixelRect(ctx, x - 4, y + height * 0.3, 6, 3, details.dark);
-    drawPixelRect(ctx, x - 5, y + height * 0.35, 3, 2, details.mid);
-    drawPixelRect(ctx, x - 2, y + height * 0.4, 4, 2, details.dark);
+    // ===== CANNABIS LEAVES (50% more detailed) =====
+    // Left leaf cluster - 3 distinct fingers
+    drawPixelRect(ctx, x - 10, y + height * 0.2, 6, 3, details.mid);
+    drawPixelRect(ctx, x - 8, y + height * 0.18, 4, 2, details.light);
+    drawPixelRect(ctx, x - 6, y + height * 0.28, 8, 4, details.mid);
+    drawPixelRect(ctx, x - 7, y + height * 0.3, 4, 3, details.light);
+    drawPixelRect(ctx, x - 4, y + height * 0.38, 6, 3, details.dark);
+    drawPixelRect(ctx, x - 3, y + height * 0.36, 3, 2, details.mid);
+    // Left leaf veins
+    drawPixelRect(ctx, x - 6, y + height * 0.25, 5, 1, details.dark);
+    drawPixelRect(ctx, x - 4, y + height * 0.32, 4, 1, details.dark);
     
-    // Right leaf cluster
-    drawPixelRect(ctx, x + width + 2, y + height * 0.25, 4, 2, details.dark);
-    drawPixelRect(ctx, x + width - 2, y + height * 0.3, 6, 3, details.dark);
-    drawPixelRect(ctx, x + width + 2, y + height * 0.35, 3, 2, details.mid);
-    drawPixelRect(ctx, x + width - 2, y + height * 0.4, 4, 2, details.dark);
+    // Right leaf cluster - 3 distinct fingers
+    drawPixelRect(ctx, x + width + 4, y + height * 0.2, 6, 3, details.mid);
+    drawPixelRect(ctx, x + width + 4, y + height * 0.18, 4, 2, details.light);
+    drawPixelRect(ctx, x + width - 2, y + height * 0.28, 8, 4, details.mid);
+    drawPixelRect(ctx, x + width + 3, y + height * 0.3, 4, 3, details.light);
+    drawPixelRect(ctx, x + width - 2, y + height * 0.38, 6, 3, details.dark);
+    drawPixelRect(ctx, x + width, y + height * 0.36, 3, 2, details.mid);
+    // Right leaf veins
+    drawPixelRect(ctx, x + width + 1, y + height * 0.25, 5, 1, details.dark);
+    drawPixelRect(ctx, x + width, y + height * 0.32, 4, 1, details.dark);
     
-    // Top sugar leaves
-    drawPixelRect(ctx, x + width * 0.35, y - 4, 3, 5, details.dark);
-    drawPixelRect(ctx, x + width * 0.55, y - 3, 3, 4, details.dark);
+    // Top sugar leaves - more defined
+    drawPixelRect(ctx, x + width * 0.3, y - 6, 4, 7, details.mid);
+    drawPixelRect(ctx, x + width * 0.32, y - 8, 3, 4, details.light);
+    drawPixelRect(ctx, x + width * 0.6, y - 5, 4, 6, details.mid);
+    drawPixelRect(ctx, x + width * 0.62, y - 7, 3, 3, details.light);
+    drawPixelRect(ctx, x + width * 0.45, y - 4, 3, 5, details.dark);
+    // Sugar leaf veins
+    drawPixelRect(ctx, x + width * 0.32, y - 4, 1, 5, details.dark);
+    drawPixelRect(ctx, x + width * 0.62, y - 3, 1, 4, details.dark);
     
-    // Main bud body (dense cannabis nug shape with more layers)
-    drawPixelRect(ctx, x + width * 0.35, y - 1, width * 0.3, height * 0.12, colors.fill);
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.08, width * 0.5, height * 0.18, colors.fill);
-    drawPixelRect(ctx, x + width * 0.15, y + height * 0.18, width * 0.7, height * 0.2, colors.fill);
-    drawPixelRect(ctx, x + width * 0.1, y + height * 0.3, width * 0.8, height * 0.25, colors.fill);
-    drawPixelRect(ctx, x + width * 0.08, y + height * 0.45, width * 0.84, height * 0.2, details.mid);
-    drawPixelRect(ctx, x + width * 0.12, y + height * 0.58, width * 0.76, height * 0.18, details.dark);
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.72, width * 0.6, height * 0.15, details.dark);
-    drawPixelRect(ctx, x + width * 0.3, y + height * 0.82, width * 0.4, height * 0.1, details.dark);
+    // ===== MAIN BUD BODY (50% more layers for depth) =====
+    // Core structure
+    drawPixelRect(ctx, x + width * 0.38, y - 2, width * 0.24, height * 0.1, colors.fill);
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.05, width * 0.4, height * 0.12, colors.fill);
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.12, width * 0.56, height * 0.14, colors.fill);
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.2, width * 0.7, height * 0.16, colors.fill);
+    drawPixelRect(ctx, x + width * 0.1, y + height * 0.3, width * 0.8, height * 0.18, colors.fill);
+    drawPixelRect(ctx, x + width * 0.08, y + height * 0.42, width * 0.84, height * 0.16, details.mid);
+    drawPixelRect(ctx, x + width * 0.06, y + height * 0.52, width * 0.88, height * 0.14, details.mid);
+    drawPixelRect(ctx, x + width * 0.1, y + height * 0.62, width * 0.8, height * 0.12, details.dark);
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.72, width * 0.7, height * 0.12, details.dark);
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.8, width * 0.56, height * 0.1, details.dark);
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.88, width * 0.4, height * 0.08, details.dark);
     
-    // Calyx bumps (the rounded parts of buds) - more visible
-    drawPixelRect(ctx, x + width * 0.12, y + height * 0.25, width * 0.18, height * 0.14, colors.glow);
-    drawPixelRect(ctx, x + width * 0.7, y + height * 0.25, width * 0.18, height * 0.14, colors.glow);
-    drawPixelRect(ctx, x + width * 0.38, y + height * 0.15, width * 0.24, height * 0.12, colors.glow);
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.48, width * 0.15, height * 0.1, colors.glow);
-    drawPixelRect(ctx, x + width * 0.65, y + height * 0.48, width * 0.15, height * 0.1, colors.glow);
+    // Calyx bumps (50% more for realistic bud structure)
+    drawPixelRect(ctx, x + width * 0.1, y + height * 0.18, width * 0.16, height * 0.12, colors.glow);
+    drawPixelRect(ctx, x + width * 0.74, y + height * 0.18, width * 0.16, height * 0.12, colors.glow);
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.1, width * 0.2, height * 0.1, colors.glow);
+    drawPixelRect(ctx, x + width * 0.18, y + height * 0.32, width * 0.14, height * 0.1, colors.glow);
+    drawPixelRect(ctx, x + width * 0.68, y + height * 0.32, width * 0.14, height * 0.1, colors.glow);
+    drawPixelRect(ctx, x + width * 0.12, y + height * 0.5, width * 0.12, height * 0.08, colors.glow);
+    drawPixelRect(ctx, x + width * 0.76, y + height * 0.5, width * 0.12, height * 0.08, colors.glow);
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.58, width * 0.14, height * 0.08, colors.glow);
+    drawPixelRect(ctx, x + width * 0.52, y + height * 0.58, width * 0.14, height * 0.08, colors.glow);
     
-    // Pistils (colored hairs) - many more for realism
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.1, 2, 5, details.pistil);
-    drawPixelRect(ctx, x + width * 0.7, y + height * 0.12, 2, 4, details.pistil2);
-    drawPixelRect(ctx, x + width * 0.35, y + height * 0.08, 2, 4, details.pistil);
-    drawPixelRect(ctx, x + width * 0.55, y + height * 0.1, 2, 5, details.pistil2);
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.22, 2, 4, details.pistil);
-    drawPixelRect(ctx, x + width * 0.65, y + height * 0.2, 2, 4, details.pistil2);
-    drawPixelRect(ctx, x + width * 0.45, y + height * 0.18, 2, 3, details.pistil);
-    drawPixelRect(ctx, x + width * 0.15, y + height * 0.35, 2, 4, details.pistil2);
-    drawPixelRect(ctx, x + width * 0.75, y + height * 0.32, 2, 4, details.pistil);
-    drawPixelRect(ctx, x + width * 0.5, y + height * 0.28, 2, 3, details.pistil2);
-    drawPixelRect(ctx, x + width * 0.3, y + height * 0.52, 2, 3, details.pistil);
-    drawPixelRect(ctx, x + width * 0.6, y + height * 0.55, 2, 4, details.pistil2);
+    // Pistils (50% more hairs for realism)
+    drawPixelRect(ctx, x + width * 0.18, y + height * 0.05, 2, 6, details.pistil);
+    drawPixelRect(ctx, x + width * 0.72, y + height * 0.06, 2, 5, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.32, y + height * 0.02, 2, 5, details.pistil3);
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.04, 2, 6, details.pistil);
+    drawPixelRect(ctx, x + width * 0.45, y + height * 0.08, 2, 4, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.15, 2, 5, details.pistil);
+    drawPixelRect(ctx, x + width * 0.68, y + height * 0.14, 2, 5, details.pistil3);
+    drawPixelRect(ctx, x + width * 0.12, y + height * 0.25, 2, 4, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.78, y + height * 0.24, 2, 5, details.pistil);
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.2, 2, 4, details.pistil3);
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.22, 2, 4, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.38, 2, 4, details.pistil);
+    drawPixelRect(ctx, x + width * 0.75, y + height * 0.36, 2, 5, details.pistil3);
+    drawPixelRect(ctx, x + width * 0.28, y + height * 0.55, 2, 4, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.62, y + height * 0.54, 2, 4, details.pistil);
+    drawPixelRect(ctx, x + width * 0.42, y + height * 0.48, 2, 3, details.pistil3);
+    drawPixelRect(ctx, x + width * 0.52, y + height * 0.65, 2, 3, details.pistil2);
+    drawPixelRect(ctx, x + width * 0.38, y + height * 0.68, 2, 3, details.pistil);
     
-    // Trichome sparkles - frosty crystal effect
+    // Trichome sparkles (50% more frosty crystals)
     ctx.shadowColor = "#ffffff";
-    ctx.shadowBlur = 4;
-    drawPixelRect(ctx, x + width * 0.28, y + height * 0.15, 2, 2, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.62, y + height * 0.18, 2, 2, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.45, y + height * 0.22, 1, 1, "#e0ffe0");
-    drawPixelRect(ctx, x + width * 0.18, y + height * 0.32, 2, 2, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.72, y + height * 0.35, 1, 1, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.38, y + height * 0.4, 2, 2, "#e0ffe0");
-    drawPixelRect(ctx, x + width * 0.55, y + height * 0.45, 1, 1, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.55, 1, 1, "#ffffff");
-    drawPixelRect(ctx, x + width * 0.68, y + height * 0.52, 2, 2, "#e0ffe0");
+    ctx.shadowBlur = 5;
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.1, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.12, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.42, y + height * 0.15, 2, 2, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.22, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.75, y + height * 0.24, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.28, 2, 2, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.26, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.35, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.7, y + height * 0.38, 2, 2, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.48, y + height * 0.32, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.12, y + height * 0.48, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.78, y + height * 0.5, 2, 2, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.52, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.58, 1, 1, "#e0ffe0");
     
-    // Angry eyes (these buds are enemies!)
+    // Angry eyes (enhanced detail)
     ctx.shadowBlur = 0;
-    drawPixelRect(ctx, x + width * 0.22, y + height * 0.38, width * 0.18, height * 0.12, "#fff");
-    drawPixelRect(ctx, x + width * 0.58, y + height * 0.38, width * 0.18, height * 0.12, "#fff");
-    drawPixelRect(ctx, x + width * 0.26, y + height * 0.41, width * 0.1, height * 0.08, "#ff0000");
-    drawPixelRect(ctx, x + width * 0.62, y + height * 0.41, width * 0.1, height * 0.08, "#ff0000");
+    // Eye whites
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.38, width * 0.2, height * 0.14, "#fff");
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.38, width * 0.2, height * 0.14, "#fff");
+    // Eye outline
+    drawPixelRect(ctx, x + width * 0.19, y + height * 0.37, width * 0.22, 1, "#333");
+    drawPixelRect(ctx, x + width * 0.57, y + height * 0.37, width * 0.22, 1, "#333");
+    // Pupils (red, angry)
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.41, width * 0.12, height * 0.1, "#cc0000");
+    drawPixelRect(ctx, x + width * 0.62, y + height * 0.41, width * 0.12, height * 0.1, "#cc0000");
+    // Inner pupil
+    drawPixelRect(ctx, x + width * 0.28, y + height * 0.43, width * 0.06, height * 0.06, "#880000");
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.43, width * 0.06, height * 0.06, "#880000");
     // Eye glint
-    drawPixelRect(ctx, x + width * 0.27, y + height * 0.4, 2, 2, "#ffaaaa");
-    drawPixelRect(ctx, x + width * 0.63, y + height * 0.4, 2, 2, "#ffaaaa");
-    // Angry eyebrows - thicker and meaner
-    drawPixelRect(ctx, x + width * 0.18, y + height * 0.33, width * 0.22, 3, "#000");
-    drawPixelRect(ctx, x + width * 0.58, y + height * 0.33, width * 0.22, 3, "#000");
+    drawPixelRect(ctx, x + width * 0.26, y + height * 0.4, 2, 2, "#ffcccc");
+    drawPixelRect(ctx, x + width * 0.63, y + height * 0.4, 2, 2, "#ffcccc");
+    // Angry eyebrows - thicker, angled, meaner
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.32, width * 0.25, 4, "#111");
+    drawPixelRect(ctx, x + width * 0.58, y + height * 0.32, width * 0.25, 4, "#111");
+    drawPixelRect(ctx, x + width * 0.14, y + height * 0.33, width * 0.08, 3, "#222");
+    drawPixelRect(ctx, x + width * 0.76, y + height * 0.33, width * 0.08, 3, "#222");
     
     // Health bar
     if (health < maxHealth) {
       const barWidth = width * 0.8;
-      const barHeight = 4;
+      const barHeight = 5;
       const barX = x + (width - barWidth) / 2;
-      const barY = y - 10;
+      const barY = y - 12;
       
       ctx.shadowBlur = 0;
+      drawPixelRect(ctx, barX - 1, barY - 1, barWidth + 2, barHeight + 2, "#111");
       drawPixelRect(ctx, barX, barY, barWidth, barHeight, "#333");
       drawPixelRect(ctx, barX, barY, barWidth * (health / maxHealth), barHeight, "#00ff00");
+      // Health bar shine
+      drawPixelRect(ctx, barX, barY, barWidth * (health / maxHealth), 1, "#88ff88");
     }
     
     ctx.shadowBlur = 0;
@@ -882,57 +1008,142 @@ export default function Game() {
   const drawHazard = (ctx: CanvasRenderingContext2D, hazard: Hazard) => {
     const { x, y, width, height, type } = hazard;
     
-    ctx.shadowBlur = 10;
+    ctx.shadowBlur = 12;
     
     if (type === "bong") {
-      // Bong - tall glass water pipe
+      // Bong - tall glass water pipe (50% more detail)
       ctx.shadowColor = "#00ffff";
-      // Base
-      drawPixelRect(ctx, x + width * 0.2, y + height * 0.8, width * 0.6, height * 0.2, "#4488ff");
-      // Water chamber
-      drawPixelRect(ctx, x + width * 0.25, y + height * 0.5, width * 0.5, height * 0.35, "#66aaff");
-      drawPixelRect(ctx, x + width * 0.3, y + height * 0.55, width * 0.4, height * 0.25, "#99ccff");
-      // Neck
-      drawPixelRect(ctx, x + width * 0.35, y + height * 0.1, width * 0.3, height * 0.45, "#88bbff");
-      // Bowl
-      drawPixelRect(ctx, x + width * 0.6, y + height * 0.35, width * 0.25, height * 0.15, "#996633");
-      drawPixelRect(ctx, x + width * 0.65, y + height * 0.3, width * 0.15, height * 0.08, "#22c55e");
-      // Water line
-      drawPixelRect(ctx, x + width * 0.28, y + height * 0.65, width * 0.44, height * 0.08, "#0088ff");
+      
+      // Base with depth
+      drawPixelRect(ctx, x + width * 0.18, y + height * 0.82, width * 0.64, height * 0.18, "#3377dd");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.8, width * 0.6, height * 0.18, "#4488ff");
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.82, width * 0.5, height * 0.12, "#66aaff");
+      // Base highlight
+      drawPixelRect(ctx, x + width * 0.22, y + height * 0.81, width * 0.15, height * 0.04, "#aaddff");
+      
+      // Water chamber with glass effect
+      drawPixelRect(ctx, x + width * 0.22, y + height * 0.48, width * 0.56, height * 0.36, "#5599ee");
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.5, width * 0.5, height * 0.32, "#66aaff");
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.52, width * 0.44, height * 0.28, "#88bbff");
+      drawPixelRect(ctx, x + width * 0.32, y + height * 0.54, width * 0.36, height * 0.22, "#99ccff");
+      // Glass reflection
+      drawPixelRect(ctx, x + width * 0.26, y + height * 0.52, width * 0.08, height * 0.2, "#bbddff");
+      
+      // Neck with glass detail
+      drawPixelRect(ctx, x + width * 0.33, y + height * 0.08, width * 0.34, height * 0.44, "#77aaee");
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.1, width * 0.3, height * 0.4, "#88bbff");
+      drawPixelRect(ctx, x + width * 0.38, y + height * 0.12, width * 0.24, height * 0.36, "#99ccff");
+      // Neck reflection
+      drawPixelRect(ctx, x + width * 0.36, y + height * 0.12, width * 0.06, height * 0.3, "#aaddff");
+      // Mouthpiece rim
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.05, width * 0.4, height * 0.06, "#aaccff");
+      
+      // Downstem
+      drawPixelRect(ctx, x + width * 0.52, y + height * 0.38, width * 0.04, height * 0.25, "#77aaee");
+      
+      // Bowl with herb
+      drawPixelRect(ctx, x + width * 0.56, y + height * 0.32, width * 0.28, height * 0.18, "#8b6914");
+      drawPixelRect(ctx, x + width * 0.58, y + height * 0.34, width * 0.24, height * 0.14, "#a0782c");
+      drawPixelRect(ctx, x + width * 0.6, y + height * 0.28, width * 0.2, height * 0.1, "#166534");
+      drawPixelRect(ctx, x + width * 0.62, y + height * 0.26, width * 0.16, height * 0.06, "#22c55e");
+      // Bowl rim
+      drawPixelRect(ctx, x + width * 0.58, y + height * 0.3, width * 0.24, height * 0.03, "#c9a048");
+      
+      // Water line with bubbles effect
+      drawPixelRect(ctx, x + width * 0.26, y + height * 0.62, width * 0.48, height * 0.1, "#0077ee");
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.64, width * 0.44, height * 0.06, "#0088ff");
+      // Bubbles
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.58, 3, 3, "#aaddff");
+      drawPixelRect(ctx, x + width * 0.48, y + height * 0.56, 2, 2, "#88ccff");
+      drawPixelRect(ctx, x + width * 0.55, y + height * 0.6, 3, 3, "#aaddff");
+      
     } else if (type === "joint") {
-      // Lit joint - white paper with orange ember tip
+      // Lit joint (50% more detail)
       ctx.shadowColor = "#ff6600";
-      // Paper body (angled)
+      
+      // Paper body with texture
+      drawPixelRect(ctx, x + width * 0.12, y + height * 0.38, width * 0.76, height * 0.24, "#e8e4d0");
       drawPixelRect(ctx, x + width * 0.15, y + height * 0.4, width * 0.7, height * 0.2, "#f5f5dc");
-      drawPixelRect(ctx, x + width * 0.2, y + height * 0.35, width * 0.55, height * 0.3, "#fffaf0");
-      // Filter/tip
-      drawPixelRect(ctx, x + width * 0.1, y + height * 0.42, width * 0.12, height * 0.16, "#d2691e");
-      // Lit end with ember glow
+      drawPixelRect(ctx, x + width * 0.18, y + height * 0.42, width * 0.64, height * 0.16, "#fffaf0");
+      // Paper crease lines
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.44, width * 0.5, 1, "#d8d4c0");
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.5, width * 0.4, 1, "#d8d4c0");
+      // Visible herb through paper
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.45, width * 0.25, height * 0.08, "#228844");
+      
+      // Filter/tip with detail
+      drawPixelRect(ctx, x + width * 0.06, y + height * 0.4, width * 0.14, height * 0.2, "#b8860b");
+      drawPixelRect(ctx, x + width * 0.08, y + height * 0.42, width * 0.1, height * 0.16, "#d2691e");
+      drawPixelRect(ctx, x + width * 0.09, y + height * 0.44, width * 0.06, height * 0.12, "#daa520");
+      // Filter hole
+      drawPixelRect(ctx, x + width * 0.02, y + height * 0.46, width * 0.06, height * 0.08, "#333");
+      
+      // Lit end with ember glow (enhanced)
       ctx.shadowColor = "#ff4400";
-      ctx.shadowBlur = 15;
-      drawPixelRect(ctx, x + width * 0.75, y + height * 0.38, width * 0.15, height * 0.24, "#ff4400");
-      drawPixelRect(ctx, x + width * 0.78, y + height * 0.4, width * 0.1, height * 0.2, "#ffaa00");
-      // Smoke wisps
+      ctx.shadowBlur = 18;
+      drawPixelRect(ctx, x + width * 0.72, y + height * 0.36, width * 0.2, height * 0.28, "#cc3300");
+      drawPixelRect(ctx, x + width * 0.74, y + height * 0.38, width * 0.16, height * 0.24, "#ff4400");
+      drawPixelRect(ctx, x + width * 0.76, y + height * 0.4, width * 0.12, height * 0.2, "#ff6600");
+      drawPixelRect(ctx, x + width * 0.78, y + height * 0.42, width * 0.08, height * 0.16, "#ff9900");
+      drawPixelRect(ctx, x + width * 0.8, y + height * 0.44, width * 0.04, height * 0.12, "#ffcc00");
+      // Ember core
+      drawPixelRect(ctx, x + width * 0.81, y + height * 0.46, width * 0.03, height * 0.08, "#ffff88");
+      
+      // Smoke wisps (more detailed)
       ctx.shadowColor = "#888888";
-      ctx.shadowBlur = 5;
-      drawPixelRect(ctx, x + width * 0.82, y + height * 0.15, 2, 8, "#aaaaaa");
-      drawPixelRect(ctx, x + width * 0.78, y + height * 0.1, 2, 6, "#888888");
+      ctx.shadowBlur = 6;
+      drawPixelRect(ctx, x + width * 0.84, y + height * 0.12, 2, 10, "#aaaaaa");
+      drawPixelRect(ctx, x + width * 0.86, y + height * 0.08, 2, 8, "#999999");
+      drawPixelRect(ctx, x + width * 0.8, y + height * 0.05, 2, 6, "#888888");
+      drawPixelRect(ctx, x + width * 0.88, y + height * 0.15, 2, 6, "#777777");
+      // Wispy curls
+      drawPixelRect(ctx, x + width * 0.82, y + height * 0.02, 3, 3, "#aaaaaa");
+      drawPixelRect(ctx, x + width * 0.78, y - 2, 2, 4, "#999999");
+      
     } else if (type === "matches") {
-      // Box of matches
+      // Box of matches (50% more detail)
       ctx.shadowColor = "#ff0000";
-      // Box body
+      
+      // Box body with 3D effect
+      drawPixelRect(ctx, x + width * 0.12, y + height * 0.28, width * 0.76, height * 0.54, "#6b0000");
       drawPixelRect(ctx, x + width * 0.15, y + height * 0.3, width * 0.7, height * 0.5, "#8b0000");
-      drawPixelRect(ctx, x + width * 0.18, y + height * 0.33, width * 0.64, height * 0.44, "#b22222");
-      // Strike strip
-      drawPixelRect(ctx, x + width * 0.2, y + height * 0.7, width * 0.6, height * 0.08, "#333");
-      // Match sticks poking out
-      drawPixelRect(ctx, x + width * 0.25, y + height * 0.15, 3, height * 0.2, "#deb887");
-      drawPixelRect(ctx, x + width * 0.4, y + height * 0.12, 3, height * 0.22, "#deb887");
-      drawPixelRect(ctx, x + width * 0.55, y + height * 0.18, 3, height * 0.18, "#deb887");
-      // Match heads (red tips)
-      drawPixelRect(ctx, x + width * 0.24, y + height * 0.1, 5, 5, "#ff0000");
-      drawPixelRect(ctx, x + width * 0.39, y + height * 0.07, 5, 5, "#ff0000");
-      drawPixelRect(ctx, x + width * 0.54, y + height * 0.13, 5, 5, "#ff0000");
+      drawPixelRect(ctx, x + width * 0.18, y + height * 0.32, width * 0.64, height * 0.46, "#a52a2a");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.34, width * 0.6, height * 0.42, "#b22222");
+      // Box highlight
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.34, width * 0.15, height * 0.3, "#c44444");
+      // Box label area
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.4, width * 0.44, height * 0.2, "#991111");
+      
+      // Strike strip with texture
+      drawPixelRect(ctx, x + width * 0.18, y + height * 0.7, width * 0.64, height * 0.1, "#222");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.71, width * 0.6, height * 0.08, "#333");
+      // Strip texture dots
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.72, 2, 2, "#444");
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.73, 2, 2, "#444");
+      drawPixelRect(ctx, x + width * 0.45, y + height * 0.72, 2, 2, "#444");
+      drawPixelRect(ctx, x + width * 0.55, y + height * 0.73, 2, 2, "#444");
+      drawPixelRect(ctx, x + width * 0.65, y + height * 0.72, 2, 2, "#444");
+      
+      // Match sticks (more detailed)
+      drawPixelRect(ctx, x + width * 0.24, y + height * 0.12, 4, height * 0.22, "#c9a06c");
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.14, 2, height * 0.18, "#deb887");
+      drawPixelRect(ctx, x + width * 0.38, y + height * 0.08, 4, height * 0.26, "#c9a06c");
+      drawPixelRect(ctx, x + width * 0.39, y + height * 0.1, 2, height * 0.22, "#deb887");
+      drawPixelRect(ctx, x + width * 0.52, y + height * 0.14, 4, height * 0.2, "#c9a06c");
+      drawPixelRect(ctx, x + width * 0.53, y + height * 0.16, 2, height * 0.16, "#deb887");
+      drawPixelRect(ctx, x + width * 0.66, y + height * 0.1, 4, height * 0.24, "#c9a06c");
+      drawPixelRect(ctx, x + width * 0.67, y + height * 0.12, 2, height * 0.2, "#deb887");
+      
+      // Match heads (more detailed with glow)
+      ctx.shadowBlur = 8;
+      drawPixelRect(ctx, x + width * 0.22, y + height * 0.06, 8, 8, "#cc0000");
+      drawPixelRect(ctx, x + width * 0.24, y + height * 0.08, 4, 4, "#ff2222");
+      drawPixelRect(ctx, x + width * 0.36, y + height * 0.02, 8, 8, "#cc0000");
+      drawPixelRect(ctx, x + width * 0.38, y + height * 0.04, 4, 4, "#ff2222");
+      drawPixelRect(ctx, x + width * 0.5, y + height * 0.08, 8, 8, "#cc0000");
+      drawPixelRect(ctx, x + width * 0.52, y + height * 0.1, 4, 4, "#ff2222");
+      drawPixelRect(ctx, x + width * 0.64, y + height * 0.04, 8, 8, "#cc0000");
+      drawPixelRect(ctx, x + width * 0.66, y + height * 0.06, 4, 4, "#ff2222");
     }
     
     ctx.shadowBlur = 0;
@@ -940,46 +1151,71 @@ export default function Game() {
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
     if (proj.isPlayerBullet) {
-      // Cannabis seed - realistic teardrop shape with tiger stripes
+      // Cannabis seed - realistic teardrop shape with tiger stripes (50% more detail)
       ctx.shadowColor = "#00ff00";
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
       
       const cx = proj.x + proj.width / 2;
       const cy = proj.y + proj.height / 2;
       
-      // Outer shell - darker brown edge
-      drawPixelRect(ctx, proj.x, proj.y + 1, proj.width, proj.height - 2, "#5c4a1f");
+      // Outer shell - darker brown edge with depth
+      drawPixelRect(ctx, proj.x - 1, proj.y + 2, proj.width + 2, proj.height - 4, "#3d2f1e");
+      drawPixelRect(ctx, proj.x, proj.y + 1, proj.width, proj.height - 2, "#4a3c28");
       drawPixelRect(ctx, proj.x + 1, proj.y, proj.width - 2, proj.height, "#5c4a1f");
       
-      // Main seed body - mottled brown/tan
-      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#8b7355");
-      drawPixelRect(ctx, proj.x + 1, proj.y + 2, proj.width - 2, proj.height - 4, "#9c8565");
+      // Main seed body - mottled brown/tan layers
+      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#7a6445");
+      drawPixelRect(ctx, proj.x + 1, proj.y + 2, proj.width - 2, proj.height - 4, "#8b7355");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, proj.width - 4, proj.height - 4, "#9c8565");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 3, proj.width - 4, proj.height - 6, "#a89270");
       
-      // Tiger stripe pattern (characteristic of cannabis seeds)
-      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 1, proj.height - 4, "#4a3c28");
-      drawPixelRect(ctx, proj.x + proj.width - 3, proj.y + 2, 1, proj.height - 4, "#4a3c28");
+      // Tiger stripe pattern (characteristic of cannabis seeds) - more stripes
+      drawPixelRect(ctx, proj.x + 1, proj.y + 2, 1, proj.height - 4, "#3d2f1e");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 3, 1, proj.height - 6, "#4a3c28");
+      drawPixelRect(ctx, proj.x + proj.width - 2, proj.y + 2, 1, proj.height - 4, "#3d2f1e");
+      drawPixelRect(ctx, proj.x + proj.width - 3, proj.y + 3, 1, proj.height - 6, "#4a3c28");
       
-      // Central ridge line
-      drawPixelRect(ctx, cx - 0.5, proj.y + 1, 1, proj.height - 2, "#3d2f1e");
+      // Central ridge line (more prominent)
+      drawPixelRect(ctx, cx - 1, proj.y + 1, 2, proj.height - 2, "#2d1f0e");
+      drawPixelRect(ctx, cx - 0.5, proj.y + 2, 1, proj.height - 4, "#3d2f1e");
       
-      // Lighter tan highlights on sides
-      drawPixelRect(ctx, proj.x + 1, proj.y + proj.height * 0.3, 1, proj.height * 0.4, "#b8a680");
-      drawPixelRect(ctx, proj.x + proj.width - 2, proj.y + proj.height * 0.3, 1, proj.height * 0.4, "#b8a680");
+      // Mottled pattern (tiger spotting)
+      drawPixelRect(ctx, proj.x + 2, proj.y + 4, 1, 2, "#5c4a1f");
+      drawPixelRect(ctx, proj.x + proj.width - 3, proj.y + 5, 1, 2, "#5c4a1f");
+      drawPixelRect(ctx, proj.x + 3, proj.y + proj.height - 4, 1, 2, "#5c4a1f");
+      
+      // Lighter tan highlights on sides (gradient effect)
+      drawPixelRect(ctx, proj.x + 1, proj.y + proj.height * 0.25, 1, proj.height * 0.5, "#b8a680");
+      drawPixelRect(ctx, proj.x + proj.width - 2, proj.y + proj.height * 0.25, 1, proj.height * 0.5, "#b8a680");
+      drawPixelRect(ctx, proj.x + 2, proj.y + proj.height * 0.3, 1, proj.height * 0.3, "#c9b896");
       
       // Pointed tip highlight (seeds are teardrop shaped)
-      drawPixelRect(ctx, cx - 0.5, proj.y + 1, 1, 2, "#d4c4a0");
+      drawPixelRect(ctx, cx - 1, proj.y + 1, 2, 3, "#c9b896");
+      drawPixelRect(ctx, cx - 0.5, proj.y, 1, 2, "#d4c4a0");
       
-      // Subtle sheen/glossy reflection
-      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 2, 1, "#c9b896");
+      // Glossy reflection/sheen (enhanced)
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 3, 2, "#d4c4a0");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 3, 2, 1, "#e0d0b0");
+      
+      // Bottom point shadow
+      drawPixelRect(ctx, cx - 1, proj.y + proj.height - 2, 2, 2, "#2d1f0e");
+      
     } else {
-      // Enemy projectile - glowing magenta energy ball
+      // Enemy projectile - glowing magenta energy ball (50% more detail)
       ctx.shadowColor = "#ff00ff";
-      ctx.shadowBlur = 10;
+      ctx.shadowBlur = 14;
       
-      drawPixelRect(ctx, proj.x, proj.y, proj.width, proj.height, "#ff00ff");
-      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#ff66ff");
-      // Core glow
-      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 2, 2, "#ffffff");
+      // Outer glow layer
+      drawPixelRect(ctx, proj.x - 1, proj.y - 1, proj.width + 2, proj.height + 2, "#aa00aa");
+      drawPixelRect(ctx, proj.x, proj.y, proj.width, proj.height, "#cc00cc");
+      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#ff00ff");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, proj.width - 4, proj.height - 4, "#ff44ff");
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, proj.width - 4, proj.height - 4, "#ff66ff");
+      // Inner glow
+      drawPixelRect(ctx, proj.x + 3, proj.y + 3, proj.width - 6, proj.height - 6, "#ff99ff");
+      // Core glow (bright white center)
+      drawPixelRect(ctx, proj.x + 3, proj.y + 3, 2, 2, "#ffccff");
+      drawPixelRect(ctx, proj.x + 3, proj.y + 3, 1, 1, "#ffffff");
     }
     
     ctx.shadowBlur = 0;
@@ -1012,26 +1248,70 @@ export default function Game() {
       });
       ctx.globalAlpha = 1;
       
-      // Draw power-ups
+      // Draw power-ups (50% more detail)
       powerUpsRef.current.forEach(powerUp => {
         const color = powerUpColors[powerUp.type];
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 8;
+        const cx = powerUp.x + powerUp.width / 2;
+        const cy = powerUp.y + powerUp.height / 2;
         
-        // Pulsing effect
-        const pulse = Math.sin(Date.now() / 100) * 2;
+        // Enhanced pulsing effect
+        const pulse = Math.sin(Date.now() / 100) * 2.5;
         const size = powerUp.width + pulse;
+        const outerPulse = Math.sin(Date.now() / 150) * 1.5;
         
+        // Outer glow ring
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 15;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.arc(cx, cy, size / 2 + 6 + outerPulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
+        // Middle glow ring
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, size / 2 + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        
+        // Main body with gradient-like layers
+        ctx.shadowBlur = 12;
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2, size / 2, 0, Math.PI * 2);
+        ctx.arc(cx, cy, size / 2, 0, Math.PI * 2);
         ctx.fill();
         
-        // Inner glow
+        // Inner ring (slightly lighter)
+        ctx.fillStyle = `${color}cc`;
+        ctx.beginPath();
+        ctx.arc(cx, cy, size / 2 - 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bright inner core
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "#ffffff";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(cx, cy, size / 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Sparkle highlight
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
-        ctx.arc(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2, size / 4, 0, Math.PI * 2);
+        ctx.arc(cx - 3, cy - 3, size / 8, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Type-specific icon indicator
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#000";
+        ctx.font = "6px 'Press Start 2P'";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const icons: Record<string, string> = { speed: "S", shield: "D", rapid: "R", life: "+" };
+        ctx.fillText(icons[powerUp.type] || "?", cx, cy + 1);
         
         ctx.shadowBlur = 0;
       });

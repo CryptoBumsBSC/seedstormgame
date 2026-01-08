@@ -73,4 +73,12 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
+- 2026-01-08: Enhanced all game assets with 50% more detail
+  - Player ship now features iconic 5-point cannabis leaf with veins, serrations, and defined fingers
+  - Enemy buds have 50% more layers, pistils, trichomes, and calyx bumps
+  - Hazards (bong, joint, matches) enhanced with glass effects, reflections, and textures
+  - Cannabis seed projectiles have more tiger stripe detail and realistic mottling
+  - Power-ups now have pulsing glow rings and type indicator letters (S/D/R/+)
+- 2026-01-08: Added permanent all-time leaderboard (top 3 scores that never reset)
+- 2026-01-08: Added branding text on canvas borders (dudleybud.com, x.com/dudley420, @dudley420, TELEGRAM)
 - 2026-01-08: Initial MVP complete with all core game mechanics
