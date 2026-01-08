@@ -13,13 +13,36 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Scores - only from verified sessions
+  // Scores - GET all scores
   app.get("/api/scores", async (req, res) => {
     try {
       const scores = await storage.getScores();
       res.json(scores);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch scores" });
+    }
+  });
+
+  // Scores - POST new score (free to play mode)
+  app.post("/api/scores", async (req, res) => {
+    try {
+      const { playerName, score, wave, playTime } = req.body;
+      
+      if (!playerName || typeof score !== "number" || typeof wave !== "number") {
+        return res.status(400).json({ error: "Invalid score data" });
+      }
+      
+      const newScore = await storage.createScore({
+        playerName: playerName.slice(0, 10).toUpperCase(),
+        score,
+        wave,
+        playTime: playTime || 0,
+      });
+      
+      res.status(201).json(newScore);
+    } catch (error) {
+      console.error("Score submission error:", error);
+      res.status(500).json({ error: "Failed to save score" });
     }
   });
 
