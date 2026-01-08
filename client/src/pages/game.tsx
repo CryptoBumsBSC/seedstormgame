@@ -27,6 +27,7 @@ const DIFFICULTY_INTERVAL = 15000;
 const HAZARD_SIZE = 24;
 
 type HazardType = "bong" | "joint" | "matches";
+type PowerUpType = "speed" | "shield" | "rapid" | "life";
 
 interface Hazard {
   id: string;
@@ -38,15 +39,120 @@ interface Hazard {
   type: HazardType;
 }
 
+interface PowerUp {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  type: PowerUpType;
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
+
 const strainColors: Record<StrainType, { fill: string; glow: string }> = {
   indica: { fill: "#9333ea", glow: "#c084fc" },
   sativa: { fill: "#22c55e", glow: "#86efac" },
   hybrid: { fill: "#f97316", glow: "#fdba74" },
 };
 
+const powerUpColors: Record<PowerUpType, string> = {
+  speed: "#00ffff",
+  shield: "#ffff00",
+  rapid: "#ff00ff",
+  life: "#ff0000",
+};
+
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11);
 }
+
+// Sound system using Web Audio API
+class SoundSystem {
+  private audioContext: AudioContext | null = null;
+  private enabled = true;
+
+  init() {
+    if (!this.audioContext) {
+      this.audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    }
+  }
+
+  toggle() {
+    this.enabled = !this.enabled;
+    return this.enabled;
+  }
+
+  isEnabled() {
+    return this.enabled;
+  }
+
+  private playTone(frequency: number, duration: number, type: OscillatorType = "square", volume = 0.1) {
+    if (!this.enabled || !this.audioContext) return;
+    
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+    
+    oscillator.frequency.value = frequency;
+    oscillator.type = type;
+    gainNode.gain.value = volume;
+    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+    
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + duration);
+  }
+
+  shoot() {
+    this.playTone(800, 0.05, "square", 0.08);
+  }
+
+  hit() {
+    this.playTone(200, 0.1, "sawtooth", 0.1);
+  }
+
+  explosion() {
+    this.playTone(100, 0.2, "sawtooth", 0.15);
+    setTimeout(() => this.playTone(80, 0.15, "sawtooth", 0.1), 50);
+  }
+
+  powerUp() {
+    this.playTone(523, 0.1, "sine", 0.1);
+    setTimeout(() => this.playTone(659, 0.1, "sine", 0.1), 100);
+    setTimeout(() => this.playTone(784, 0.15, "sine", 0.1), 200);
+  }
+
+  damage() {
+    this.playTone(150, 0.2, "square", 0.15);
+  }
+
+  gameOver() {
+    this.playTone(200, 0.3, "square", 0.1);
+    setTimeout(() => this.playTone(150, 0.3, "square", 0.1), 300);
+    setTimeout(() => this.playTone(100, 0.5, "square", 0.1), 600);
+  }
+
+  newHighScore() {
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      setTimeout(() => this.playTone(freq, 0.2, "sine", 0.12), i * 150);
+    });
+  }
+}
+
+const soundSystem = new SoundSystem();
 
 export default function Game() {
   const [screen, setScreen] = useState<Screen>("title");
@@ -61,6 +167,8 @@ export default function Game() {
   });
   const [playerName, setPlayerName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   
   const { toast } = useToast();
 
@@ -91,6 +199,11 @@ export default function Game() {
   const gameTimeRef = useRef<number>(0);
   const weaponLevelRef = useRef<number>(0);
   const hazardsRef = useRef<Hazard[]>([]);
+  const powerUpsRef = useRef<PowerUp[]>([]);
+  const particlesRef = useRef<Particle[]>([]);
+  const rapidFireEndRef = useRef<number>(0);
+  const speedBoostEndRef = useRef<number>(0);
+  const shieldEndRef = useRef<number>(0);
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -141,6 +254,7 @@ export default function Game() {
 
   const shoot = useCallback((isPlayer: boolean, x: number, y: number) => {
     if (isPlayer) {
+      soundSystem.shoot();
       const weaponLevel = weaponLevelRef.current;
       const player = playerRef.current;
       
@@ -247,7 +361,55 @@ export default function Game() {
     hazardsRef.current.push(hazard);
   }, []);
 
+  const createExplosion = useCallback((x: number, y: number, color: string) => {
+    const particleCount = 12;
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount;
+      const speed = 2 + Math.random() * 3;
+      particlesRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        maxLife: 1,
+        color,
+        size: 3 + Math.random() * 3,
+      });
+    }
+    soundSystem.explosion();
+  }, []);
+
+  const spawnPowerUp = useCallback((x: number, y: number) => {
+    if (Math.random() > 0.2) return; // 20% chance to drop power-up
+    
+    const types: PowerUpType[] = ["speed", "shield", "rapid", "life"];
+    const weights = [0.3, 0.3, 0.3, 0.1]; // life is rarer
+    const rand = Math.random();
+    let cumulative = 0;
+    let selectedType: PowerUpType = "speed";
+    
+    for (let i = 0; i < types.length; i++) {
+      cumulative += weights[i];
+      if (rand < cumulative) {
+        selectedType = types[i];
+        break;
+      }
+    }
+    
+    powerUpsRef.current.push({
+      id: generateId(),
+      x,
+      y,
+      width: 16,
+      height: 16,
+      speed: 1.5,
+      type: selectedType,
+    });
+  }, []);
+
   const resetGame = useCallback(() => {
+    soundSystem.init();
     playerRef.current = {
       x: CANVAS_WIDTH / 2 - PLAYER_SIZE / 2,
       y: CANVAS_HEIGHT - PLAYER_SIZE - 80,
@@ -258,6 +420,8 @@ export default function Game() {
     enemiesRef.current = [];
     projectilesRef.current = [];
     hazardsRef.current = [];
+    powerUpsRef.current = [];
+    particlesRef.current = [];
     difficultyRef.current = 1;
     gameTimeRef.current = 0;
     shootCooldownRef.current = 0;
@@ -265,6 +429,10 @@ export default function Game() {
     hazardCooldownRef.current = 0;
     weaponLevelRef.current = 0;
     invincibilityRef.current = 0;
+    rapidFireEndRef.current = 0;
+    speedBoostEndRef.current = 0;
+    shieldEndRef.current = 0;
+    setIsNewHighScore(false);
     
     setGameState({
       score: 0,
@@ -278,13 +446,21 @@ export default function Game() {
   }, []);
 
   const endGame = useCallback(() => {
-    setGameState(prev => ({
-      ...prev,
-      isPlaying: false,
-      isGameOver: true,
-    }));
+    soundSystem.gameOver();
+    const currentHighScore = scores.length > 0 ? Math.max(...scores.map(s => s.score)) : 0;
+    setGameState(prev => {
+      if (prev.score > currentHighScore) {
+        setIsNewHighScore(true);
+        setTimeout(() => soundSystem.newHighScore(), 500);
+      }
+      return {
+        ...prev,
+        isPlaying: false,
+        isGameOver: true,
+      };
+    });
     setScreen("gameover");
-  }, []);
+  }, [scores]);
 
   const togglePause = useCallback(() => {
     setGameState(prev => ({
@@ -334,7 +510,9 @@ export default function Game() {
     invincibilityRef.current = Math.max(0, invincibilityRef.current - deltaTime);
     
     // Faster shooting with machine gun (level 3)
-    const shootDelay = weaponLevelRef.current >= 3 ? 120 : 200;
+    const rapidFireActive = rapidFireEndRef.current > gameTimeRef.current;
+    const baseDelay = weaponLevelRef.current >= 3 ? 120 : 200;
+    const shootDelay = rapidFireActive ? baseDelay * 0.5 : baseDelay; // Rapid fire halves the delay
     if ((keysRef.current.has(" ") || keysRef.current.has("ArrowUp") || touchRef.current.fire) && 
         shootCooldownRef.current <= 0) {
       shoot(true, player.x + player.width / 2, player.y);
@@ -364,12 +542,13 @@ export default function Game() {
       return hazard.y < CANVAS_HEIGHT + hazard.height;
     });
 
-    // Check hazard collisions with player (only if not invincible)
+    // Check hazard collisions with player (only if not invincible and no shield)
     // Use a separate loop to ensure we only take one hit per frame
     let tookDamageThisFrame = invincibilityRef.current > 0;
     hazardsRef.current = hazardsRef.current.filter(hazard => {
-      if (!tookDamageThisFrame && checkCollision(hazard, player)) {
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(hazard, player)) {
         tookDamageThisFrame = true;
+        soundSystem.damage();
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -404,7 +583,11 @@ export default function Game() {
           const enemy = enemiesRef.current[i];
           if (checkCollision(proj, enemy)) {
             enemy.health--;
+            soundSystem.hit();
             if (enemy.health <= 0) {
+              const enemyColor = strainColors[enemy.strain].fill;
+              createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemyColor);
+              spawnPowerUp(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
               setGameState(prev => ({ 
                 ...prev, 
                 score: prev.score + enemy.points 
@@ -415,8 +598,9 @@ export default function Game() {
           }
         }
       } else {
-        if (!tookDamageThisFrame && checkCollision(proj, player)) {
+        if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(proj, player)) {
           tookDamageThisFrame = true;
+          soundSystem.damage();
           invincibilityRef.current = 1500; // 1.5 seconds of invincibility
           setGameState(prev => {
             const newLives = prev.lives - 1;
@@ -432,8 +616,9 @@ export default function Game() {
     });
 
     enemiesRef.current = enemiesRef.current.filter(enemy => {
-      if (!tookDamageThisFrame && checkCollision(enemy, player)) {
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(enemy, player)) {
         tookDamageThisFrame = true;
+        soundSystem.damage();
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -447,11 +632,53 @@ export default function Game() {
       return enemy.y < CANVAS_HEIGHT + enemy.height;
     });
 
+    // Update particles
+    particlesRef.current = particlesRef.current.filter(particle => {
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.life -= 0.02;
+      particle.vy += 0.1; // gravity
+      return particle.life > 0;
+    });
+
+    // Update power-ups
+    powerUpsRef.current = powerUpsRef.current.filter(powerUp => {
+      powerUp.y += powerUp.speed;
+      
+      if (checkCollision(powerUp, player)) {
+        soundSystem.powerUp();
+        switch (powerUp.type) {
+          case "speed":
+            speedBoostEndRef.current = gameTimeRef.current + 5000;
+            playerRef.current.speed = 8;
+            break;
+          case "shield":
+            shieldEndRef.current = gameTimeRef.current + 5000;
+            break;
+          case "rapid":
+            rapidFireEndRef.current = gameTimeRef.current + 5000;
+            break;
+          case "life":
+            setGameState(prev => ({ ...prev, lives: Math.min(prev.lives + 1, 5) }));
+            break;
+        }
+        return false;
+      }
+      
+      return powerUp.y < CANVAS_HEIGHT + powerUp.height;
+    });
+
+    // Reset power-up effects when expired
+    if (speedBoostEndRef.current > 0 && speedBoostEndRef.current <= gameTimeRef.current) {
+      playerRef.current.speed = 5;
+      speedBoostEndRef.current = 0;
+    }
+
     setGameState(prev => ({
       ...prev,
       gameTime: Math.floor(gameTimeRef.current / 1000),
     }));
-  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, endGame]);
+  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, endGame, createExplosion, spawnPowerUp]);
 
   const drawPixelRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color;
@@ -722,10 +949,61 @@ export default function Game() {
     });
 
     if (gameState.isPlaying && !gameState.isGameOver) {
+      // Draw particles (explosions)
+      particlesRef.current.forEach(particle => {
+        const alpha = particle.life / particle.maxLife;
+        ctx.fillStyle = particle.color;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      
+      // Draw power-ups
+      powerUpsRef.current.forEach(powerUp => {
+        const color = powerUpColors[powerUp.type];
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 8;
+        
+        // Pulsing effect
+        const pulse = Math.sin(Date.now() / 100) * 2;
+        const size = powerUp.width + pulse;
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner glow
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(powerUp.x + powerUp.width / 2, powerUp.y + powerUp.height / 2, size / 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
+      });
+      
       // Flash player when invincible (show every other 100ms)
       const shouldDrawPlayer = invincibilityRef.current <= 0 || 
         Math.floor(invincibilityRef.current / 100) % 2 === 0;
       if (shouldDrawPlayer) {
+        // Draw shield effect if active
+        if (shieldEndRef.current > gameTimeRef.current) {
+          ctx.strokeStyle = "#ffff00";
+          ctx.lineWidth = 2;
+          ctx.shadowColor = "#ffff00";
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.arc(
+            playerRef.current.x + playerRef.current.width / 2,
+            playerRef.current.y + playerRef.current.height / 2,
+            playerRef.current.width / 2 + 8,
+            0, Math.PI * 2
+          );
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
         drawPlayer(ctx, playerRef.current);
       }
       
@@ -1030,6 +1308,19 @@ export default function Game() {
   if (screen === "gameover") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        {isNewHighScore && (
+          <div 
+            className="text-xl mb-4 animate-bounce"
+            style={{ 
+              color: "#ffff00",
+              textShadow: "0 0 10px #ffff00, 0 0 20px #ff00ff, 0 0 30px #00ffff"
+            }}
+            data-testid="text-new-high-score"
+          >
+            NEW HIGH SCORE!
+          </div>
+        )}
+        
         <h1 
           className="text-2xl mb-8 animate-pulse"
           style={{ 
@@ -1041,7 +1332,7 @@ export default function Game() {
           GAME OVER
         </h1>
 
-        <Card className="p-6 mb-8 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
+        <Card className="p-6 mb-8 border-2 bg-card/80" style={{ borderColor: isNewHighScore ? "#ffff00" : "#ff00ff" }}>
           <div className="text-center space-y-4">
             <div>
               <p className="text-[10px]" style={{ color: "#00ffff" }}>FINAL SCORE</p>
