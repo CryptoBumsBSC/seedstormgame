@@ -26,6 +26,19 @@ const PLAYER_SIZE = 32;
 const ENEMY_SIZE = 28;
 const PROJECTILE_SIZE = 6;
 const DIFFICULTY_INTERVAL = 15000;
+const HAZARD_SIZE = 24;
+
+type HazardType = "bong" | "joint" | "matches";
+
+interface Hazard {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  type: HazardType;
+}
 
 const strainColors: Record<StrainType, { fill: string; glow: string }> = {
   indica: { fill: "#9333ea", glow: "#c084fc" },
@@ -100,8 +113,11 @@ export default function Game() {
   });
   const shootCooldownRef = useRef<number>(0);
   const spawnCooldownRef = useRef<number>(0);
+  const hazardCooldownRef = useRef<number>(0);
   const difficultyRef = useRef<number>(1);
   const gameTimeRef = useRef<number>(0);
+  const weaponLevelRef = useRef<number>(0);
+  const hazardsRef = useRef<Hazard[]>([]);
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -151,16 +167,84 @@ export default function Game() {
   }, []);
 
   const shoot = useCallback((isPlayer: boolean, x: number, y: number) => {
-    const projectile: Projectile = {
-      id: generateId(),
-      x: x - PROJECTILE_SIZE / 2,
-      y: isPlayer ? y - PROJECTILE_SIZE : y + ENEMY_SIZE,
-      width: PROJECTILE_SIZE,
-      height: PROJECTILE_SIZE * 2,
-      speed: isPlayer ? -10 : 4 + difficultyRef.current * 0.5,
-      isPlayerBullet: isPlayer,
-    };
-    projectilesRef.current.push(projectile);
+    if (isPlayer) {
+      const weaponLevel = weaponLevelRef.current;
+      const player = playerRef.current;
+      
+      // Center gun (always active)
+      const centerX = player.x + player.width / 2;
+      
+      if (weaponLevel >= 3) {
+        // Double barrel machine gun - 2 projectiles from center
+        projectilesRef.current.push({
+          id: generateId(),
+          x: centerX - 4 - PROJECTILE_SIZE / 2,
+          y: player.y - PROJECTILE_SIZE,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -12,
+          isPlayerBullet: true,
+        });
+        projectilesRef.current.push({
+          id: generateId(),
+          x: centerX + 4 - PROJECTILE_SIZE / 2,
+          y: player.y - PROJECTILE_SIZE,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -12,
+          isPlayerBullet: true,
+        });
+      } else {
+        // Single center shot
+        projectilesRef.current.push({
+          id: generateId(),
+          x: centerX - PROJECTILE_SIZE / 2,
+          y: player.y - PROJECTILE_SIZE,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -10,
+          isPlayerBullet: true,
+        });
+      }
+      
+      // Left gun (weapon level 1+)
+      if (weaponLevel >= 1) {
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x - 6,
+          y: player.y + 8,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -10,
+          isPlayerBullet: true,
+        });
+      }
+      
+      // Right gun (weapon level 2+)
+      if (weaponLevel >= 2) {
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x + player.width,
+          y: player.y + 8,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -10,
+          isPlayerBullet: true,
+        });
+      }
+    } else {
+      // Enemy projectile
+      const projectile: Projectile = {
+        id: generateId(),
+        x: x - PROJECTILE_SIZE / 2,
+        y: y + ENEMY_SIZE,
+        width: PROJECTILE_SIZE,
+        height: PROJECTILE_SIZE * 2,
+        speed: 4 + difficultyRef.current * 0.5,
+        isPlayerBullet: false,
+      };
+      projectilesRef.current.push(projectile);
+    }
   }, []);
 
   const checkCollision = (a: { x: number; y: number; width: number; height: number }, 
@@ -173,6 +257,23 @@ export default function Game() {
     );
   };
 
+  const spawnHazard = useCallback(() => {
+    const hazardTypes: HazardType[] = ["bong", "joint", "matches"];
+    const type = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
+    
+    const hazard: Hazard = {
+      id: generateId(),
+      x: Math.random() * (CANVAS_WIDTH - HAZARD_SIZE),
+      y: -HAZARD_SIZE,
+      width: HAZARD_SIZE,
+      height: HAZARD_SIZE,
+      speed: 2 + Math.random() * 2,
+      type,
+    };
+    
+    hazardsRef.current.push(hazard);
+  }, []);
+
   const resetGame = useCallback(() => {
     playerRef.current = {
       x: CANVAS_WIDTH / 2 - PLAYER_SIZE / 2,
@@ -183,10 +284,13 @@ export default function Game() {
     };
     enemiesRef.current = [];
     projectilesRef.current = [];
+    hazardsRef.current = [];
     difficultyRef.current = 1;
     gameTimeRef.current = 0;
     shootCooldownRef.current = 0;
     spawnCooldownRef.current = 0;
+    hazardCooldownRef.current = 0;
+    weaponLevelRef.current = 0;
     
     setGameState({
       score: 0,
@@ -240,6 +344,17 @@ export default function Game() {
     if (gameState.isPaused || !gameState.isPlaying) return;
 
     gameTimeRef.current += deltaTime;
+    const gameTimeSec = gameTimeRef.current / 1000;
+    
+    // Weapon upgrades based on time
+    if (gameTimeSec >= 240 && weaponLevelRef.current < 3) {
+      weaponLevelRef.current = 3; // Double barrel machine gun
+    } else if (gameTimeSec >= 90 && weaponLevelRef.current < 2) {
+      weaponLevelRef.current = 2; // Right gun
+    } else if (gameTimeSec >= 60 && weaponLevelRef.current < 1) {
+      weaponLevelRef.current = 1; // Left gun
+    }
+    
     const newDifficulty = Math.floor(gameTimeRef.current / DIFFICULTY_INTERVAL) + 1;
     if (newDifficulty !== difficultyRef.current) {
       difficultyRef.current = newDifficulty;
@@ -263,10 +378,12 @@ export default function Game() {
     }
 
     shootCooldownRef.current -= deltaTime;
+    // Faster shooting with machine gun (level 3)
+    const shootDelay = weaponLevelRef.current >= 3 ? 120 : 200;
     if ((keysRef.current.has(" ") || keysRef.current.has("ArrowUp") || touchRef.current.fire) && 
         shootCooldownRef.current <= 0) {
       shoot(true, player.x + player.width / 2, player.y);
-      shootCooldownRef.current = 200;
+      shootCooldownRef.current = shootDelay;
     }
 
     spawnCooldownRef.current -= deltaTime;
@@ -275,6 +392,37 @@ export default function Game() {
       spawnEnemy();
       spawnCooldownRef.current = spawnRate;
     }
+
+    // Hazard spawning - starts after 20 seconds, rate increases with time
+    hazardCooldownRef.current -= deltaTime;
+    if (gameTimeSec >= 20) {
+      const hazardRate = Math.max(1500, 5000 - gameTimeSec * 15);
+      if (hazardCooldownRef.current <= 0) {
+        spawnHazard();
+        hazardCooldownRef.current = hazardRate;
+      }
+    }
+
+    // Update hazards
+    hazardsRef.current = hazardsRef.current.filter(hazard => {
+      hazard.y += hazard.speed;
+      return hazard.y < CANVAS_HEIGHT + hazard.height;
+    });
+
+    // Check hazard collisions with player
+    hazardsRef.current = hazardsRef.current.filter(hazard => {
+      if (checkCollision(hazard, player)) {
+        setGameState(prev => {
+          const newLives = prev.lives - 1;
+          if (newLives <= 0) {
+            endGame();
+          }
+          return { ...prev, lives: newLives };
+        });
+        return false;
+      }
+      return true;
+    });
 
     enemiesRef.current.forEach(enemy => {
       enemy.y += enemy.speed;
@@ -340,7 +488,7 @@ export default function Game() {
       ...prev,
       gameTime: Math.floor(gameTimeRef.current / 1000),
     }));
-  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, endGame]);
+  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, endGame]);
 
   const drawPixelRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color;
@@ -399,6 +547,35 @@ export default function Game() {
     // Lens shine
     drawPixelRect(ctx, x + width * 0.2, y + height * 0.36, 2, 2, "#4444ff");
     drawPixelRect(ctx, x + width * 0.57, y + height * 0.36, 2, 2, "#4444ff");
+    
+    // Draw side guns based on weapon level
+    const weaponLevel = weaponLevelRef.current;
+    
+    // Left gun (weapon level 1+)
+    if (weaponLevel >= 1) {
+      ctx.shadowColor = "#00ffff";
+      ctx.shadowBlur = 6;
+      drawPixelRect(ctx, x - 10, y + 6, 6, 12, "#444");
+      drawPixelRect(ctx, x - 9, y + 4, 4, 4, "#666");
+      drawPixelRect(ctx, x - 8, y + 8, 2, 8, "#00ffff");
+    }
+    
+    // Right gun (weapon level 2+)
+    if (weaponLevel >= 2) {
+      ctx.shadowColor = "#00ffff";
+      ctx.shadowBlur = 6;
+      drawPixelRect(ctx, x + width + 4, y + 6, 6, 12, "#444");
+      drawPixelRect(ctx, x + width + 5, y + 4, 4, 4, "#666");
+      drawPixelRect(ctx, x + width + 6, y + 8, 2, 8, "#00ffff");
+    }
+    
+    // Double barrel indicator (weapon level 3)
+    if (weaponLevel >= 3) {
+      ctx.shadowColor = "#ff0000";
+      ctx.shadowBlur = 8;
+      drawPixelRect(ctx, x + width * 0.35, y - 10, 4, 6, "#ff4444");
+      drawPixelRect(ctx, x + width * 0.55, y - 10, 4, 6, "#ff4444");
+    }
     
     ctx.shadowBlur = 0;
   };
@@ -480,6 +657,65 @@ export default function Game() {
     ctx.shadowBlur = 0;
   };
 
+  const drawHazard = (ctx: CanvasRenderingContext2D, hazard: Hazard) => {
+    const { x, y, width, height, type } = hazard;
+    
+    ctx.shadowBlur = 10;
+    
+    if (type === "bong") {
+      // Bong - tall glass water pipe
+      ctx.shadowColor = "#00ffff";
+      // Base
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.8, width * 0.6, height * 0.2, "#4488ff");
+      // Water chamber
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.5, width * 0.5, height * 0.35, "#66aaff");
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.55, width * 0.4, height * 0.25, "#99ccff");
+      // Neck
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.1, width * 0.3, height * 0.45, "#88bbff");
+      // Bowl
+      drawPixelRect(ctx, x + width * 0.6, y + height * 0.35, width * 0.25, height * 0.15, "#996633");
+      drawPixelRect(ctx, x + width * 0.65, y + height * 0.3, width * 0.15, height * 0.08, "#22c55e");
+      // Water line
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.65, width * 0.44, height * 0.08, "#0088ff");
+    } else if (type === "joint") {
+      // Lit joint - white paper with orange ember tip
+      ctx.shadowColor = "#ff6600";
+      // Paper body (angled)
+      drawPixelRect(ctx, x + width * 0.15, y + height * 0.4, width * 0.7, height * 0.2, "#f5f5dc");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.35, width * 0.55, height * 0.3, "#fffaf0");
+      // Filter/tip
+      drawPixelRect(ctx, x + width * 0.1, y + height * 0.42, width * 0.12, height * 0.16, "#d2691e");
+      // Lit end with ember glow
+      ctx.shadowColor = "#ff4400";
+      ctx.shadowBlur = 15;
+      drawPixelRect(ctx, x + width * 0.75, y + height * 0.38, width * 0.15, height * 0.24, "#ff4400");
+      drawPixelRect(ctx, x + width * 0.78, y + height * 0.4, width * 0.1, height * 0.2, "#ffaa00");
+      // Smoke wisps
+      ctx.shadowColor = "#888888";
+      ctx.shadowBlur = 5;
+      drawPixelRect(ctx, x + width * 0.82, y + height * 0.15, 2, 8, "#aaaaaa");
+      drawPixelRect(ctx, x + width * 0.78, y + height * 0.1, 2, 6, "#888888");
+    } else if (type === "matches") {
+      // Box of matches
+      ctx.shadowColor = "#ff0000";
+      // Box body
+      drawPixelRect(ctx, x + width * 0.15, y + height * 0.3, width * 0.7, height * 0.5, "#8b0000");
+      drawPixelRect(ctx, x + width * 0.18, y + height * 0.33, width * 0.64, height * 0.44, "#b22222");
+      // Strike strip
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.7, width * 0.6, height * 0.08, "#333");
+      // Match sticks poking out
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.15, 3, height * 0.2, "#deb887");
+      drawPixelRect(ctx, x + width * 0.4, y + height * 0.12, 3, height * 0.22, "#deb887");
+      drawPixelRect(ctx, x + width * 0.55, y + height * 0.18, 3, height * 0.18, "#deb887");
+      // Match heads (red tips)
+      drawPixelRect(ctx, x + width * 0.24, y + height * 0.1, 5, 5, "#ff0000");
+      drawPixelRect(ctx, x + width * 0.39, y + height * 0.07, 5, 5, "#ff0000");
+      drawPixelRect(ctx, x + width * 0.54, y + height * 0.13, 5, 5, "#ff0000");
+    }
+    
+    ctx.shadowBlur = 0;
+  };
+
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
     if (proj.isPlayerBullet) {
       // Cannabis seed - brown oval with stripe
@@ -526,6 +762,7 @@ export default function Game() {
       drawPlayer(ctx, playerRef.current);
       
       enemiesRef.current.forEach(enemy => drawEnemy(ctx, enemy));
+      hazardsRef.current.forEach(hazard => drawHazard(ctx, hazard));
       projectilesRef.current.forEach(proj => drawProjectile(ctx, proj));
     }
 
