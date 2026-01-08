@@ -202,6 +202,11 @@ export default function Game() {
     right: false,
     fire: false,
   });
+  const swipeTouchRef = useRef<{ startX: number; currentX: number; active: boolean }>({
+    startX: 0,
+    currentX: 0,
+    active: false,
+  });
   const shootCooldownRef = useRef<number>(0);
   const invincibilityRef = useRef<number>(0);
   const spawnCooldownRef = useRef<number>(0);
@@ -560,10 +565,15 @@ export default function Game() {
     });
 
     const player = playerRef.current;
-    if (keysRef.current.has("ArrowLeft") || keysRef.current.has("a") || touchRef.current.left) {
+    const swipe = swipeTouchRef.current;
+    const swipeThreshold = 10;
+    const swipeLeft = swipe.active && (swipe.currentX - swipe.startX) < -swipeThreshold;
+    const swipeRight = swipe.active && (swipe.currentX - swipe.startX) > swipeThreshold;
+    
+    if (keysRef.current.has("ArrowLeft") || keysRef.current.has("a") || touchRef.current.left || swipeLeft) {
       player.x = Math.max(0, player.x - player.speed);
     }
-    if (keysRef.current.has("ArrowRight") || keysRef.current.has("d") || touchRef.current.right) {
+    if (keysRef.current.has("ArrowRight") || keysRef.current.has("d") || touchRef.current.right || swipeRight) {
       player.x = Math.min(CANVAS_WIDTH - player.width, player.x + player.speed);
     }
 
@@ -1726,12 +1736,26 @@ export default function Game() {
             ref={canvasRef}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            className="border-2 rounded-sm w-full h-auto"
+            className="border-2 rounded-sm w-full h-auto touch-none"
             style={{ 
               borderColor: "#ff00ff",
               imageRendering: "pixelated",
               maxWidth: CANVAS_WIDTH,
               aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault();
+              const touch = e.touches[0];
+              swipeTouchRef.current = { startX: touch.clientX, currentX: touch.clientX, active: true };
+            }}
+            onTouchMove={(e) => {
+              e.preventDefault();
+              if (swipeTouchRef.current.active) {
+                swipeTouchRef.current.currentX = e.touches[0].clientX;
+              }
+            }}
+            onTouchEnd={() => {
+              swipeTouchRef.current.active = false;
             }}
             data-testid="canvas-game"
           />
