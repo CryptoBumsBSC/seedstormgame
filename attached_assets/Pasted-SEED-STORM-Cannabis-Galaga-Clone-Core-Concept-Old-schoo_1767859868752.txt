@@ -1,0 +1,115 @@
+SEED STORM - Cannabis Galaga Clone
+Core Concept: Old-school vertical space shooter where you play as "Dudley Bud" shooting cannabis seeds at incoming enemy buds of different strains.
+Game Mechanics
+Player:
+
+Cool cannabis bud character (your mascot)
+Fires cannabis seeds as bullets
+3 lives total
+Death = restart from beginning
+
+Difficulty Progression (Every 15 seconds):
+
+0:00-0:15 → 1 hit kills = 1 point
+0:15-0:30 → 2 hits kill = 2 points
+0:30-0:45 → 3 hits kill = 3 points
+0:45-1:00 → 4 hits kill = 4 points
+And so on... up to 10 minutes continuous play
+Speed increases, more enemies spawn, bullets get faster
+
+Enemies:
+
+Different strain buds (Indica, Sativa, Hybrid)
+Different colors and sizes
+Shoot seeds back at player
+Health increases every 15 seconds
+
+Scoring:
+
+Points = hits needed to kill
+High score tracking
+Daily + Weekly leaderboards
+
+Economic Model
+Entry Fee:
+
+Pay in EVM token (could be ETH, USDC, or custom Base token)
+All entry fees go into prize pool
+
+Weekly Payouts (Automated):
+
+1st Place: 30% of week's revenue
+2nd Place: 15% of week's revenue
+3rd Place: 5% of week's revenue
+50% total distribution = House keeps 50%
+
+Leaderboard Reset:
+
+Weekly reset at specific time (e.g., Sunday 12:00 UTC)
+Automatic smart contract payout to top 3 wallets
+
+Technical Stack
+Platform: Telegram Mini App + Replit hosting
+Frontend:
+
+HTML5 Canvas for pixel art graphics
+Phaser.js game framework (lightweight, perfect for pixel art)
+Telegram WebApp API integration
+
+Backend (Replit):
+
+Node.js/Express server
+MongoDB for leaderboard storage
+Web3.js for blockchain integration
+
+Smart Contract (Base Blockchain):
+
+Entry fee collection
+Automated weekly prize distribution
+Leaderboard verification
+
+Visual Style
+
+Low-res pixel art (8-bit or 16-bit style)
+Retro arcade aesthetic
+Bright cannabis-themed colors
+Simple particle effects for explosions
+Scrolling star background
+
+Development Priority
+Phase 1 - Core Game (Week 1-2):
+
+Basic shooting mechanics
+Enemy spawning system
+Difficulty scaling (15-sec intervals)
+Score system
+3-life system
+
+Phase 2 - Backend (Week 2-3):
+
+Telegram bot integration
+Database setup for scores
+Daily/weekly leaderboards
+User wallet connection
+
+Phase 3 - Blockchain (Week 3-4):
+
+Smart contract for payments
+Entry fee system
+Automated payout logic
+Testing on Base testnet
+
+Phase 4 - Polish (Week 4):
+
+Pixel art assets
+Sound effects
+Animations
+Bug fixes
+
+
+This is perfect for Dudley Bud brand - combines retro gaming nostalgia with crypto mechanics and your cannabis theme. Want me to start building the actual game code right now?
+I can create:
+
+The game engine first (playable demo)
+Smart contract for payments
+Telegram integration
