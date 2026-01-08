@@ -50,7 +50,7 @@ export default function Game() {
   });
   const [playerName, setPlayerName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
-  const [hasPaidEntry, setHasPaidEntry] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [referrerAddress, setReferrerAddress] = useState<string | null>(null);
   const [copiedReferral, setCopiedReferral] = useState(false);
   
@@ -74,6 +74,10 @@ export default function Game() {
       setTimeout(() => setCopiedReferral(false), 2000);
     }
   };
+
+  const handlePaymentSuccess = useCallback((newSessionId: string) => {
+    setSessionId(newSessionId);
+  }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameLoopRef = useRef<number>();
@@ -195,17 +199,26 @@ export default function Game() {
     });
   }, []);
 
-  const startGame = useCallback(() => {
-    if (!hasPaidEntry) return;
-    initStars();
-    resetGame();
-    setScreen("game");
-    setHasPaidEntry(false);
-  }, [initStars, resetGame, hasPaidEntry]);
-
-  const handlePaymentSuccess = useCallback(() => {
-    setHasPaidEntry(true);
-  }, []);
+  const startGame = useCallback(async () => {
+    if (!sessionId) return;
+    
+    try {
+      const response = await apiRequest("POST", `/api/sessions/${sessionId}/start`, {});
+      const data = await response.json();
+      
+      if (data.success) {
+        initStars();
+        resetGame();
+        setScreen("game");
+      } else {
+        toast({ title: "Failed to start game", variant: "destructive" });
+        setSessionId(null);
+      }
+    } catch {
+      toast({ title: "Session error", variant: "destructive" });
+      setSessionId(null);
+    }
+  }, [initStars, resetGame, sessionId, toast]);
 
   const endGame = useCallback(() => {
     setGameState(prev => ({
@@ -635,7 +648,7 @@ export default function Game() {
             referrerAddress={referrerAddress}
           />
           
-          {hasPaidEntry && (
+          {sessionId && (
             <Button
               onClick={startGame}
               className="w-full py-6 text-sm animate-pulse"

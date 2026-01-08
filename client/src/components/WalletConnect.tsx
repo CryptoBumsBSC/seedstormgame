@@ -2,7 +2,7 @@ import { useConnect, useAccount, useDisconnect, useBalance, useSwitchChain, useW
 import { base } from "wagmi/chains";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Wallet, LogOut, Loader2, Check, AlertCircle } from "lucide-react";
+import { Wallet, LogOut, Loader2, Check, AlertCircle, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { parseUnits } from "viem";
 import { USDC_ADDRESS_BASE, ERC20_ABI, ENTRY_FEE_USDC, USDC_DECIMALS } from "@/lib/web3Config";
@@ -11,7 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 const TREASURY_ADDRESS = "0x1234567890123456789012345678901234567890" as const;
 
 interface WalletConnectProps {
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (sessionId: string) => void;
   referrerAddress?: string | null;
 }
 
@@ -20,7 +20,7 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
   const { address, isConnected, chain } = useAccount();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
-  const [paymentState, setPaymentState] = useState<"idle" | "approving" | "paying" | "confirming" | "success" | "error">("idle");
+  const [paymentState, setPaymentState] = useState<"idle" | "paying" | "verifying" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   const { data: usdcBalance } = useBalance({
@@ -29,7 +29,7 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
     chainId: base.id,
   });
 
-  const { writeContract, data: txHash, error: writeError, isPending: isWritePending } = useWriteContract();
+  const { writeContract, data: txHash, error: writeError, isPending: isWritePending, reset: resetWrite } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
@@ -37,7 +37,7 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
 
   useEffect(() => {
     if (isConfirmed && txHash) {
-      recordPayment(txHash);
+      verifyAndCreateSession(txHash);
     }
   }, [isConfirmed, txHash]);
 
@@ -48,19 +48,28 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
     }
   }, [writeError]);
 
-  const recordPayment = async (hash: string) => {
+  const verifyAndCreateSession = async (hash: string) => {
+    setPaymentState("verifying");
     try {
-      await apiRequest("POST", "/api/payments/entry", {
+      const response = await apiRequest("POST", "/api/sessions/create", {
         walletAddress: address,
         txHash: hash,
       });
-      setPaymentState("success");
-      setTimeout(() => {
-        onPaymentSuccess();
-      }, 1500);
-    } catch {
+      
+      const data = await response.json();
+      
+      if (data.verified && data.sessionId) {
+        setPaymentState("success");
+        setTimeout(() => {
+          onPaymentSuccess(data.sessionId);
+        }, 1500);
+      } else {
+        setPaymentState("error");
+        setErrorMessage(data.error || "Payment verification failed");
+      }
+    } catch (err) {
       setPaymentState("error");
-      setErrorMessage("Failed to record payment");
+      setErrorMessage("Failed to verify payment on blockchain");
     }
   };
 
@@ -97,12 +106,16 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
         functionName: "transfer",
         args: [TREASURY_ADDRESS, amount],
       });
-      
-      setPaymentState("confirming");
     } catch {
       setPaymentState("error");
       setErrorMessage("Payment failed. Please try again.");
     }
+  };
+
+  const resetPayment = () => {
+    setPaymentState("idle");
+    setErrorMessage("");
+    resetWrite();
   };
 
   const isWrongNetwork = isConnected && chain?.id !== base.id;
@@ -111,11 +124,14 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
     return (
       <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
         <div className="flex flex-col gap-3">
-          <p className="text-[10px] text-center" style={{ color: "#00ffff" }}>
-            CONNECT WALLET TO PLAY
-          </p>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Shield className="w-4 h-4" style={{ color: "#00ff00" }} />
+            <p className="text-[10px]" style={{ color: "#00ffff" }}>
+              SECURE BLOCKCHAIN PAYMENTS
+            </p>
+          </div>
           <p className="text-[8px] text-center" style={{ color: "#ff00ff" }}>
-            $1 USDC ENTRY FEE
+            $1 USDC ON BASE NETWORK
           </p>
           {connectors.map((connector) => (
             <Button
@@ -206,9 +222,22 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
           </div>
 
           {paymentState === "success" ? (
-            <div className="flex items-center justify-center gap-2 py-3" style={{ color: "#00ff00" }}>
-              <Check className="w-5 h-5" />
-              <span className="text-xs">PAYMENT CONFIRMED!</span>
+            <div className="flex flex-col items-center gap-2 py-3">
+              <div className="flex items-center gap-2" style={{ color: "#00ff00" }}>
+                <Check className="w-5 h-5" />
+                <span className="text-xs">VERIFIED ON BLOCKCHAIN!</span>
+              </div>
+              <p className="text-[8px]" style={{ color: "#888" }}>Starting game...</p>
+            </div>
+          ) : paymentState === "verifying" ? (
+            <div className="flex flex-col items-center gap-2 py-3">
+              <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#00ffff" }} />
+              <span className="text-[10px]" style={{ color: "#00ffff" }}>
+                VERIFYING ON BASE BLOCKCHAIN...
+              </span>
+              <p className="text-[8px]" style={{ color: "#888" }}>
+                Checking {3} confirmations
+              </p>
             </div>
           ) : paymentState === "error" ? (
             <div className="flex flex-col gap-2">
@@ -217,10 +246,7 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
                 <span className="text-[10px]">{errorMessage}</span>
               </div>
               <Button
-                onClick={() => {
-                  setPaymentState("idle");
-                  setErrorMessage("");
-                }}
+                onClick={resetPayment}
                 className="w-full"
                 variant="outline"
                 style={{ borderColor: "#00ffff", color: "#00ffff" }}
@@ -248,16 +274,33 @@ export function WalletConnect({ onPaymentSuccess, referrerAddress }: WalletConne
               }}
               data-testid="button-pay-entry"
             >
-              {isWritePending || isConfirming ? (
+              {isWritePending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {isConfirming ? "CONFIRMING..." : "PAYING..."}
+                  CONFIRM IN WALLET...
+                </>
+              ) : isConfirming ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  WAITING FOR TX...
                 </>
               ) : (
-                "PAY $1 USDC TO PLAY"
+                <>
+                  <Shield className="w-4 h-4 mr-2" />
+                  PAY $1 USDC TO PLAY
+                </>
               )}
             </Button>
           )}
+        </div>
+
+        <div className="text-center pt-2 border-t border-border">
+          <p className="text-[7px]" style={{ color: "#666" }}>
+            PAYMENTS VERIFIED ON-CHAIN
+          </p>
+          <p className="text-[7px]" style={{ color: "#666" }}>
+            SCORES LINKED TO VERIFIED SESSIONS
+          </p>
         </div>
 
         {referrerAddress && (

@@ -1,5 +1,10 @@
 import { 
-  type Score, 
+  scores,
+  players,
+  referrals,
+  payments,
+  weeklyPools,
+  type Score,
   type InsertScore,
   type PlayerAccount,
   type InsertPlayer,
@@ -8,36 +13,32 @@ import {
   type Referral,
   type WeeklyPrizePool
 } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, desc, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
-  // Scores
   getScores(): Promise<Score[]>;
   createScore(score: InsertScore): Promise<Score>;
   getTopScores(limit?: number): Promise<Score[]>;
   
-  // Players
   getPlayer(walletAddress: string): Promise<PlayerAccount | undefined>;
   createPlayer(player: InsertPlayer): Promise<PlayerAccount>;
   updatePlayerStats(walletAddress: string, spent: number): Promise<void>;
   
-  // Referrals
   getReferral(referredAddress: string): Promise<Referral | undefined>;
   getReferralsByReferrer(referrerAddress: string): Promise<Referral[]>;
   createReferral(referrerAddress: string, referredAddress: string): Promise<Referral>;
   addReferralEarning(referrerAddress: string, amount: number): Promise<void>;
   
-  // Payments
   createPayment(payment: InsertPayment): Promise<Payment>;
   getPaymentsByWallet(walletAddress: string): Promise<Payment[]>;
   
-  // Prize Pool
   getCurrentWeekPool(): Promise<WeeklyPrizePool>;
   addToPool(amount: number): Promise<void>;
   getPendingReferralEarnings(walletAddress: string): Promise<number>;
 }
 
-function getWeekBounds(): { start: string; end: string } {
+function getWeekBounds(): { start: Date; end: Date } {
   const now = new Date();
   const dayOfWeek = now.getUTCDay();
   const startOfWeek = new Date(now);
@@ -47,170 +48,117 @@ function getWeekBounds(): { start: string; end: string } {
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 7);
   
-  return {
-    start: startOfWeek.toISOString(),
-    end: endOfWeek.toISOString(),
-  };
+  return { start: startOfWeek, end: endOfWeek };
 }
 
-export class MemStorage implements IStorage {
-  private scores: Map<string, Score>;
-  private players: Map<string, PlayerAccount>;
-  private referrals: Map<string, Referral>;
-  private payments: Map<string, Payment>;
-  private weeklyPool: WeeklyPrizePool;
-  private pendingReferralEarnings: Map<string, number>;
-
-  constructor() {
-    this.scores = new Map();
-    this.players = new Map();
-    this.referrals = new Map();
-    this.payments = new Map();
-    this.pendingReferralEarnings = new Map();
-    
-    const { start, end } = getWeekBounds();
-    this.weeklyPool = {
-      id: randomUUID(),
-      weekStart: start,
-      weekEnd: end,
-      totalPool: 0,
-      distributed: false,
-      winners: { first: null, second: null, third: null },
-    };
-  }
-
-  // Scores
+export class DatabaseStorage implements IStorage {
   async getScores(): Promise<Score[]> {
-    return Array.from(this.scores.values()).sort((a, b) => b.score - a.score);
+    return await db.select().from(scores).orderBy(desc(scores.score));
   }
 
   async createScore(insertScore: InsertScore): Promise<Score> {
-    const id = randomUUID();
-    const score: Score = { 
-      ...insertScore, 
-      id,
-      createdAt: new Date().toISOString()
-    };
-    this.scores.set(id, score);
+    const [score] = await db.insert(scores).values(insertScore).returning();
     return score;
   }
 
   async getTopScores(limit: number = 10): Promise<Score[]> {
-    const allScores = await this.getScores();
-    return allScores.slice(0, limit);
+    return await db.select().from(scores).orderBy(desc(scores.score)).limit(limit);
   }
 
-  // Players
   async getPlayer(walletAddress: string): Promise<PlayerAccount | undefined> {
-    return this.players.get(walletAddress.toLowerCase());
+    const [player] = await db.select().from(players).where(eq(players.walletAddress, walletAddress.toLowerCase()));
+    return player || undefined;
   }
 
   async createPlayer(insertPlayer: InsertPlayer): Promise<PlayerAccount> {
-    const id = randomUUID();
-    const player: PlayerAccount = {
-      id,
+    const [player] = await db.insert(players).values({
       walletAddress: insertPlayer.walletAddress.toLowerCase(),
       referredBy: insertPlayer.referredBy?.toLowerCase() || null,
-      totalSpent: 0,
-      totalEarnings: 0,
-      gamesPlayed: 0,
-      createdAt: new Date().toISOString(),
-    };
-    this.players.set(player.walletAddress, player);
+    }).returning();
     return player;
   }
 
   async updatePlayerStats(walletAddress: string, spent: number): Promise<void> {
     const player = await this.getPlayer(walletAddress);
     if (player) {
-      player.totalSpent += spent;
-      player.gamesPlayed += 1;
-      this.players.set(walletAddress.toLowerCase(), player);
+      await db.update(players)
+        .set({ 
+          totalSpent: player.totalSpent + spent,
+          gamesPlayed: player.gamesPlayed + 1
+        })
+        .where(eq(players.walletAddress, walletAddress.toLowerCase()));
     }
   }
 
-  // Referrals
   async getReferral(referredAddress: string): Promise<Referral | undefined> {
-    return Array.from(this.referrals.values()).find(
-      r => r.referredAddress === referredAddress.toLowerCase()
-    );
+    const [referral] = await db.select().from(referrals).where(eq(referrals.referredAddress, referredAddress.toLowerCase()));
+    return referral || undefined;
   }
 
   async getReferralsByReferrer(referrerAddress: string): Promise<Referral[]> {
-    return Array.from(this.referrals.values()).filter(
-      r => r.referrerAddress === referrerAddress.toLowerCase()
-    );
+    return await db.select().from(referrals).where(eq(referrals.referrerAddress, referrerAddress.toLowerCase()));
   }
 
   async createReferral(referrerAddress: string, referredAddress: string): Promise<Referral> {
-    const id = randomUUID();
-    const referral: Referral = {
-      id,
+    const [referral] = await db.insert(referrals).values({
       referrerAddress: referrerAddress.toLowerCase(),
       referredAddress: referredAddress.toLowerCase(),
-      totalEarnings: 0,
-      createdAt: new Date().toISOString(),
-    };
-    this.referrals.set(id, referral);
+    }).returning();
     return referral;
   }
 
   async addReferralEarning(referrerAddress: string, amount: number): Promise<void> {
-    const current = this.pendingReferralEarnings.get(referrerAddress.toLowerCase()) || 0;
-    this.pendingReferralEarnings.set(referrerAddress.toLowerCase(), current + amount);
-    
-    // Also update the referral record total
-    const referrals = await this.getReferralsByReferrer(referrerAddress);
-    // Update total earnings on referral records
+    const existing = await db.select().from(referrals).where(eq(referrals.referrerAddress, referrerAddress.toLowerCase()));
+    if (existing.length > 0) {
+      await db.update(referrals)
+        .set({ totalEarnings: existing[0].totalEarnings + amount })
+        .where(eq(referrals.referrerAddress, referrerAddress.toLowerCase()));
+    }
   }
 
   async getPendingReferralEarnings(walletAddress: string): Promise<number> {
-    return this.pendingReferralEarnings.get(walletAddress.toLowerCase()) || 0;
+    const refs = await this.getReferralsByReferrer(walletAddress);
+    return refs.reduce((sum, r) => sum + r.totalEarnings, 0);
   }
 
-  // Payments
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
-    const id = randomUUID();
-    const payment: Payment = {
-      id,
+    const [payment] = await db.insert(payments).values({
       ...insertPayment,
       walletAddress: insertPayment.walletAddress.toLowerCase(),
       status: 'confirmed',
-      createdAt: new Date().toISOString(),
-    };
-    this.payments.set(id, payment);
+    }).returning();
     return payment;
   }
 
   async getPaymentsByWallet(walletAddress: string): Promise<Payment[]> {
-    return Array.from(this.payments.values()).filter(
-      p => p.walletAddress === walletAddress.toLowerCase()
-    );
+    return await db.select().from(payments).where(eq(payments.walletAddress, walletAddress.toLowerCase()));
   }
 
-  // Prize Pool
   async getCurrentWeekPool(): Promise<WeeklyPrizePool> {
     const { start, end } = getWeekBounds();
     
-    // Check if we need a new week
-    if (this.weeklyPool.weekEnd !== end) {
-      this.weeklyPool = {
-        id: randomUUID(),
-        weekStart: start,
-        weekEnd: end,
-        totalPool: 0,
-        distributed: false,
-        winners: { first: null, second: null, third: null },
-      };
-    }
+    const [existing] = await db.select().from(weeklyPools)
+      .where(and(
+        gte(weeklyPools.weekStart, start),
+        lte(weeklyPools.weekEnd, end)
+      ));
     
-    return this.weeklyPool;
+    if (existing) return existing;
+
+    const [pool] = await db.insert(weeklyPools).values({
+      weekStart: start,
+      weekEnd: end,
+    }).returning();
+    
+    return pool;
   }
 
   async addToPool(amount: number): Promise<void> {
     const pool = await this.getCurrentWeekPool();
-    pool.totalPool += amount;
+    await db.update(weeklyPools)
+      .set({ totalPool: pool.totalPool + amount })
+      .where(eq(weeklyPools.id, pool.id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
