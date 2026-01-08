@@ -303,20 +303,56 @@ export default function Game() {
 
   const drawPlayer = (ctx: CanvasRenderingContext2D, player: Player) => {
     const { x, y, width, height } = player;
-    const px = Math.floor;
     
     ctx.shadowColor = "#00ff00";
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 12;
     
-    drawPixelRect(ctx, x + width * 0.3, y, width * 0.4, height * 0.3, "#00ff00");
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.5, "#22c55e");
-    drawPixelRect(ctx, x, y + height * 0.5, width, height * 0.3, "#15803d");
-    drawPixelRect(ctx, x + width * 0.1, y + height * 0.7, width * 0.25, height * 0.3, "#166534");
-    drawPixelRect(ctx, x + width * 0.65, y + height * 0.7, width * 0.25, height * 0.3, "#166534");
+    // Cannabis leaves pointing out (iconic 5-point pattern)
+    // Left leaf
+    drawPixelRect(ctx, x - 4, y + height * 0.3, 6, 3, "#15803d");
+    drawPixelRect(ctx, x - 6, y + height * 0.25, 4, 2, "#166534");
+    drawPixelRect(ctx, x - 2, y + height * 0.4, 4, 2, "#22c55e");
     
-    ctx.fillStyle = "#000";
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.35, width * 0.15, height * 0.1, "#000");
-    drawPixelRect(ctx, x + width * 0.6, y + height * 0.35, width * 0.15, height * 0.1, "#000");
+    // Right leaf
+    drawPixelRect(ctx, x + width - 2, y + height * 0.3, 6, 3, "#15803d");
+    drawPixelRect(ctx, x + width + 2, y + height * 0.25, 4, 2, "#166534");
+    drawPixelRect(ctx, x + width - 2, y + height * 0.4, 4, 2, "#22c55e");
+    
+    // Top leaf
+    drawPixelRect(ctx, x + width * 0.4, y - 6, 3, 8, "#15803d");
+    drawPixelRect(ctx, x + width * 0.5, y - 4, 3, 6, "#166534");
+    
+    // Main bud body (dense, rounded shape)
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.1, width * 0.5, height * 0.2, "#22c55e");
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.2, width * 0.7, height * 0.35, "#16a34a");
+    drawPixelRect(ctx, x + width * 0.1, y + height * 0.35, width * 0.8, height * 0.35, "#15803d");
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.6, width * 0.6, height * 0.25, "#166534");
+    
+    // Orange pistils (hairs) scattered on bud
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.15, 2, 3, "#f97316");
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.2, 2, 3, "#ea580c");
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.35, 2, 2, "#f97316");
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.4, 2, 3, "#ea580c");
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.45, 2, 2, "#f97316");
+    drawPixelRect(ctx, x + width * 0.5, y + height * 0.5, 2, 3, "#ea580c");
+    
+    // Trichome sparkles (frosty crystals)
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 3;
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.25, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.6, y + height * 0.3, 1, 1, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.45, y + height * 0.45, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.7, y + height * 0.5, 1, 1, "#e0ffe0");
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.55, 1, 1, "#ffffff");
+    
+    // Cool sunglasses on Dudley Bud
+    ctx.shadowBlur = 0;
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.38, width * 0.7, 3, "#000");
+    drawPixelRect(ctx, x + width * 0.18, y + height * 0.35, width * 0.25, 6, "#000");
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.35, width * 0.25, 6, "#000");
+    // Lens shine
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.36, 2, 2, "#4444ff");
+    drawPixelRect(ctx, x + width * 0.57, y + height * 0.36, 2, 2, "#4444ff");
     
     ctx.shadowBlur = 0;
   };
@@ -325,26 +361,70 @@ export default function Game() {
     const { x, y, width, height, strain, health, maxHealth } = enemy;
     const colors = strainColors[strain];
     
+    // Different colors per strain for variety
+    const strainDetails: Record<StrainType, { dark: string; pistil: string }> = {
+      indica: { dark: "#581c87", pistil: "#f472b6" }, // Deep purple with pink hairs
+      sativa: { dark: "#14532d", pistil: "#fbbf24" }, // Dark green with gold hairs
+      hybrid: { dark: "#7c2d12", pistil: "#fb923c" }, // Brown-orange with orange hairs
+    };
+    const details = strainDetails[strain];
+    
     ctx.shadowColor = colors.glow;
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 8;
     
-    drawPixelRect(ctx, x + width * 0.2, y, width * 0.6, height * 0.3, colors.fill);
-    drawPixelRect(ctx, x, y + height * 0.2, width, height * 0.5, colors.fill);
-    drawPixelRect(ctx, x + width * 0.1, y + height * 0.6, width * 0.3, height * 0.4, colors.fill);
-    drawPixelRect(ctx, x + width * 0.6, y + height * 0.6, width * 0.3, height * 0.4, colors.fill);
+    // Cannabis leaves on enemy buds
+    // Left leaf
+    drawPixelRect(ctx, x - 3, y + height * 0.35, 5, 2, details.dark);
+    drawPixelRect(ctx, x - 5, y + height * 0.3, 3, 2, details.dark);
     
-    ctx.fillStyle = "#fff";
-    drawPixelRect(ctx, x + width * 0.2, y + height * 0.35, width * 0.2, height * 0.15, "#fff");
-    drawPixelRect(ctx, x + width * 0.6, y + height * 0.35, width * 0.2, height * 0.15, "#fff");
-    ctx.fillStyle = "#f00";
-    drawPixelRect(ctx, x + width * 0.25, y + height * 0.38, width * 0.1, height * 0.1, "#f00");
-    drawPixelRect(ctx, x + width * 0.65, y + height * 0.38, width * 0.1, height * 0.1, "#f00");
+    // Right leaf  
+    drawPixelRect(ctx, x + width - 2, y + height * 0.35, 5, 2, details.dark);
+    drawPixelRect(ctx, x + width + 2, y + height * 0.3, 3, 2, details.dark);
     
+    // Main bud body (dense cannabis nug shape)
+    drawPixelRect(ctx, x + width * 0.3, y, width * 0.4, height * 0.15, colors.fill);
+    drawPixelRect(ctx, x + width * 0.2, y + height * 0.1, width * 0.6, height * 0.25, colors.fill);
+    drawPixelRect(ctx, x + width * 0.1, y + height * 0.25, width * 0.8, height * 0.35, colors.fill);
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.5, width * 0.7, height * 0.3, details.dark);
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.7, width * 0.5, height * 0.2, details.dark);
+    
+    // Calyx bumps (the rounded parts of buds)
+    drawPixelRect(ctx, x + width * 0.15, y + height * 0.3, width * 0.2, height * 0.15, colors.glow);
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.3, width * 0.2, height * 0.15, colors.glow);
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.2, width * 0.2, height * 0.12, colors.glow);
+    
+    // Pistils (colored hairs) 
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.15, 2, 4, details.pistil);
+    drawPixelRect(ctx, x + width * 0.6, y + height * 0.18, 2, 3, details.pistil);
+    drawPixelRect(ctx, x + width * 0.45, y + height * 0.25, 2, 3, details.pistil);
+    drawPixelRect(ctx, x + width * 0.3, y + height * 0.4, 2, 3, details.pistil);
+    drawPixelRect(ctx, x + width * 0.55, y + height * 0.45, 2, 4, details.pistil);
+    drawPixelRect(ctx, x + width * 0.7, y + height * 0.35, 2, 3, details.pistil);
+    
+    // Trichome sparkles
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 2;
+    drawPixelRect(ctx, x + width * 0.35, y + height * 0.22, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.5, y + height * 0.35, 2, 2, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.65, y + height * 0.28, 1, 1, "#ffffff");
+    drawPixelRect(ctx, x + width * 0.4, y + height * 0.5, 1, 1, "#ffffff");
+    
+    // Angry eyes (these buds are enemies!)
+    ctx.shadowBlur = 0;
+    drawPixelRect(ctx, x + width * 0.25, y + height * 0.4, width * 0.15, height * 0.1, "#fff");
+    drawPixelRect(ctx, x + width * 0.6, y + height * 0.4, width * 0.15, height * 0.1, "#fff");
+    drawPixelRect(ctx, x + width * 0.28, y + height * 0.42, width * 0.08, height * 0.06, "#ff0000");
+    drawPixelRect(ctx, x + width * 0.63, y + height * 0.42, width * 0.08, height * 0.06, "#ff0000");
+    // Angry eyebrows
+    drawPixelRect(ctx, x + width * 0.22, y + height * 0.36, width * 0.18, 2, "#000");
+    drawPixelRect(ctx, x + width * 0.6, y + height * 0.36, width * 0.18, 2, "#000");
+    
+    // Health bar
     if (health < maxHealth) {
       const barWidth = width * 0.8;
       const barHeight = 4;
       const barX = x + (width - barWidth) / 2;
-      const barY = y - 8;
+      const barY = y - 10;
       
       ctx.shadowBlur = 0;
       drawPixelRect(ctx, barX, barY, barWidth, barHeight, "#333");
@@ -355,14 +435,27 @@ export default function Game() {
   };
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
-    const color = proj.isPlayerBullet ? "#00ff00" : "#ff00ff";
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 4;
-    
-    drawPixelRect(ctx, proj.x, proj.y, proj.width, proj.height, color);
-    
     if (proj.isPlayerBullet) {
-      drawPixelRect(ctx, proj.x + 1, proj.y + 2, proj.width - 2, proj.height - 4, "#86efac");
+      // Cannabis seed - brown oval with stripe
+      ctx.shadowColor = "#00ff00";
+      ctx.shadowBlur = 6;
+      
+      // Seed body (brown/tan teardrop)
+      drawPixelRect(ctx, proj.x, proj.y, proj.width, proj.height, "#8b6914");
+      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#a67c00");
+      // Stripe down the middle
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 2, proj.height - 4, "#654321");
+      // Highlight
+      drawPixelRect(ctx, proj.x + 1, proj.y + 1, 1, 2, "#d4a017");
+    } else {
+      // Enemy projectile - glowing magenta energy ball
+      ctx.shadowColor = "#ff00ff";
+      ctx.shadowBlur = 8;
+      
+      drawPixelRect(ctx, proj.x, proj.y, proj.width, proj.height, "#ff00ff");
+      drawPixelRect(ctx, proj.x + 1, proj.y + 1, proj.width - 2, proj.height - 2, "#ff66ff");
+      // Core glow
+      drawPixelRect(ctx, proj.x + 2, proj.y + 2, 2, 2, "#ffffff");
     }
     
     ctx.shadowBlur = 0;
