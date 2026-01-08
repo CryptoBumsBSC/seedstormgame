@@ -79,6 +79,8 @@ shared/
   - Hazards (bong, joint, matches) enhanced with glass effects, reflections, and textures
   - Cannabis seed projectiles have more tiger stripe detail and realistic mottling
   - Power-ups now have pulsing glow rings and type indicator letters (S/D/R/+)
+- 2026-01-08: Added Bud Angel special object (appears after 90 sec, grants 15s shield on contact)
+- 2026-01-08: Added Skull & Crossbones hazard (max once per 30 sec, instant game over unless shielded)
 - 2026-01-08: Added permanent all-time leaderboard (top 3 scores that never reset)
 - 2026-01-08: Removed branding text from canvas borders (cleaner look)
 - 2026-01-08: Initial MVP complete with all core game mechanics

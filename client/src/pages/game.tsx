@@ -28,6 +28,7 @@ const HAZARD_SIZE = 24;
 
 type HazardType = "bong" | "joint" | "matches";
 type PowerUpType = "speed" | "shield" | "rapid" | "life";
+type SpecialObjectType = "budAngel" | "skull";
 
 interface Hazard {
   id: string;
@@ -37,6 +38,16 @@ interface Hazard {
   height: number;
   speed: number;
   type: HazardType;
+}
+
+interface SpecialObject {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  type: SpecialObjectType;
 }
 
 interface PowerUp {
@@ -204,6 +215,9 @@ export default function Game() {
   const rapidFireEndRef = useRef<number>(0);
   const speedBoostEndRef = useRef<number>(0);
   const shieldEndRef = useRef<number>(0);
+  const specialObjectsRef = useRef<SpecialObject[]>([]);
+  const lastSkullSpawnRef = useRef<number>(0);
+  const lastBudAngelSpawnRef = useRef<number>(0);
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -413,6 +427,45 @@ export default function Game() {
     });
   }, []);
 
+  const spawnBudAngel = useCallback(() => {
+    const gameTimeSec = gameTimeRef.current / 1000;
+    // Only spawn after 90 seconds of play
+    if (gameTimeSec < 90) return;
+    // Only spawn if not recently spawned (min 20 sec between spawns)
+    if (gameTimeRef.current - lastBudAngelSpawnRef.current < 20000) return;
+    // 5% chance per spawn attempt
+    if (Math.random() > 0.05) return;
+    
+    lastBudAngelSpawnRef.current = gameTimeRef.current;
+    specialObjectsRef.current.push({
+      id: generateId(),
+      x: Math.random() * (CANVAS_WIDTH - 28),
+      y: -28,
+      width: 28,
+      height: 28,
+      speed: 1.5,
+      type: "budAngel",
+    });
+  }, []);
+
+  const spawnSkull = useCallback(() => {
+    // Max once per 30 seconds
+    if (gameTimeRef.current - lastSkullSpawnRef.current < 30000) return;
+    // 3% chance per spawn attempt
+    if (Math.random() > 0.03) return;
+    
+    lastSkullSpawnRef.current = gameTimeRef.current;
+    specialObjectsRef.current.push({
+      id: generateId(),
+      x: Math.random() * (CANVAS_WIDTH - 24),
+      y: -24,
+      width: 24,
+      height: 24,
+      speed: 2 + Math.random() * 1.5,
+      type: "skull",
+    });
+  }, []);
+
   const resetGame = useCallback(() => {
     soundSystem.init();
     playerRef.current = {
@@ -427,6 +480,7 @@ export default function Game() {
     hazardsRef.current = [];
     powerUpsRef.current = [];
     particlesRef.current = [];
+    specialObjectsRef.current = [];
     difficultyRef.current = 1;
     gameTimeRef.current = 0;
     shootCooldownRef.current = 0;
@@ -437,6 +491,8 @@ export default function Game() {
     rapidFireEndRef.current = 0;
     speedBoostEndRef.current = 0;
     shieldEndRef.current = 0;
+    lastSkullSpawnRef.current = 0;
+    lastBudAngelSpawnRef.current = 0;
     setIsNewHighScore(false);
     
     setGameState({
@@ -540,6 +596,36 @@ export default function Game() {
         hazardCooldownRef.current = hazardRate;
       }
     }
+
+    // Special object spawning
+    spawnBudAngel(); // Only spawns after 90 seconds
+    spawnSkull(); // Max once per 30 seconds
+
+    // Update special objects and check collisions
+    specialObjectsRef.current = specialObjectsRef.current.filter(obj => {
+      obj.y += obj.speed;
+      
+      if (checkCollision(obj, player)) {
+        if (obj.type === "budAngel") {
+          // Bud Angel grants 15 seconds of shield
+          soundSystem.powerUp();
+          shieldEndRef.current = gameTimeRef.current + 15000;
+          createExplosion(obj.x + obj.width / 2, obj.y + obj.height / 2, "#88ffff");
+          return false;
+        } else if (obj.type === "skull") {
+          // Skull causes instant game over (unless shielded)
+          if (shieldEndRef.current <= gameTimeRef.current) {
+            soundSystem.damage();
+            createExplosion(obj.x + obj.width / 2, obj.y + obj.height / 2, "#006400");
+            setGameState(prev => ({ ...prev, lives: 0 }));
+            endGame();
+            return false;
+          }
+        }
+      }
+      
+      return obj.y < CANVAS_HEIGHT + obj.height;
+    });
 
     // Update hazards
     hazardsRef.current = hazardsRef.current.filter(hazard => {
@@ -683,7 +769,7 @@ export default function Game() {
       ...prev,
       gameTime: Math.floor(gameTimeRef.current / 1000),
     }));
-  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, endGame, createExplosion, spawnPowerUp]);
+  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, spawnBudAngel, spawnSkull, endGame, createExplosion, spawnPowerUp]);
 
   const drawPixelRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color;
@@ -1149,6 +1235,104 @@ export default function Game() {
     ctx.shadowBlur = 0;
   };
 
+  const drawSpecialObject = (ctx: CanvasRenderingContext2D, obj: SpecialObject) => {
+    const { x, y, width, height, type } = obj;
+    
+    if (type === "budAngel") {
+      // Bud Angel - glowing angelic cannabis bud with wings and halo
+      ctx.shadowColor = "#88ffff";
+      ctx.shadowBlur = 20;
+      
+      // Halo ring
+      drawPixelRect(ctx, x + width * 0.2, y - 4, width * 0.6, 3, "#ffff88");
+      drawPixelRect(ctx, x + width * 0.25, y - 5, width * 0.5, 2, "#ffffcc");
+      drawPixelRect(ctx, x + width * 0.3, y - 6, width * 0.4, 1, "#ffffff");
+      
+      // Left wing
+      ctx.shadowColor = "#aaffff";
+      drawPixelRect(ctx, x - 4, y + height * 0.2, 8, height * 0.4, "#aaddff");
+      drawPixelRect(ctx, x - 2, y + height * 0.25, 6, height * 0.3, "#ccffff");
+      drawPixelRect(ctx, x, y + height * 0.3, 4, height * 0.2, "#eeffff");
+      
+      // Right wing
+      drawPixelRect(ctx, x + width - 4, y + height * 0.2, 8, height * 0.4, "#aaddff");
+      drawPixelRect(ctx, x + width - 4, y + height * 0.25, 6, height * 0.3, "#ccffff");
+      drawPixelRect(ctx, x + width - 4, y + height * 0.3, 4, height * 0.2, "#eeffff");
+      
+      // Main bud body (light green angelic glow)
+      ctx.shadowColor = "#88ff88";
+      drawPixelRect(ctx, x + width * 0.15, y + height * 0.15, width * 0.7, height * 0.7, "#88cc88");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.6, "#aaffaa");
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.25, width * 0.5, height * 0.5, "#ccffcc");
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.3, width * 0.4, height * 0.4, "#eeffee");
+      
+      // Calyx bumps
+      drawPixelRect(ctx, x + width * 0.1, y + height * 0.35, width * 0.15, height * 0.2, "#99dd99");
+      drawPixelRect(ctx, x + width * 0.75, y + height * 0.35, width * 0.15, height * 0.2, "#99dd99");
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.1, width * 0.3, height * 0.12, "#99dd99");
+      
+      // Trichome sparkles
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.35, 2, 2, "#ffffff");
+      drawPixelRect(ctx, x + width * 0.55, y + height * 0.45, 2, 2, "#ffffff");
+      drawPixelRect(ctx, x + width * 0.45, y + height * 0.55, 2, 2, "#ffffff");
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.5, 1, 1, "#ffff88");
+      drawPixelRect(ctx, x + width * 0.6, y + height * 0.35, 1, 1, "#ffff88");
+      
+    } else if (type === "skull") {
+      // Dark green skull and crossbones - death hazard
+      ctx.shadowColor = "#006400";
+      ctx.shadowBlur = 15;
+      
+      // Skull main shape (dark green)
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.1, width * 0.6, height * 0.55, "#004400");
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.12, width * 0.5, height * 0.5, "#005500");
+      drawPixelRect(ctx, x + width * 0.15, y + height * 0.2, width * 0.7, height * 0.4, "#006600");
+      drawPixelRect(ctx, x + width * 0.2, y + height * 0.15, width * 0.6, height * 0.45, "#007700");
+      
+      // Forehead highlight
+      drawPixelRect(ctx, x + width * 0.3, y + height * 0.18, width * 0.4, height * 0.12, "#008800");
+      
+      // Eye sockets (black)
+      drawPixelRect(ctx, x + width * 0.22, y + height * 0.28, width * 0.2, height * 0.18, "#001100");
+      drawPixelRect(ctx, x + width * 0.58, y + height * 0.28, width * 0.2, height * 0.18, "#001100");
+      // Eye glow (sinister red)
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.32, width * 0.08, height * 0.08, "#ff0000");
+      drawPixelRect(ctx, x + width * 0.64, y + height * 0.32, width * 0.08, height * 0.08, "#ff0000");
+      
+      // Nose hole
+      drawPixelRect(ctx, x + width * 0.42, y + height * 0.45, width * 0.16, height * 0.1, "#002200");
+      
+      // Teeth (jaw area)
+      drawPixelRect(ctx, x + width * 0.25, y + height * 0.55, width * 0.5, height * 0.12, "#004400");
+      drawPixelRect(ctx, x + width * 0.28, y + height * 0.57, width * 0.08, height * 0.08, "#002200");
+      drawPixelRect(ctx, x + width * 0.4, y + height * 0.57, width * 0.08, height * 0.08, "#002200");
+      drawPixelRect(ctx, x + width * 0.52, y + height * 0.57, width * 0.08, height * 0.08, "#002200");
+      drawPixelRect(ctx, x + width * 0.64, y + height * 0.57, width * 0.08, height * 0.08, "#002200");
+      
+      // Crossbones behind skull
+      ctx.shadowColor = "#004400";
+      // Left bone (diagonal)
+      drawPixelRect(ctx, x, y + height * 0.7, width * 0.35, height * 0.08, "#004400");
+      drawPixelRect(ctx, x + width * 0.05, y + height * 0.72, width * 0.25, height * 0.04, "#006600");
+      // Right bone (diagonal)  
+      drawPixelRect(ctx, x + width * 0.65, y + height * 0.7, width * 0.35, height * 0.08, "#004400");
+      drawPixelRect(ctx, x + width * 0.7, y + height * 0.72, width * 0.25, height * 0.04, "#006600");
+      // Cross center
+      drawPixelRect(ctx, x + width * 0.35, y + height * 0.75, width * 0.3, height * 0.1, "#005500");
+      // Lower bones
+      drawPixelRect(ctx, x, y + height * 0.85, width * 0.35, height * 0.08, "#004400");
+      drawPixelRect(ctx, x + width * 0.65, y + height * 0.85, width * 0.35, height * 0.08, "#004400");
+      
+      // Bone ends (knobs)
+      drawPixelRect(ctx, x - 2, y + height * 0.68, 6, 6, "#007700");
+      drawPixelRect(ctx, x + width - 4, y + height * 0.68, 6, 6, "#007700");
+      drawPixelRect(ctx, x - 2, y + height * 0.88, 6, 6, "#007700");
+      drawPixelRect(ctx, x + width - 4, y + height * 0.88, 6, 6, "#007700");
+    }
+    
+    ctx.shadowBlur = 0;
+  };
+
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
     if (proj.isPlayerBullet) {
       // Cannabis seed - realistic teardrop shape with tiger stripes (50% more detail)
@@ -1341,6 +1525,7 @@ export default function Game() {
       
       enemiesRef.current.forEach(enemy => drawEnemy(ctx, enemy));
       hazardsRef.current.forEach(hazard => drawHazard(ctx, hazard));
+      specialObjectsRef.current.forEach(obj => drawSpecialObject(ctx, obj));
       projectilesRef.current.forEach(proj => drawProjectile(ctx, proj));
     }
 
