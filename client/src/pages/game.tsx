@@ -414,8 +414,11 @@ export default function Game() {
     });
 
     // Check hazard collisions with player (only if not invincible)
+    // Use a separate loop to ensure we only take one hit per frame
+    let tookDamageThisFrame = invincibilityRef.current > 0;
     hazardsRef.current = hazardsRef.current.filter(hazard => {
-      if (invincibilityRef.current <= 0 && checkCollision(hazard, player)) {
+      if (!tookDamageThisFrame && checkCollision(hazard, player)) {
+        tookDamageThisFrame = true;
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -461,7 +464,8 @@ export default function Game() {
           }
         }
       } else {
-        if (invincibilityRef.current <= 0 && checkCollision(proj, player)) {
+        if (!tookDamageThisFrame && checkCollision(proj, player)) {
+          tookDamageThisFrame = true;
           invincibilityRef.current = 1500; // 1.5 seconds of invincibility
           setGameState(prev => {
             const newLives = prev.lives - 1;
@@ -477,7 +481,8 @@ export default function Game() {
     });
 
     enemiesRef.current = enemiesRef.current.filter(enemy => {
-      if (invincibilityRef.current <= 0 && checkCollision(enemy, player)) {
+      if (!tookDamageThisFrame && checkCollision(enemy, player)) {
+        tookDamageThisFrame = true;
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         setGameState(prev => {
           const newLives = prev.lives - 1;
