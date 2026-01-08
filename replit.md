@@ -7,6 +7,15 @@ SEED STORM is a retro arcade vertical space shooter game where you play as "Dudl
 - **Complete MVP** with working game engine, all screens, and leaderboard functionality
 - Fully playable with touch/mouse/keyboard controls
 - Score submission and persistent leaderboards
+- Sound effects, particle explosions, power-ups all working
+- Deployed at: https://galaga-clone--oscarjameshardi.replit.app
+
+## Telegram Bot Setup (In Progress)
+- Bot created: @seedstormbot
+- Banner images available at:
+  - /banner.png (640x360 for BotFather)
+  - /download (page with download button)
+- Next step: Complete /newapp in BotFather with 640x360 image
 
 ## Tech Stack
 - **Frontend**: React + TypeScript + Vite
