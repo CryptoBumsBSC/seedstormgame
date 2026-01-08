@@ -4,16 +4,19 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useAccount } from "wagmi";
+import { WalletConnect } from "@/components/WalletConnect";
 import type { 
   GameState, 
-  Player, 
+  PlayerSprite, 
   Enemy, 
   Projectile, 
   Star, 
   StrainType,
   Score 
 } from "@shared/schema";
-import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Copy, Check, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 type Screen = "title" | "game" | "gameover" | "leaderboard";
 
@@ -47,11 +50,35 @@ export default function Game() {
   });
   const [playerName, setPlayerName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
+  const [hasPaidEntry, setHasPaidEntry] = useState(false);
+  const [referrerAddress, setReferrerAddress] = useState<string | null>(null);
+  const [copiedReferral, setCopiedReferral] = useState(false);
+  
+  const { address, isConnected } = useAccount();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get("ref");
+    if (ref && ref.length === 42 && ref.startsWith("0x")) {
+      setReferrerAddress(ref);
+    }
+  }, []);
+
+  const copyReferralLink = () => {
+    if (address) {
+      const link = `${window.location.origin}?ref=${address}`;
+      navigator.clipboard.writeText(link);
+      setCopiedReferral(true);
+      toast({ title: "Referral link copied!" });
+      setTimeout(() => setCopiedReferral(false), 2000);
+    }
+  };
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameLoopRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
-  const playerRef = useRef<Player>({
+  const playerRef = useRef<PlayerSprite>({
     x: CANVAS_WIDTH / 2 - PLAYER_SIZE / 2,
     y: CANVAS_HEIGHT - PLAYER_SIZE - 80,
     width: PLAYER_SIZE,
@@ -169,10 +196,16 @@ export default function Game() {
   }, []);
 
   const startGame = useCallback(() => {
+    if (!hasPaidEntry) return;
     initStars();
     resetGame();
     setScreen("game");
-  }, [initStars, resetGame]);
+    setHasPaidEntry(false);
+  }, [initStars, resetGame, hasPaidEntry]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    setHasPaidEntry(true);
+  }, []);
 
   const endGame = useCallback(() => {
     setGameState(prev => ({
@@ -301,7 +334,7 @@ export default function Game() {
     ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
   };
 
-  const drawPlayer = (ctx: CanvasRenderingContext2D, player: Player) => {
+  const drawPlayer = (ctx: CanvasRenderingContext2D, player: PlayerSprite) => {
     const { x, y, width, height } = player;
     
     ctx.shadowColor = "#00ff00";
@@ -578,7 +611,7 @@ export default function Game() {
           </p>
         </div>
 
-        <Card className="p-6 mb-8 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
+        <Card className="p-6 mb-6 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
           <div className="flex flex-col items-center gap-4">
             <div 
               className="w-16 h-16 rounded-md flex items-center justify-center"
@@ -597,30 +630,59 @@ export default function Game() {
         </Card>
 
         <div className="flex flex-col gap-4 w-full max-w-xs">
-          <Button
-            onClick={startGame}
-            className="w-full py-6 text-sm"
-            style={{ 
-              background: "linear-gradient(135deg, #00ff00, #22c55e)",
-              color: "#000",
-              boxShadow: "0 0 20px #00ff00, inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.3)"
-            }}
-            data-testid="button-start-game"
-          >
-            <Play className="w-4 h-4 mr-2" />
-            START GAME
-          </Button>
+          <WalletConnect 
+            onPaymentSuccess={handlePaymentSuccess}
+            referrerAddress={referrerAddress}
+          />
+          
+          {hasPaidEntry && (
+            <Button
+              onClick={startGame}
+              className="w-full py-6 text-sm animate-pulse"
+              style={{ 
+                background: "linear-gradient(135deg, #00ff00, #22c55e)",
+                color: "#000",
+                boxShadow: "0 0 20px #00ff00, inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 0 rgba(0,0,0,0.3)"
+              }}
+              data-testid="button-start-game"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              START GAME
+            </Button>
+          )}
           
           <Button
             onClick={() => setScreen("leaderboard")}
             variant="outline"
-            className="w-full py-6 text-sm border-2"
+            className="w-full py-4 text-sm border-2"
             style={{ borderColor: "#00ffff", color: "#00ffff" }}
             data-testid="button-leaderboard"
           >
             <Trophy className="w-4 h-4 mr-2" />
             LEADERBOARD
           </Button>
+
+          {isConnected && address && (
+            <Button
+              onClick={copyReferralLink}
+              variant="outline"
+              className="w-full py-4 text-xs border-2"
+              style={{ borderColor: "#ff00ff", color: "#ff00ff" }}
+              data-testid="button-copy-referral"
+            >
+              {copiedReferral ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  COPIED!
+                </>
+              ) : (
+                <>
+                  <Users className="w-4 h-4 mr-2" />
+                  SHARE REFERRAL LINK (10% BACK)
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         <div className="mt-8 text-center">

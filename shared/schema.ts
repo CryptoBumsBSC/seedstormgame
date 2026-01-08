@@ -27,7 +27,7 @@ export interface GameState {
   isGameOver: boolean;
 }
 
-export interface Player {
+export interface PlayerSprite {
   x: number;
   y: number;
   width: number;
@@ -66,3 +66,60 @@ export interface Star {
   speed: number;
   opacity: number;
 }
+
+export interface PlayerAccount {
+  id: string;
+  walletAddress: string;
+  referredBy: string | null;
+  totalSpent: number;
+  totalEarnings: number;
+  gamesPlayed: number;
+  createdAt: string;
+}
+
+export interface Referral {
+  id: string;
+  referrerAddress: string;
+  referredAddress: string;
+  totalEarnings: number;
+  createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  walletAddress: string;
+  amount: number;
+  txHash: string;
+  type: 'entry_fee' | 'prize' | 'referral';
+  status: 'pending' | 'confirmed' | 'failed';
+  createdAt: string;
+}
+
+export interface WeeklyPrizePool {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  totalPool: number;
+  distributed: boolean;
+  winners: {
+    first: string | null;
+    second: string | null;
+    third: string | null;
+  };
+}
+
+export const insertPlayerSchema = z.object({
+  walletAddress: z.string().min(42).max(42),
+  referredBy: z.string().nullable(),
+});
+
+export type InsertPlayer = z.infer<typeof insertPlayerSchema>;
+
+export const insertPaymentSchema = z.object({
+  walletAddress: z.string(),
+  amount: z.number(),
+  txHash: z.string(),
+  type: z.enum(['entry_fee', 'prize', 'referral']),
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
