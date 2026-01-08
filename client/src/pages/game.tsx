@@ -2227,9 +2227,35 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#88ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#88ffff" }}>
+              <Shield className="w-4 h-4" />
+              BUD ANGEL
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>A glowing angelic bud with wings and halo!</p>
+              <p><span style={{ color: "#88ffff" }}>Appears:</span> After 90 seconds of play</p>
+              <p><span style={{ color: "#88ff88" }}>Collect it:</span> Grants 15 seconds of shield!</p>
+              <p>Shield protects you from all damage.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#006400" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#008800" }}>
+              <AlertTriangle className="w-4 h-4" />
+              SKULL & CROSSBONES
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ff0000" }}>DEADLY!</span> Dark green skull hazard.</p>
+              <p><span style={{ color: "#ffff00" }}>Spawns:</span> Max once every 30 seconds</p>
+              <p><span style={{ color: "#ff0000" }}>If touched:</span> INSTANT GAME OVER!</p>
+              <p>Shield protects you from this hazard.</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
-              <Shield className="w-4 h-4" />
+              <Heart className="w-4 h-4" />
               TIPS
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
