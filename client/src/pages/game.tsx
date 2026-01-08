@@ -64,6 +64,7 @@ export default function Game() {
   const [playerName, setPlayerName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [referrerAddress, setReferrerAddress] = useState<string | null>(null);
   const [copiedReferral, setCopiedReferral] = useState(false);
   
@@ -878,32 +879,38 @@ export default function Game() {
 
         <div className="flex flex-col gap-4 w-full max-w-xs mb-6">
           {!sessionId && (
-            <Button
-              onClick={async () => {
-                try {
-                  const response = await apiRequest("POST", "/api/sessions/demo", {});
-                  const data = await response.json();
-                  if (data.success) {
-                    setSessionId(data.sessionId);
-                    initStars();
-                    resetGame();
-                    setScreen("game");
+            <>
+              <Button
+                onClick={async () => {
+                  try {
+                    const response = await apiRequest("POST", "/api/sessions/demo", {});
+                    const data = await response.json();
+                    if (data.success) {
+                      setSessionId(data.sessionId);
+                      setIsDemoMode(true);
+                      initStars();
+                      resetGame();
+                      setScreen("game");
+                    }
+                  } catch {
+                    toast({ title: "Failed to start", variant: "destructive" });
                   }
-                } catch {
-                  toast({ title: "Failed to start", variant: "destructive" });
-                }
-              }}
-              className="w-full py-8 text-lg font-bold animate-bounce"
-              style={{ 
-                background: "linear-gradient(135deg, #00ff00, #22c55e)",
-                color: "#000",
-                boxShadow: "0 0 30px #00ff00, 0 0 60px #00ff00"
-              }}
-              data-testid="button-demo-play"
-            >
-              <Play className="w-6 h-6 mr-2" />
-              PLAY NOW
-            </Button>
+                }}
+                className="w-full py-8 text-lg font-bold animate-bounce"
+                style={{ 
+                  background: "linear-gradient(135deg, #00ff00, #22c55e)",
+                  color: "#000",
+                  boxShadow: "0 0 30px #00ff00, 0 0 60px #00ff00"
+                }}
+                data-testid="button-demo-play"
+              >
+                <Play className="w-6 h-6 mr-2" />
+                DEMO PLAY
+              </Button>
+              <p className="text-[8px] text-center" style={{ color: "#888" }}>
+                Free practice mode - scores not saved to leaderboard
+              </p>
+            </>
           )}
 
           {sessionId && (
@@ -1145,19 +1152,31 @@ export default function Game() {
 
         {!showNameInput ? (
           <div className="flex flex-col gap-4 w-full max-w-xs">
-            <Button
-              onClick={() => setShowNameInput(true)}
-              className="w-full py-6 text-sm"
-              style={{ 
-                background: "linear-gradient(135deg, #ffff00, #f97316)",
-                color: "#000",
-                boxShadow: "0 0 15px #ffff00"
-              }}
-              data-testid="button-save-score"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              SAVE SCORE
-            </Button>
+            {isDemoMode ? (
+              <Card className="p-4 border-2 bg-card/80 text-center" style={{ borderColor: "#888" }}>
+                <p className="text-[10px] mb-2" style={{ color: "#888" }}>
+                  DEMO MODE
+                </p>
+                <p className="text-[8px]" style={{ color: "#666" }}>
+                  Scores are not saved in demo mode.
+                  Connect wallet and pay entry fee to compete!
+                </p>
+              </Card>
+            ) : (
+              <Button
+                onClick={() => setShowNameInput(true)}
+                className="w-full py-6 text-sm"
+                style={{ 
+                  background: "linear-gradient(135deg, #ffff00, #f97316)",
+                  color: "#000",
+                  boxShadow: "0 0 15px #ffff00"
+                }}
+                data-testid="button-save-score"
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                SAVE SCORE
+              </Button>
+            )}
             
             <Button
               onClick={startGame}
@@ -1173,7 +1192,11 @@ export default function Game() {
             </Button>
             
             <Button
-              onClick={() => setScreen("title")}
+              onClick={() => {
+                setSessionId(null);
+                setIsDemoMode(false);
+                setScreen("title");
+              }}
               variant="outline"
               className="w-full py-6 text-sm border-2"
               style={{ borderColor: "#00ffff", color: "#00ffff" }}
