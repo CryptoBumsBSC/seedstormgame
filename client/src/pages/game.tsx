@@ -259,6 +259,10 @@ export default function Game() {
     const strain = strains[Math.floor(Math.random() * strains.length)];
     const health = difficultyRef.current;
     
+    // Randomized speed: base + difficulty bonus + random variation (-30% to +50%)
+    const baseSpeed = 1 + difficultyRef.current * 0.2;
+    const speedVariation = baseSpeed * (0.7 + Math.random() * 0.8); // 70% to 150% of base
+    
     const enemy: Enemy = {
       id: generateId(),
       x: Math.random() * (CANVAS_WIDTH - ENEMY_SIZE),
@@ -268,8 +272,8 @@ export default function Game() {
       health,
       maxHealth: health,
       strain,
-      speed: 1 + difficultyRef.current * 0.2,
-      shootCooldown: Math.random() * 2000 + 1000,
+      speed: speedVariation,
+      shootCooldown: Math.random() * 2000 + 500, // Faster initial shots sometimes
       points: health,
     };
     
@@ -344,14 +348,22 @@ export default function Game() {
         });
       }
     } else {
-      // Enemy projectile
+      // Enemy projectile with randomized speed
+      // Base speed + difficulty + random variation
+      // Sometimes fires FAST burst shots (15% chance)
+      const isBurstShot = Math.random() < 0.15;
+      const baseSpeed = 4 + difficultyRef.current * 0.5;
+      const randomVariation = baseSpeed * (0.6 + Math.random() * 0.8); // 60% to 140% variation
+      const burstMultiplier = isBurstShot ? 1.8 + Math.random() * 0.7 : 1; // 1.8x to 2.5x for bursts
+      const finalSpeed = randomVariation * burstMultiplier;
+      
       const projectile: Projectile = {
         id: generateId(),
         x: x - PROJECTILE_SIZE / 2,
         y: y + ENEMY_SIZE,
         width: PROJECTILE_SIZE,
         height: PROJECTILE_SIZE * 2,
-        speed: 4 + difficultyRef.current * 0.5,
+        speed: finalSpeed,
         isPlayerBullet: false,
       };
       projectilesRef.current.push(projectile);
@@ -372,13 +384,20 @@ export default function Game() {
     const hazardTypes: HazardType[] = ["bong", "joint", "matches"];
     const type = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
     
+    // Highly randomized hazard speed: some slow, some FAST
+    // 20% chance of "fast hazard" that zooms down
+    const isFastHazard = Math.random() < 0.2;
+    const hazardSpeed = isFastHazard 
+      ? 4 + Math.random() * 3  // Fast: 4-7 speed
+      : 1.5 + Math.random() * 2.5; // Normal: 1.5-4 speed
+    
     const hazard: Hazard = {
       id: generateId(),
       x: Math.random() * (CANVAS_WIDTH - HAZARD_SIZE),
       y: -HAZARD_SIZE,
       width: HAZARD_SIZE,
       height: HAZARD_SIZE,
-      speed: 2 + Math.random() * 2,
+      speed: hazardSpeed,
       type,
     };
     
@@ -591,19 +610,31 @@ export default function Game() {
     }
 
     spawnCooldownRef.current -= deltaTime;
-    const spawnRate = Math.max(500, 2000 - difficultyRef.current * 150);
+    // Randomized spawn rate: base rate with 50% to 150% variation for unpredictability
+    const baseSpawnRate = Math.max(500, 2000 - difficultyRef.current * 150);
+    const spawnRateVariation = baseSpawnRate * (0.5 + Math.random()); // 50% to 150%
     if (spawnCooldownRef.current <= 0) {
       spawnEnemy();
-      spawnCooldownRef.current = spawnRate;
+      // Sometimes spawn 2 enemies at once (10% chance after 30 sec)
+      if (gameTimeSec >= 30 && Math.random() < 0.1) {
+        spawnEnemy();
+      }
+      spawnCooldownRef.current = spawnRateVariation;
     }
 
-    // Hazard spawning - starts after 20 seconds, rate increases with time
+    // Hazard spawning - starts after 20 seconds, highly randomized timing
     hazardCooldownRef.current -= deltaTime;
     if (gameTimeSec >= 20) {
-      const hazardRate = Math.max(1500, 5000 - gameTimeSec * 15);
+      const baseHazardRate = Math.max(1500, 5000 - gameTimeSec * 15);
+      // 40% to 160% variation for maximum unpredictability
+      const hazardRateVariation = baseHazardRate * (0.4 + Math.random() * 1.2);
       if (hazardCooldownRef.current <= 0) {
         spawnHazard();
-        hazardCooldownRef.current = hazardRate;
+        // Sometimes spawn 2 hazards at once (8% chance after 45 sec)
+        if (gameTimeSec >= 45 && Math.random() < 0.08) {
+          spawnHazard();
+        }
+        hazardCooldownRef.current = hazardRateVariation;
       }
     }
 
