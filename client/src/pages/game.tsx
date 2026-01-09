@@ -2022,7 +2022,7 @@ export default function Game() {
             <Target className="w-8 h-8" />
           </Button>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-10">
             <Button
               size="lg"
               className="h-16 px-6"
