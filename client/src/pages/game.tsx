@@ -1875,7 +1875,7 @@ export default function Game() {
               A Dudley Bud Adventure
             </p>
             <p 
-              className="text-xs mt-1"
+              className="text-[10px] mt-1 whitespace-nowrap"
               style={{ color: "#00ff00", textShadow: "0 0 8px #00ff00" }}
               data-testid="text-tagline"
             >
