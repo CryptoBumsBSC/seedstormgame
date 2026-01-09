@@ -1868,15 +1868,15 @@ export default function Game() {
 
           <div className="text-center py-2">
             <p 
-              className="text-xs"
-              style={{ color: "#ff00ff" }}
+              className="text-sm"
+              style={{ color: "#00ff00", textShadow: "0 0 8px #00ff00" }}
               data-testid="text-subtitle"
             >
               A Dudley Bud Adventure
             </p>
             <p 
-              className="text-[9px] mt-1"
-              style={{ color: "#ffff00", textShadow: "0 0 5px #ffff00" }}
+              className="text-xs mt-1"
+              style={{ color: "#00ff00", textShadow: "0 0 8px #00ff00" }}
               data-testid="text-tagline"
             >
               Randomness Happens Awe Man LFG
