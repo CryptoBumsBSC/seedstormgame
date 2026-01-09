@@ -2471,6 +2471,7 @@ export default function Game() {
               <p>After 20 seconds, hazards start falling:</p>
               <p><span style={{ color: "#4488ff" }}>Bong</span> - <span style={{ color: "#ff6600" }}>Lit Joint</span> - <span style={{ color: "#ff0000" }}>Matches</span></p>
               <p>Avoid them! They damage you on contact.</p>
+              <p className="mt-2" style={{ color: "#00ff00" }}>Randomness Sometimes Happens, its apart of the game, Awe Man LFG</p>
               <p>Spawn rate increases over time!</p>
             </div>
           </Card>
