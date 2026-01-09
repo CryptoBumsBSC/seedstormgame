@@ -13,7 +13,7 @@ import type {
   StrainType,
   Score 
 } from "@shared/schema";
-import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Gamepad2, HelpCircle, Crosshair, Shield, Zap, AlertTriangle } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Gamepad2, HelpCircle, Crosshair, Shield, Zap, AlertTriangle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Screen = "title" | "game" | "gameover" | "leaderboard" | "help";
@@ -2293,6 +2293,123 @@ export default function Game() {
               <p>Survive to 4 minutes for max firepower!</p>
               <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
               <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffff00" }}>
+            <h2 className="text-xs mb-3 flex items-center gap-2" style={{ color: "#ffff00" }}>
+              <Eye className="w-4 h-4" />
+              VISUAL GUIDE
+            </h2>
+            
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#00ff00" }}>ENEMIES (shoot them!)</p>
+                <div className="flex gap-4 items-center flex-wrap">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full" style={{ background: "radial-gradient(circle, #a855f7 30%, #7c3aed 70%, #5b21b6 100%)", boxShadow: "0 0 6px #a855f7" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#a855f7" }}>Indica</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full" style={{ background: "radial-gradient(circle, #22c55e 30%, #16a34a 70%, #15803d 100%)", boxShadow: "0 0 6px #22c55e" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#22c55e" }}>Sativa</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full" style={{ background: "radial-gradient(circle, #f97316 30%, #ea580c 70%, #c2410c 100%)", boxShadow: "0 0 6px #f97316" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#f97316" }}>Hybrid</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#ff0000" }}>HAZARDS (avoid!)</p>
+                <div className="flex gap-4 items-center flex-wrap">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-10 rounded-b-full" style={{ background: "linear-gradient(to bottom, #4488ff 60%, #2266cc 100%)", boxShadow: "0 0 6px #4488ff", borderTop: "3px solid #66aaff" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#4488ff" }}>Bong</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-2 h-8 rounded-sm" style={{ background: "linear-gradient(to bottom, #ff6600 20%, #cc4400 50%, #ffffff 90%)", boxShadow: "0 0 6px #ff6600" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#ff6600" }}>Joint</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-6 h-8 rounded-sm" style={{ background: "linear-gradient(to bottom, #ff4444 30%, #8B0000 100%)", boxShadow: "0 0 6px #ff0000" }} />
+                    <span className="text-[8px] mt-1" style={{ color: "#ff0000" }}>Matches</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#ff0000" }}>DEADLY (instant game over!)</p>
+                <div className="flex gap-4 items-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "radial-gradient(circle, #1a3d1a 30%, #0d1f0d 100%)", boxShadow: "0 0 8px #ff0000" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24">
+                        <circle cx="12" cy="10" r="8" fill="#0d1f0d" stroke="#1a3d1a" strokeWidth="1"/>
+                        <circle cx="8" cy="9" r="2" fill="#ff0000"/>
+                        <circle cx="16" cy="9" r="2" fill="#ff0000"/>
+                        <ellipse cx="12" cy="14" rx="3" ry="2" fill="#1a1a1a"/>
+                        <rect x="6" y="20" width="3" height="6" rx="1" fill="#0d1f0d" stroke="#1a3d1a" strokeWidth="0.5" transform="rotate(-30 7.5 23)"/>
+                        <rect x="15" y="20" width="3" height="6" rx="1" fill="#0d1f0d" stroke="#1a3d1a" strokeWidth="0.5" transform="rotate(30 16.5 23)"/>
+                      </svg>
+                    </div>
+                    <span className="text-[8px] mt-1" style={{ color: "#008800" }}>Skull</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#88ffff" }}>HELPER (collect!)</p>
+                <div className="flex gap-4 items-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "radial-gradient(circle, #ffffff 20%, #88ffff 60%, #44aaaa 100%)", boxShadow: "0 0 12px #88ffff, 0 0 20px #ffffff" }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24">
+                        <ellipse cx="12" cy="14" rx="6" ry="5" fill="#88ffff"/>
+                        <ellipse cx="6" cy="12" rx="4" ry="3" fill="#aaffff" transform="rotate(-30 6 12)"/>
+                        <ellipse cx="18" cy="12" rx="4" ry="3" fill="#aaffff" transform="rotate(30 18 12)"/>
+                        <ellipse cx="12" cy="6" rx="4" ry="2" fill="#ffff88" stroke="#ffdd00" strokeWidth="0.5"/>
+                      </svg>
+                    </div>
+                    <span className="text-[8px] mt-1" style={{ color: "#88ffff" }}>Bud Angel</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>POWER-UPS (collect!)</p>
+                <div className="flex gap-3 items-center flex-wrap">
+                  <div className="flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#00ffff", color: "#000", boxShadow: "0 0 6px #00ffff" }}>S</div>
+                    <span className="text-[8px] mt-1" style={{ color: "#00ffff" }}>Speed</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#ff0000", color: "#fff", boxShadow: "0 0 6px #ff0000" }}>D</div>
+                    <span className="text-[8px] mt-1" style={{ color: "#ff0000" }}>Damage</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#ffff00", color: "#000", boxShadow: "0 0 6px #ffff00" }}>R</div>
+                    <span className="text-[8px] mt-1" style={{ color: "#ffff00" }}>Rapid</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#00ff00", color: "#000", boxShadow: "0 0 6px #00ff00" }}>+</div>
+                    <span className="text-[8px] mt-1" style={{ color: "#00ff00" }}>Life</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#00ff00" }}>YOU (the player)</p>
+                <div className="flex gap-4 items-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-10 flex items-center justify-center" style={{ color: "#00ff00" }}>
+                      <svg width="32" height="32" viewBox="0 0 32 32">
+                        <polygon points="16,2 20,12 30,12 22,18 25,28 16,22 7,28 10,18 2,12 12,12" fill="#00ff00" stroke="#22c55e" strokeWidth="1"/>
+                      </svg>
+                    </div>
+                    <span className="text-[8px] mt-1" style={{ color: "#00ff00" }}>Dudley Bud</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
         </div>
