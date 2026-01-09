@@ -1,19 +1,22 @@
-const BLOCKED_SLURS = [
-  "nigger", "nigga", "negro", "negr",
-  "kike", 
-  "chink",
-  "cracker",
-  "spic", "spick",
-  "wetback",
-  "gook",
-  "beaner",
-  "coon",
-  "paki",
-  "fag", "faggot", "fagot", "faget",
-  "dyke",
-  "tranny", "trannie",
-  "retard", "retarded", "tard"
+// Slurs are base64 encoded to keep source code clean
+const ENCODED_SLURS = [
+  "bmlnZ2Vy", "bmlnZ2E=", "bmVncm8=", "bmVncg==",
+  "a2lrZQ==",
+  "Y2hpbms=",
+  "Y3JhY2tlcg==",
+  "c3BpYw==", "c3BpY2s=",
+  "d2V0YmFjaw==",
+  "Z29vaw==",
+  "YmVhbmVy",
+  "Y29vbg==",
+  "cGFraQ==",
+  "ZmFn", "ZmFnZ290", "ZmFnb3Q=", "ZmFnZXQ=",
+  "ZHlrZQ==",
+  "dHJhbm55", "dHJhbm5pZQ==",
+  "cmV0YXJk", "cmV0YXJkZWQ=", "dGFyZA=="
 ];
+
+const BLOCKED_SLURS = ENCODED_SLURS.map(s => Buffer.from(s, 'base64').toString('utf8'));
 
 function normalizeText(text: string): string {
   let normalized = text.toLowerCase();
