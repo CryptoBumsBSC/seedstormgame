@@ -1866,13 +1866,22 @@ export default function Game() {
             LEADERBOARD
           </Button>
 
-          <p 
-            className="text-xs text-center py-2"
-            style={{ color: "#ff00ff" }}
-            data-testid="text-subtitle"
-          >
-            A DUDLEY BUD ADVENTURE
-          </p>
+          <div className="text-center py-2">
+            <p 
+              className="text-xs"
+              style={{ color: "#ff00ff" }}
+              data-testid="text-subtitle"
+            >
+              A Dudley Bud Adventure
+            </p>
+            <p 
+              className="text-[9px] mt-1"
+              style={{ color: "#ffff00", textShadow: "0 0 5px #ffff00" }}
+              data-testid="text-tagline"
+            >
+              Randomness Happens Awe Man LFG
+            </p>
+          </div>
 
           <Button
             onClick={() => setScreen("help")}
