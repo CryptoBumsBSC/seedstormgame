@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEED STORM Community Rules</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background: linear-gradient(180deg, #0a0a0f 0%, #1a0a1a 100%);
+      min-height: 100vh;
+      color: #00ffff;
+      padding: 20px;
+      line-height: 1.8;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      color: #00ff00;
+      text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
+      font-size: 18px;
+      margin-bottom: 30px;
+    }
+    
+    h2 {
+      color: #ffff00;
+      text-shadow: 0 0 8px #ffff00;
+      font-size: 12px;
+      margin: 25px 0 15px 0;
+    }
+    
+    .section {
+      background: rgba(0, 255, 0, 0.05);
+      border: 2px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .section.blocked {
+      border-color: #ff0000;
+      background: rgba(255, 0, 0, 0.05);
+    }
+    
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    li {
+      font-size: 8px;
+      margin-bottom: 12px;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    li::before {
+      position: absolute;
+      left: 0;
+      font-size: 10px;
+    }
+    
+    .allowed li::before {
+      content: "✓";
+      color: #00ff00;
+    }
+    
+    .blocked li::before {
+      content: "✗";
+      color: #ff0000;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 10px;
+      color: #00ff00;
+      text-shadow: 0 0 5px #00ff00;
+    }
+    
+    .tagline {
+      color: #ff00ff;
+      font-size: 8px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    
+    .copy-btn {
+      display: block;
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #00ff00, #22c55e);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Press Start 2P', cursive;
+      font-size: 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    
+    .copy-btn:hover {
+      transform: scale(1.02);
+      box-shadow: 0 0 20px #00ff00;
+    }
+    
+    .rules-text {
+      background: #111;
+      border: 1px solid #333;
+      padding: 15px;
+      font-family: monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      border-radius: 8px;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SEED STORM<br>COMMUNITY RULES</h1>
+    
+    <div class="section allowed">
+      <h2>ALLOWED</h2>
+      <ul>
+        <li>Cannabis terms & 420 culture</li>
+        <li>Friendly trash talk</li>
+        <li>Adult language</li>
+        <li>Creative stoner names</li>
+        <li>All strains & slang</li>
+      </ul>
+    </div>
+    
+    <div class="section blocked">
+      <h2>NOT ALLOWED</h2>
+      <ul>
+        <li>Racial slurs</li>
+        <li>Religious hate speech</li>
+        <li>Anti-LGBTQ+ slurs</li>
+        <li>Disability slurs</li>
+        <li>Cheating or fake scores</li>
+        <li>Spam submissions</li>
+      </ul>
+    </div>
+    
+    <div class="section">
+      <h2>ENFORCEMENT</h2>
+      <ul style="list-style: none;">
+        <li style="padding-left: 0;">Names with hate speech will be rejected automatically.</li>
+        <li style="padding-left: 0; margin-top: 10px;">Repeated abuse may result in removal.</li>
+      </ul>
+    </div>
+    
+    <div class="footer">
+      Stay Chill, Stay Green!
+      <div class="tagline">A Dudley Bud Adventure</div>
+    </div>
+    
+    <h2 style="margin-top: 40px;">COPY FOR TELEGRAM</h2>
+    <div class="rules-text" id="rulesText">🌿 SEED STORM COMMUNITY RULES 🌿
+
+✅ ALLOWED:
+• Cannabis terms & 420 culture
+• Friendly trash talk
+• Adult language
+• Creative stoner names
+
+❌ NOT ALLOWED:
+• Racial slurs
+• Religious hate speech
+• Anti-LGBTQ+ slurs
+• Disability slurs
+• Cheating/fake scores
+
+First offense: Name rejected
+Repeated abuse: May be removed
+
+Stay chill, stay green! 🌱
+A Dudley Bud Adventure</div>
+    
+    <button class="copy-btn" onclick="copyRules()">
+      COPY RULES TO CLIPBOARD
+    </button>
+  </div>
+  
+  <script>
+    function copyRules() {
+      const text = document.getElementById('rulesText').innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'COPIED!';
+        btn.style.background = '#ffff00';
+        setTimeout(() => {
+          btn.textContent = 'COPY RULES TO CLIPBOARD';
+          btn.style.background = 'linear-gradient(135deg, #00ff00, #22c55e)';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

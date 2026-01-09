@@ -232,15 +232,22 @@ export default function Game() {
     queryKey: ["/api/scores/all-time"],
   });
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
-      return apiRequest("POST", "/api/scores", data);
+      const response = await apiRequest("POST", "/api/scores", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scores/all-time"] });
+      setSubmitError(null);
       setShowNameInput(false);
       setScreen("leaderboard");
+    },
+    onError: (error: Error) => {
+      setSubmitError(error.message || "Please choose a different name");
     },
   });
 
@@ -1838,6 +1845,7 @@ export default function Game() {
   }, [screen, togglePause]);
 
   const handleSubmitScore = () => {
+    setSubmitError(null);
     if (playerName.trim().length > 0) {
       submitScoreMutation.mutate({
         playerName: playerName.trim().toUpperCase(),
@@ -2203,15 +2211,31 @@ export default function Game() {
             <p className="text-[10px] mb-4 text-center" style={{ color: "#00ffff" }}>
               ENTER YOUR NAME
             </p>
+            {submitError && (
+              <p 
+                className="text-[9px] mb-3 text-center p-2 rounded"
+                style={{ 
+                  color: "#ff0000",
+                  background: "rgba(255, 0, 0, 0.1)",
+                  border: "1px solid #ff0000"
+                }}
+                data-testid="text-submit-error"
+              >
+                {submitError}
+              </p>
+            )}
             <Input
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value.slice(0, 10))}
+              onChange={(e) => {
+                setPlayerName(e.target.value.slice(0, 10));
+                setSubmitError(null);
+              }}
               placeholder="AAA"
               maxLength={10}
               className="text-center text-lg mb-4 uppercase"
               style={{ 
                 background: "#111",
-                borderColor: "#ff00ff",
+                borderColor: submitError ? "#ff0000" : "#ff00ff",
                 color: "#00ff00"
               }}
               autoFocus

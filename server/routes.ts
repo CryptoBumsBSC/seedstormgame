@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
+import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier } from "./profanityFilter";
 import path from "path";
 import fs from "fs";
 
@@ -21,6 +22,12 @@ export async function registerRoutes(
     res.setHeader('Content-Type', 'image/png');
     res.setHeader('Cache-Control', 'no-cache');
     fs.createReadStream(filePath).pipe(res);
+  });
+
+  // Community rules page
+  app.get("/rules", (req, res) => {
+    const filePath = path.resolve(process.cwd(), "public/community-rules.html");
+    res.sendFile(filePath);
   });
 
   // Download page for banner (640x360 for Telegram)
@@ -66,13 +73,34 @@ export async function registerRoutes(
     }
   });
 
-  // Scores - POST new score (free to play mode)
+  // Scores - POST new score (free to play mode) with security checks
   app.post("/api/scores", async (req, res) => {
     try {
       const { playerName, score, wave, playTime } = req.body;
       
       if (!playerName || typeof score !== "number" || typeof wave !== "number") {
         return res.status(400).json({ error: "Invalid score data" });
+      }
+      
+      // Rate limiting - 1 score per 10 seconds per client
+      const clientId = getClientIdentifier(req);
+      const rateCheck = checkRateLimit(clientId);
+      if (!rateCheck.allowed) {
+        return res.status(429).json({ 
+          error: `Please wait ${rateCheck.waitTime} seconds before submitting again` 
+        });
+      }
+      
+      // Validate player name (profanity filter)
+      const nameCheck = validatePlayerName(playerName);
+      if (!nameCheck.valid) {
+        return res.status(400).json({ error: nameCheck.error });
+      }
+      
+      // Validate score is realistic for play time
+      const scoreCheck = validateScore(score, playTime || 0);
+      if (!scoreCheck.valid) {
+        return res.status(400).json({ error: scoreCheck.error });
       }
       
       const scoreData = {
@@ -349,13 +377,6 @@ export async function registerRoutes(
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pool info" });
     }
-  });
-
-  // Legacy endpoint - redirect to new secure flow
-  app.post("/api/scores", async (req, res) => {
-    return res.status(403).json({ 
-      error: "Direct score submission disabled. Use /api/sessions/:id/end" 
-    });
   });
 
   app.post("/api/payments/entry", async (req, res) => {
