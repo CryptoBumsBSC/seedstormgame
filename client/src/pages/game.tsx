@@ -2759,6 +2759,21 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff6600" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff6600" }}>
+              <Zap className="w-4 h-4" />
+              SEED STORM
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ff6600" }}>METEOR SHOWER!</span> Falling cannabis seeds!</p>
+              <p><span style={{ color: "#ffff00" }}>Appears:</span> After 90 seconds of play</p>
+              <p><span style={{ color: "#ffff00" }}>Duration:</span> Lasts 3-6 seconds</p>
+              <p><span style={{ color: "#ff6600" }}>5-15 seeds</span> fall with fire trails</p>
+              <p><span style={{ color: "#ff0000" }}>Contact:</span> Lose 1 life (shield protects)</p>
+              <p>Warning text "SEED STORM!" appears during event</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
               <Heart className="w-4 h-4" />
@@ -2771,6 +2786,7 @@ export default function Game() {
               <p>Survive to 4 minutes for max firepower!</p>
               <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
               <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>
+              <p><span style={{ color: "#ff6600" }}>SEED STORM:</span> Move to the edges when it hits!</p>
             </div>
           </Card>
 
@@ -2832,6 +2848,23 @@ export default function Game() {
                       </svg>
                     </div>
                     <span className="text-[8px] mt-1" style={{ color: "#008800" }}>Skull</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] mb-2" style={{ color: "#ff6600" }}>SEED STORM (dodge!)</p>
+                <div className="flex gap-4 items-center">
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-12 flex items-center justify-center" style={{ boxShadow: "0 0 10px #ff6600" }}>
+                      <svg width="24" height="32" viewBox="0 0 24 32">
+                        <ellipse cx="12" cy="20" rx="6" ry="8" fill="#8a6a45" stroke="#5c3a1e" strokeWidth="1"/>
+                        <line x1="12" y1="4" x2="12" y2="12" stroke="#ff6600" strokeWidth="2" opacity="0.6"/>
+                        <line x1="12" y1="0" x2="12" y2="8" stroke="#ff4400" strokeWidth="2" opacity="0.3"/>
+                        <line x1="6" y1="20" x2="18" y2="20" stroke="#4d2f1e" strokeWidth="1"/>
+                      </svg>
+                    </div>
+                    <span className="text-[8px] mt-1" style={{ color: "#ff6600" }}>Meteor Seed</span>
                   </div>
                 </div>
               </div>
