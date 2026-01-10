@@ -71,6 +71,16 @@ interface Particle {
   size: number;
 }
 
+interface MeteorSeed {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number;
+  angle: number; // Direction angle for diagonal movement
+}
+
 const strainColors: Record<StrainType, { fill: string; glow: string }> = {
   indica: { fill: "#9333ea", glow: "#c084fc" },
   sativa: { fill: "#22c55e", glow: "#86efac" },
@@ -83,6 +93,20 @@ const powerUpColors: Record<PowerUpType, string> = {
   rapid: "#ff00ff",
   life: "#ff0000",
 };
+
+// ============ AD CONFIGURATION ============
+// Change these to update your ads (320x100 banner size recommended)
+const ADS = {
+  titleScreen: {
+    image: "", // Put your ad image URL here, e.g. "/my-ad.png"
+    link: "",  // Where clicking the ad goes, e.g. "https://example.com"
+  },
+  gameOver: {
+    image: "", // Put your ad image URL here
+    link: "",  // Where clicking the ad goes
+  },
+};
+// ==========================================
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 11);
@@ -223,6 +247,10 @@ export default function Game() {
   const specialObjectsRef = useRef<SpecialObject[]>([]);
   const lastSkullSpawnRef = useRef<number>(0);
   const lastBudAngelSpawnRef = useRef<number>(0);
+  const meteorSeedsRef = useRef<MeteorSeed[]>([]);
+  const meteorShowerActiveRef = useRef<boolean>(false);
+  const meteorShowerEndRef = useRef<number>(0);
+  const lastMeteorShowerRef = useRef<number>(0);
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -497,6 +525,41 @@ export default function Game() {
     });
   }, []);
 
+  const startMeteorShower = useCallback(() => {
+    const gameTimeSec = gameTimeRef.current / 1000;
+    // Only after 90 seconds of play
+    if (gameTimeSec < 90) return;
+    // Don't start if already active
+    if (meteorShowerActiveRef.current) return;
+    // Min 15 seconds between showers
+    if (gameTimeRef.current - lastMeteorShowerRef.current < 15000) return;
+    // 3% chance per check
+    if (Math.random() > 0.03) return;
+    
+    meteorShowerActiveRef.current = true;
+    lastMeteorShowerRef.current = gameTimeRef.current;
+    // Random duration: 3-6 seconds
+    const duration = 3000 + Math.random() * 3000;
+    meteorShowerEndRef.current = gameTimeRef.current + duration;
+    
+    // Spawn initial batch of meteor seeds (5-15 seeds)
+    const seedCount = 5 + Math.floor(Math.random() * 11);
+    for (let i = 0; i < seedCount; i++) {
+      setTimeout(() => {
+        if (!meteorShowerActiveRef.current) return;
+        meteorSeedsRef.current.push({
+          id: generateId(),
+          x: Math.random() * CANVAS_WIDTH,
+          y: -10 - Math.random() * 50,
+          width: 8,
+          height: 12,
+          speed: 4 + Math.random() * 6, // Speed: 4-10
+          angle: (Math.random() - 0.5) * 0.5, // Slight diagonal variation
+        });
+      }, i * (duration / seedCount / 2)); // Stagger spawns
+    }
+  }, []);
+
   const resetGame = useCallback(() => {
     soundSystem.init();
     playerRef.current = {
@@ -524,6 +587,10 @@ export default function Game() {
     shieldEndRef.current = 0;
     lastSkullSpawnRef.current = 0;
     lastBudAngelSpawnRef.current = 0;
+    meteorSeedsRef.current = [];
+    meteorShowerActiveRef.current = false;
+    meteorShowerEndRef.current = 0;
+    lastMeteorShowerRef.current = 0;
     setIsNewHighScore(false);
     
     setGameState({
@@ -813,11 +880,42 @@ export default function Game() {
       speedBoostEndRef.current = 0;
     }
 
+    // Check for meteor shower spawn
+    startMeteorShower();
+    
+    // End meteor shower if time is up
+    if (meteorShowerActiveRef.current && gameTimeRef.current >= meteorShowerEndRef.current) {
+      meteorShowerActiveRef.current = false;
+    }
+    
+    // Update meteor seeds
+    meteorSeedsRef.current = meteorSeedsRef.current.filter(seed => {
+      seed.y += seed.speed;
+      seed.x += seed.angle * seed.speed; // Slight diagonal movement
+      
+      // Check collision with player (only if not invincible and no shield)
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(seed, player)) {
+        tookDamageThisFrame = true;
+        soundSystem.damage();
+        invincibilityRef.current = 1500;
+        setGameState(prev => {
+          const newLives = prev.lives - 1;
+          if (newLives <= 0) {
+            endGame();
+          }
+          return { ...prev, lives: newLives };
+        });
+        return false;
+      }
+      
+      return seed.y < CANVAS_HEIGHT + seed.height;
+    });
+
     setGameState(prev => ({
       ...prev,
       gameTime: Math.floor(gameTimeRef.current / 1000),
     }));
-  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, spawnBudAngel, spawnSkull, endGame, createExplosion, spawnPowerUp]);
+  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, spawnBudAngel, spawnSkull, startMeteorShower, endGame, createExplosion, spawnPowerUp]);
 
   const drawPixelRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color;
@@ -1604,6 +1702,52 @@ export default function Game() {
     ctx.shadowBlur = 0;
   };
 
+  const drawMeteorSeed = (ctx: CanvasRenderingContext2D, seed: MeteorSeed) => {
+    // Falling cannabis seed - larger, glowing, dangerous
+    ctx.shadowColor = "#ff6600";
+    ctx.shadowBlur = 15;
+    
+    const { x, y, width, height } = seed;
+    const cx = x + width / 2;
+    
+    // Outer glow (danger warning)
+    ctx.fillStyle = "#ff330033";
+    ctx.beginPath();
+    ctx.arc(cx, y + height / 2, width + 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Outer shell - darker brown with orange tint (heated from falling)
+    drawPixelRect(ctx, x - 1, y + 2, width + 2, height - 4, "#5c3a1e");
+    drawPixelRect(ctx, x, y + 1, width, height - 2, "#6a4828");
+    drawPixelRect(ctx, x + 1, y, width - 2, height, "#7c5a2f");
+    
+    // Main seed body
+    drawPixelRect(ctx, x + 1, y + 1, width - 2, height - 2, "#8a6a45");
+    drawPixelRect(ctx, x + 1, y + 2, width - 2, height - 4, "#9b7b55");
+    drawPixelRect(ctx, x + 2, y + 2, width - 4, height - 4, "#ac8c65");
+    
+    // Tiger stripe pattern
+    drawPixelRect(ctx, x + 1, y + 2, 1, height - 4, "#5c3a1e");
+    drawPixelRect(ctx, x + width - 2, y + 2, 1, height - 4, "#5c3a1e");
+    
+    // Central ridge
+    drawPixelRect(ctx, cx - 1, y + 1, 2, height - 2, "#4d2f1e");
+    
+    // Heat glow on edges (falling fast)
+    drawPixelRect(ctx, x, y + 1, 1, height - 2, "#ff6600");
+    drawPixelRect(ctx, x + width - 1, y + 1, 1, height - 2, "#ff6600");
+    
+    // Tail trail effect
+    ctx.globalAlpha = 0.4;
+    drawPixelRect(ctx, x + 2, y - 8, width - 4, 6, "#ff6600");
+    drawPixelRect(ctx, x + 3, y - 14, width - 6, 5, "#ff4400");
+    ctx.globalAlpha = 0.2;
+    drawPixelRect(ctx, x + 3, y - 18, width - 6, 4, "#ff2200");
+    ctx.globalAlpha = 1;
+    
+    ctx.shadowBlur = 0;
+  };
+
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1786,6 +1930,17 @@ export default function Game() {
       hazardsRef.current.forEach(hazard => drawHazard(ctx, hazard));
       specialObjectsRef.current.forEach(obj => drawSpecialObject(ctx, obj));
       projectilesRef.current.forEach(proj => drawProjectile(ctx, proj));
+      meteorSeedsRef.current.forEach(seed => drawMeteorSeed(ctx, seed));
+      
+      // Meteor shower warning indicator
+      if (meteorShowerActiveRef.current) {
+        ctx.fillStyle = "#ff6600";
+        ctx.font = "8px 'Press Start 2P'";
+        ctx.textAlign = "center";
+        ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.3;
+        ctx.fillText("SEED STORM!", CANVAS_WIDTH / 2, 20);
+        ctx.globalAlpha = 1;
+      }
     }
 
     if (gameState.isPaused) {
@@ -1866,7 +2021,7 @@ export default function Game() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
-          className="text-2xl md:text-4xl text-center mb-2 mt-4 animate-pulse"
+          className="text-2xl md:text-4xl text-center mb-8 mt-4 animate-pulse"
           style={{ 
             color: "#00ffff", 
             textShadow: "0 0 10px #00ffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff" 
@@ -1875,7 +2030,7 @@ export default function Game() {
         >
           SEED STORM
         </h1>
-        <div className="flex flex-col gap-4 w-full max-w-xs mb-6">
+        <div className="flex flex-col gap-4 w-full max-w-xs mb-6 mt-2">
           <Button
             onClick={() => {
               initStars();
@@ -1934,19 +2089,41 @@ export default function Game() {
           </Button>
         </div>
 
-        <Card className="p-4 mb-4 border-2 bg-card/80 backdrop-blur" style={{ borderColor: "#ff00ff" }}>
-          <div className="flex flex-col items-center gap-2">
-            <Target className="w-8 h-8" style={{ color: "#00ff00" }} />
-            <p className="text-[10px] text-center" style={{ color: "#00ffff" }}>SHOOT SEEDS AT ENEMY BUDS</p>
+        {ADS.titleScreen.image ? (
+          <a 
+            href={ADS.titleScreen.link || "#"} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block mb-4"
+            data-testid="link-ad-title"
+          >
+            <img 
+              src={ADS.titleScreen.image} 
+              alt="Advertisement" 
+              className="w-[320px] h-[100px] object-cover rounded border-2"
+              style={{ borderColor: "#ff00ff" }}
+            />
+          </a>
+        ) : (
+          <div 
+            className="w-[320px] h-[100px] mb-4 flex items-center justify-center border-2 border-dashed rounded"
+            style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
+            data-testid="placeholder-ad-title"
+          >
+            <p className="text-[10px]" style={{ color: "#ff00ff" }}>AD SPACE</p>
           </div>
-        </Card>
+        )}
 
         <div className="text-center">
           <p className="text-[8px]" style={{ color: "#888" }}>ARROWS/WASD TO MOVE - SPACE TO SHOOT</p>
         </div>
 
+        <div className="mt-4 text-center">
+          <p className="text-[8px]" style={{ color: "#888" }}>ad enquiry @dudley420</p>
+        </div>
+
         {scores.length > 0 && (
-          <div className="mt-4 text-center">
+          <div className="mt-2 text-center">
             <p className="text-[8px]" style={{ color: "#ff00ff" }}>HIGH SCORE</p>
             <p className="text-sm" style={{ color: "#ffff00" }} data-testid="text-high-score">
               {Math.max(...scores.map(s => s.score))}
@@ -2205,6 +2382,31 @@ export default function Game() {
             >
               MAIN MENU
             </Button>
+
+            {ADS.gameOver.image ? (
+              <a 
+                href={ADS.gameOver.link || "#"} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block mt-4"
+                data-testid="link-ad-gameover"
+              >
+                <img 
+                  src={ADS.gameOver.image} 
+                  alt="Advertisement" 
+                  className="w-[320px] h-[100px] object-cover rounded border-2"
+                  style={{ borderColor: "#ff00ff" }}
+                />
+              </a>
+            ) : (
+              <div 
+                className="w-[320px] h-[100px] mt-4 flex items-center justify-center border-2 border-dashed rounded"
+                style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
+                data-testid="placeholder-ad-gameover"
+              >
+                <p className="text-[10px]" style={{ color: "#ff00ff" }}>AD SPACE</p>
+              </div>
+            )}
           </div>
         ) : (
           <Card className="p-6 w-full max-w-xs border-2" style={{ borderColor: "#00ffff" }}>
