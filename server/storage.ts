@@ -5,6 +5,7 @@ import {
   payments,
   weeklyPools,
   allTimeScores,
+  adClicks,
   type Score,
   type InsertScore,
   type PlayerAccount,
@@ -14,10 +15,12 @@ import {
   type Referral,
   type WeeklyPrizePool,
   type AllTimeScore,
-  type InsertAllTimeScore
+  type InsertAllTimeScore,
+  type AdClick,
+  type InsertAdClick
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   getScores(): Promise<Score[]>;
@@ -42,6 +45,9 @@ export interface IStorage {
   getCurrentWeekPool(): Promise<WeeklyPrizePool>;
   addToPool(amount: number): Promise<void>;
   getPendingReferralEarnings(walletAddress: string): Promise<number>;
+  
+  trackAdClick(placement: string): Promise<AdClick>;
+  getAdStats(): Promise<{ titleScreen: number; gameOver: number }>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -187,6 +193,32 @@ export class DatabaseStorage implements IStorage {
     await db.update(weeklyPools)
       .set({ totalPool: pool.totalPool + amount })
       .where(eq(weeklyPools.id, pool.id));
+  }
+
+  async trackAdClick(placement: string): Promise<AdClick> {
+    // Normalize placement to ensure consistent storage
+    const normalizedPlacement = placement === 'titleScreen' ? 'titleScreen' : 'gameOver';
+    const [click] = await db.insert(adClicks).values({ placement: normalizedPlacement }).returning();
+    return click;
+  }
+
+  async getAdStats(): Promise<{ titleScreen: number; gameOver: number }> {
+    // Use SQL aggregation for efficient counting
+    const result = await db
+      .select({ 
+        placement: adClicks.placement, 
+        clickCount: count() 
+      })
+      .from(adClicks)
+      .groupBy(adClicks.placement);
+    
+    // Map results to expected format with defaults
+    const stats = { titleScreen: 0, gameOver: 0 };
+    for (const row of result) {
+      if (row.placement === 'titleScreen') stats.titleScreen = Number(row.clickCount);
+      if (row.placement === 'gameOver') stats.gameOver = Number(row.clickCount);
+    }
+    return stats;
   }
 }
 

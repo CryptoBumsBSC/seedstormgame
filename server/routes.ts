@@ -385,5 +385,29 @@ export async function registerRoutes(
     });
   });
 
+  // Ad click tracking
+  app.post("/api/ad-click", async (req, res) => {
+    try {
+      const { placement } = req.body;
+      if (!placement || !['titleScreen', 'gameOver'].includes(placement)) {
+        return res.status(400).json({ error: "Invalid placement" });
+      }
+      await storage.trackAdClick(placement);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to track click" });
+    }
+  });
+
+  // Ad stats (view click counts)
+  app.get("/api/ad-stats", async (req, res) => {
+    try {
+      const stats = await storage.getAdStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch ad stats" });
+    }
+  });
+
   return httpServer;
 }

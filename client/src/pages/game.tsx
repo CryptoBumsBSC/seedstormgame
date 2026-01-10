@@ -2096,6 +2096,13 @@ export default function Game() {
             rel="noopener noreferrer"
             className="block mb-4"
             data-testid="link-ad-title"
+            onClick={() => {
+              fetch('/api/ad-click', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ placement: 'titleScreen' })
+              }).catch(() => {});
+            }}
           >
             <img 
               src={ADS.titleScreen.image} 
@@ -2390,6 +2397,13 @@ export default function Game() {
                 rel="noopener noreferrer"
                 className="block mt-4"
                 data-testid="link-ad-gameover"
+                onClick={() => {
+                  fetch('/api/ad-click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ placement: 'gameOver' })
+                  }).catch(() => {});
+                }}
               >
                 <img 
                   src={ADS.gameOver.image} 

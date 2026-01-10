@@ -65,6 +65,12 @@ export const allTimeScores = pgTable("all_time_scores", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const adClicks = pgTable("ad_clicks", {
+  id: serial("id").primaryKey(),
+  placement: text("placement").notNull(), // 'titleScreen' or 'gameOver'
+  clickedAt: timestamp("clicked_at").defaultNow().notNull(),
+});
+
 // Zod Schemas for validation
 export const insertScoreSchema = createInsertSchema(scores).omit({ id: true, createdAt: true });
 export type InsertScore = z.infer<typeof insertScoreSchema>;
@@ -73,6 +79,10 @@ export type Score = typeof scores.$inferSelect;
 export const insertAllTimeScoreSchema = createInsertSchema(allTimeScores).omit({ id: true, createdAt: true });
 export type InsertAllTimeScore = z.infer<typeof insertAllTimeScoreSchema>;
 export type AllTimeScore = typeof allTimeScores.$inferSelect;
+
+export const insertAdClickSchema = createInsertSchema(adClicks).omit({ id: true, clickedAt: true });
+export type InsertAdClick = z.infer<typeof insertAdClickSchema>;
+export type AdClick = typeof adClicks.$inferSelect;
 
 export const insertPlayerSchema = z.object({
   walletAddress: z.string().min(42).max(42),
