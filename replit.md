@@ -131,6 +131,23 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
+- 2026-01-10: Added self-hosted ad spaces for monetization
+  - Two 320x100 banner slots: title screen and game over screen
+  - ADS config object at top of game.tsx for easy ad management
+  - "ad enquiry @dudley420" contact text on title screen
+- 2026-01-10: Added Meteor Shower "SEED STORM" event
+  - Spawns after 90 seconds of play (3% chance, 15s cooldown)
+  - Lasts 3-6 seconds with 5-15 falling seeds
+  - Seeds have orange glow, fire trails, and diagonal movement
+  - Causes 1 life loss on contact (respects shield/invincibility)
+  - Warning text "SEED STORM!" appears during active shower
+- 2026-01-10: Enhanced profanity filter
+  - Unicode normalization and zero-width character removal
+  - Base64-encoded slurs to keep source clean
+  - Only blocks hate speech; allows all cannabis/drug terminology
+- 2026-01-10: UI improvements
+  - Better spacing between title and buttons
+  - Cleaner layout on title and game over screens
 - 2026-01-08: Enhanced all game assets with 50% more detail
   - Player ship now features iconic 5-point cannabis leaf with veins, serrations, and defined fingers
   - Enemy buds have 50% more layers, pistils, trichomes, and calyx bumps
