@@ -2117,7 +2117,7 @@ export default function Game() {
             style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
             data-testid="placeholder-ad-title"
           >
-            <p className="text-[10px]" style={{ color: "#ff00ff" }}>AD SPACE</p>
+            <p className="text-sm font-bold" style={{ color: "#ff00ff" }}>YOUR AD HERE</p>
           </div>
         )}
 
@@ -2418,7 +2418,7 @@ export default function Game() {
                 style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
                 data-testid="placeholder-ad-gameover"
               >
-                <p className="text-[10px]" style={{ color: "#ff00ff" }}>AD SPACE</p>
+                <p className="text-sm font-bold" style={{ color: "#ff00ff" }}>YOUR AD HERE</p>
               </div>
             )}
           </div>
