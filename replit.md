@@ -131,6 +131,23 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
+- 2026-01-11: Added White-Hot Seed to SEED STORM event
+  - Rare glowing white seed (10% chance, max 1 per shower)
+  - Bright white glow with white flame trail
+  - SHOOT IT to get 5 sec shield + 5 sec rapid fire bonus
+  - Updated How To Play with visual guide for white-hot seed
+- 2026-01-11: Enhanced Dudley Bud player character with 50% more detail
+  - Sharper leaf edges with more pronounced tips
+  - Additional serrations on all 5 leaf fingers
+  - Thicker veins with darker accent details
+  - Better leaf texture and stem detail
+- 2026-01-11: Fixed control bugs
+  - Reset controls when window loses focus (prevents stuck movement)
+  - Added touchcancel handler for interrupted touch events
+- 2026-01-11: Added ad click tracking
+  - Database table for tracking clicks by placement
+  - API endpoints: POST /api/ad-click, GET /api/ad-stats
+  - SQL aggregation for efficient stats retrieval
 - 2026-01-10: Added self-hosted ad spaces for monetization
   - Two 320x100 banner slots: title screen and game over screen
   - ADS config object at top of game.tsx for easy ad management

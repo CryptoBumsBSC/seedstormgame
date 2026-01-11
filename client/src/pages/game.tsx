@@ -79,6 +79,7 @@ interface MeteorSeed {
   height: number;
   speed: number;
   angle: number; // Direction angle for diagonal movement
+  isWhiteHot?: boolean; // Rare white-hot seed that grants bonuses when shot
 }
 
 const strainColors: Record<StrainType, { fill: string; glow: string }> = {
@@ -251,6 +252,7 @@ export default function Game() {
   const meteorShowerActiveRef = useRef<boolean>(false);
   const meteorShowerEndRef = useRef<number>(0);
   const lastMeteorShowerRef = useRef<number>(0);
+  const whiteHotSpawnedRef = useRef<boolean>(false); // Track if white-hot already spawned this shower
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -538,6 +540,7 @@ export default function Game() {
     
     meteorShowerActiveRef.current = true;
     lastMeteorShowerRef.current = gameTimeRef.current;
+    whiteHotSpawnedRef.current = false; // Reset white-hot flag for new shower
     // Random duration: 3-6 seconds
     const duration = 3000 + Math.random() * 3000;
     meteorShowerEndRef.current = gameTimeRef.current + duration;
@@ -547,14 +550,20 @@ export default function Game() {
     for (let i = 0; i < seedCount; i++) {
       setTimeout(() => {
         if (!meteorShowerActiveRef.current) return;
+        // 10% chance for white-hot seed (only 1 per shower max, use persistent flag)
+        const isWhiteHot = !whiteHotSpawnedRef.current && Math.random() < 0.1;
+        if (isWhiteHot) {
+          whiteHotSpawnedRef.current = true;
+        }
         meteorSeedsRef.current.push({
           id: generateId(),
           x: Math.random() * CANVAS_WIDTH,
           y: -10 - Math.random() * 50,
-          width: 8,
-          height: 12,
+          width: isWhiteHot ? 10 : 8,
+          height: isWhiteHot ? 14 : 12,
           speed: 4 + Math.random() * 6, // Speed: 4-10
           angle: (Math.random() - 0.5) * 0.5, // Slight diagonal variation
+          isWhiteHot,
         });
       }, i * (duration / seedCount / 2)); // Stagger spawns
     }
@@ -591,6 +600,7 @@ export default function Game() {
     meteorShowerActiveRef.current = false;
     meteorShowerEndRef.current = 0;
     lastMeteorShowerRef.current = 0;
+    whiteHotSpawnedRef.current = false;
     setIsNewHighScore(false);
     
     setGameState({
@@ -785,6 +795,20 @@ export default function Game() {
 
     projectilesRef.current = projectilesRef.current.filter(proj => {
       if (proj.isPlayerBullet) {
+        // Check for white-hot seed hits
+        for (let i = meteorSeedsRef.current.length - 1; i >= 0; i--) {
+          const seed = meteorSeedsRef.current[i];
+          if (seed.isWhiteHot && checkCollision(proj, seed)) {
+            // White-hot seed hit! Grant 5 sec shield + 5 sec rapid fire
+            soundSystem.powerUp();
+            createExplosion(seed.x + seed.width / 2, seed.y + seed.height / 2, "#ffffff");
+            shieldEndRef.current = gameTimeRef.current + 5000;
+            rapidFireEndRef.current = gameTimeRef.current + 5000;
+            meteorSeedsRef.current.splice(i, 1);
+            return false;
+          }
+        }
+        
         for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
           const enemy = enemiesRef.current[i];
           if (checkCollision(proj, enemy)) {
@@ -926,61 +950,83 @@ export default function Game() {
     const { x, y, width, height } = player;
     
     ctx.shadowColor = "#00ff00";
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 18;
     
-    // ===== ICONIC 5-POINT CANNABIS LEAF (Much clearer and more defined) =====
+    // ===== ICONIC 5-POINT CANNABIS LEAF (50% MORE DETAILED - Sharper, more defined) =====
     const leafCenterX = x + width / 2;
     const leafBaseY = y + height * 0.15;
     
-    // CENTER LEAF (tallest, pointing up) - the iconic central finger
-    drawPixelRect(ctx, leafCenterX - 2, leafBaseY - 16, 4, 18, "#15803d");
-    drawPixelRect(ctx, leafCenterX - 3, leafBaseY - 14, 6, 14, "#22c55e");
-    drawPixelRect(ctx, leafCenterX - 1, leafBaseY - 18, 2, 4, "#16a34a");
-    // Center leaf vein
-    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY - 15, 1, 14, "#0d5c28");
-    // Serrated edges on center leaf
-    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 10, 2, 2, "#22c55e");
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 12, 2, 2, "#22c55e");
-    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 6, 2, 2, "#22c55e");
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 8, 2, 2, "#22c55e");
+    // CENTER LEAF (tallest, pointing up) - the iconic central finger with enhanced detail
+    drawPixelRect(ctx, leafCenterX - 2, leafBaseY - 18, 4, 20, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 3, leafBaseY - 16, 6, 16, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 1, leafBaseY - 20, 2, 5, "#16a34a");
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY - 21, 1, 2, "#22c55e"); // Sharp tip
+    // Center leaf vein - more pronounced
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY - 17, 1, 16, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY - 15, 1, 2, "#0a4a20"); // Darker vein detail
+    // Serrated edges on center leaf - sharper, more defined
+    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 12, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 14, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 8, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 10, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 4, leafBaseY - 4, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 6, 2, 2, "#22c55e");
+    // Additional leaf texture
+    drawPixelRect(ctx, leafCenterX - 2, leafBaseY - 13, 1, 1, "#16a34a");
+    drawPixelRect(ctx, leafCenterX + 1, leafBaseY - 11, 1, 1, "#16a34a");
     
-    // LEFT UPPER LEAF (angled out-left, second from center)
-    drawPixelRect(ctx, leafCenterX - 14, leafBaseY - 8, 12, 3, "#15803d");
-    drawPixelRect(ctx, leafCenterX - 16, leafBaseY - 7, 8, 4, "#22c55e");
-    drawPixelRect(ctx, leafCenterX - 12, leafBaseY - 6, 10, 3, "#16a34a");
+    // LEFT UPPER LEAF (angled out-left, second from center) - enhanced
+    drawPixelRect(ctx, leafCenterX - 16, leafBaseY - 10, 14, 4, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 18, leafBaseY - 9, 10, 5, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 14, leafBaseY - 8, 12, 3, "#16a34a");
+    drawPixelRect(ctx, leafCenterX - 19, leafBaseY - 8, 2, 2, "#22c55e"); // Sharp tip
+    // Vein - thicker
+    drawPixelRect(ctx, leafCenterX - 15, leafBaseY - 7, 10, 1, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX - 13, leafBaseY - 8, 6, 1, "#0a4a20");
+    // Serrations - more defined
+    drawPixelRect(ctx, leafCenterX - 19, leafBaseY - 12, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 16, leafBaseY - 13, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 13, leafBaseY - 12, 2, 2, "#22c55e");
+    
+    // RIGHT UPPER LEAF (angled out-right, second from center) - enhanced
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 10, 14, 4, "#15803d");
+    drawPixelRect(ctx, leafCenterX + 8, leafBaseY - 9, 10, 5, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 8, 12, 3, "#16a34a");
+    drawPixelRect(ctx, leafCenterX + 17, leafBaseY - 8, 2, 2, "#22c55e"); // Sharp tip
+    // Vein - thicker
+    drawPixelRect(ctx, leafCenterX + 5, leafBaseY - 7, 10, 1, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX + 7, leafBaseY - 8, 6, 1, "#0a4a20");
+    // Serrations - more defined
+    drawPixelRect(ctx, leafCenterX + 17, leafBaseY - 12, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 14, leafBaseY - 13, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 11, leafBaseY - 12, 2, 2, "#22c55e");
+    
+    // LEFT LOWER LEAF (angled down-left, outer finger) - enhanced
+    drawPixelRect(ctx, leafCenterX - 14, leafBaseY + 1, 12, 4, "#15803d");
+    drawPixelRect(ctx, leafCenterX - 16, leafBaseY + 2, 8, 4, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 12, leafBaseY + 3, 10, 3, "#16a34a");
+    drawPixelRect(ctx, leafCenterX - 17, leafBaseY + 3, 2, 2, "#22c55e"); // Sharp tip
     // Vein
-    drawPixelRect(ctx, leafCenterX - 13, leafBaseY - 6, 8, 1, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX - 13, leafBaseY + 4, 9, 1, "#0d5c28");
     // Serrations
-    drawPixelRect(ctx, leafCenterX - 17, leafBaseY - 10, 2, 2, "#22c55e");
-    drawPixelRect(ctx, leafCenterX - 14, leafBaseY - 11, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 15, leafBaseY - 1, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX - 12, leafBaseY, 2, 2, "#22c55e");
     
-    // RIGHT UPPER LEAF (angled out-right, second from center)
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 8, 12, 3, "#15803d");
-    drawPixelRect(ctx, leafCenterX + 8, leafBaseY - 7, 8, 4, "#22c55e");
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY - 6, 10, 3, "#16a34a");
+    // RIGHT LOWER LEAF (angled down-right, outer finger) - enhanced
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 1, 12, 4, "#15803d");
+    drawPixelRect(ctx, leafCenterX + 8, leafBaseY + 2, 8, 4, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 3, 10, 3, "#16a34a");
+    drawPixelRect(ctx, leafCenterX + 15, leafBaseY + 3, 2, 2, "#22c55e"); // Sharp tip
     // Vein
-    drawPixelRect(ctx, leafCenterX + 5, leafBaseY - 6, 8, 1, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX + 4, leafBaseY + 4, 9, 1, "#0d5c28");
     // Serrations
-    drawPixelRect(ctx, leafCenterX + 15, leafBaseY - 10, 2, 2, "#22c55e");
-    drawPixelRect(ctx, leafCenterX + 12, leafBaseY - 11, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 13, leafBaseY - 1, 2, 2, "#22c55e");
+    drawPixelRect(ctx, leafCenterX + 10, leafBaseY, 2, 2, "#22c55e");
     
-    // LEFT LOWER LEAF (angled down-left, outer finger)
-    drawPixelRect(ctx, leafCenterX - 12, leafBaseY + 2, 10, 3, "#15803d");
-    drawPixelRect(ctx, leafCenterX - 14, leafBaseY + 3, 6, 3, "#22c55e");
-    drawPixelRect(ctx, leafCenterX - 10, leafBaseY + 4, 8, 2, "#16a34a");
-    // Vein
-    drawPixelRect(ctx, leafCenterX - 11, leafBaseY + 4, 7, 1, "#0d5c28");
-    
-    // RIGHT LOWER LEAF (angled down-right, outer finger)
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 2, 10, 3, "#15803d");
-    drawPixelRect(ctx, leafCenterX + 8, leafBaseY + 3, 6, 3, "#22c55e");
-    drawPixelRect(ctx, leafCenterX + 2, leafBaseY + 4, 8, 2, "#16a34a");
-    // Vein
-    drawPixelRect(ctx, leafCenterX + 4, leafBaseY + 4, 7, 1, "#0d5c28");
-    
-    // LEAF STEM connecting to bud
-    drawPixelRect(ctx, leafCenterX - 1, leafBaseY, 2, 6, "#166534");
-    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY + 2, 1, 4, "#0d5c28");
+    // LEAF STEM connecting to bud - thicker and more detailed
+    drawPixelRect(ctx, leafCenterX - 1.5, leafBaseY - 1, 3, 8, "#166534");
+    drawPixelRect(ctx, leafCenterX - 0.5, leafBaseY + 1, 1, 5, "#0d5c28");
+    drawPixelRect(ctx, leafCenterX - 1, leafBaseY + 5, 2, 2, "#14532d"); // Base thickening
     
     // ===== MAIN BUD BODY (enhanced detail) =====
     // Outer shape layers
@@ -1703,47 +1749,108 @@ export default function Game() {
   };
 
   const drawMeteorSeed = (ctx: CanvasRenderingContext2D, seed: MeteorSeed) => {
-    // Falling cannabis seed - larger, glowing, dangerous
-    ctx.shadowColor = "#ff6600";
-    ctx.shadowBlur = 15;
-    
-    const { x, y, width, height } = seed;
+    const { x, y, width, height, isWhiteHot } = seed;
     const cx = x + width / 2;
     
-    // Outer glow (danger warning)
-    ctx.fillStyle = "#ff330033";
-    ctx.beginPath();
-    ctx.arc(cx, y + height / 2, width + 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Outer shell - darker brown with orange tint (heated from falling)
-    drawPixelRect(ctx, x - 1, y + 2, width + 2, height - 4, "#5c3a1e");
-    drawPixelRect(ctx, x, y + 1, width, height - 2, "#6a4828");
-    drawPixelRect(ctx, x + 1, y, width - 2, height, "#7c5a2f");
-    
-    // Main seed body
-    drawPixelRect(ctx, x + 1, y + 1, width - 2, height - 2, "#8a6a45");
-    drawPixelRect(ctx, x + 1, y + 2, width - 2, height - 4, "#9b7b55");
-    drawPixelRect(ctx, x + 2, y + 2, width - 4, height - 4, "#ac8c65");
-    
-    // Tiger stripe pattern
-    drawPixelRect(ctx, x + 1, y + 2, 1, height - 4, "#5c3a1e");
-    drawPixelRect(ctx, x + width - 2, y + 2, 1, height - 4, "#5c3a1e");
-    
-    // Central ridge
-    drawPixelRect(ctx, cx - 1, y + 1, 2, height - 2, "#4d2f1e");
-    
-    // Heat glow on edges (falling fast)
-    drawPixelRect(ctx, x, y + 1, 1, height - 2, "#ff6600");
-    drawPixelRect(ctx, x + width - 1, y + 1, 1, height - 2, "#ff6600");
-    
-    // Tail trail effect
-    ctx.globalAlpha = 0.4;
-    drawPixelRect(ctx, x + 2, y - 8, width - 4, 6, "#ff6600");
-    drawPixelRect(ctx, x + 3, y - 14, width - 6, 5, "#ff4400");
-    ctx.globalAlpha = 0.2;
-    drawPixelRect(ctx, x + 3, y - 18, width - 6, 4, "#ff2200");
-    ctx.globalAlpha = 1;
+    if (isWhiteHot) {
+      // WHITE-HOT SEED - Glowing bright white with white flame trail
+      ctx.shadowColor = "#ffffff";
+      ctx.shadowBlur = 25;
+      
+      // Intense outer glow
+      ctx.fillStyle = "#ffffff44";
+      ctx.beginPath();
+      ctx.arc(cx, y + height / 2, width + 8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Secondary glow ring
+      ctx.fillStyle = "#ffff8833";
+      ctx.beginPath();
+      ctx.arc(cx, y + height / 2, width + 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Outer shell - white hot edges
+      drawPixelRect(ctx, x - 1, y + 2, width + 2, height - 4, "#ffeecc");
+      drawPixelRect(ctx, x, y + 1, width, height - 2, "#ffffff");
+      drawPixelRect(ctx, x + 1, y, width - 2, height, "#ffffee");
+      
+      // Main seed body - bright white
+      drawPixelRect(ctx, x + 1, y + 1, width - 2, height - 2, "#ffffff");
+      drawPixelRect(ctx, x + 1, y + 2, width - 2, height - 4, "#fffff0");
+      drawPixelRect(ctx, x + 2, y + 2, width - 4, height - 4, "#ffffff");
+      
+      // Tiger stripe pattern (faint on white)
+      drawPixelRect(ctx, x + 1, y + 2, 1, height - 4, "#eeddcc");
+      drawPixelRect(ctx, x + width - 2, y + 2, 1, height - 4, "#eeddcc");
+      
+      // Central ridge
+      drawPixelRect(ctx, cx - 1, y + 1, 2, height - 2, "#ddccbb");
+      
+      // White-hot glow on edges
+      drawPixelRect(ctx, x, y + 1, 1, height - 2, "#ffffff");
+      drawPixelRect(ctx, x + width - 1, y + 1, 1, height - 2, "#ffffff");
+      
+      // White flame tail trail
+      ctx.globalAlpha = 0.7;
+      drawPixelRect(ctx, x + 1, y - 10, width - 2, 8, "#ffffff");
+      drawPixelRect(ctx, x + 2, y - 18, width - 4, 7, "#ffffcc");
+      ctx.globalAlpha = 0.4;
+      drawPixelRect(ctx, x + 2, y - 24, width - 4, 5, "#ffff88");
+      ctx.globalAlpha = 0.2;
+      drawPixelRect(ctx, x + 3, y - 28, width - 6, 4, "#ffff44");
+      ctx.globalAlpha = 1;
+      
+      // Pulsing sparkles around it
+      const time = Date.now();
+      const sparkleOffset = Math.sin(time / 50) * 3;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(cx + sparkleOffset, y - 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx - sparkleOffset, y + height + 2, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
+    } else {
+      // Regular falling cannabis seed - glowing orange
+      ctx.shadowColor = "#ff6600";
+      ctx.shadowBlur = 15;
+      
+      // Outer glow (danger warning)
+      ctx.fillStyle = "#ff330033";
+      ctx.beginPath();
+      ctx.arc(cx, y + height / 2, width + 4, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Outer shell - darker brown with orange tint (heated from falling)
+      drawPixelRect(ctx, x - 1, y + 2, width + 2, height - 4, "#5c3a1e");
+      drawPixelRect(ctx, x, y + 1, width, height - 2, "#6a4828");
+      drawPixelRect(ctx, x + 1, y, width - 2, height, "#7c5a2f");
+      
+      // Main seed body
+      drawPixelRect(ctx, x + 1, y + 1, width - 2, height - 2, "#8a6a45");
+      drawPixelRect(ctx, x + 1, y + 2, width - 2, height - 4, "#9b7b55");
+      drawPixelRect(ctx, x + 2, y + 2, width - 4, height - 4, "#ac8c65");
+      
+      // Tiger stripe pattern
+      drawPixelRect(ctx, x + 1, y + 2, 1, height - 4, "#5c3a1e");
+      drawPixelRect(ctx, x + width - 2, y + 2, 1, height - 4, "#5c3a1e");
+      
+      // Central ridge
+      drawPixelRect(ctx, cx - 1, y + 1, 2, height - 2, "#4d2f1e");
+      
+      // Heat glow on edges (falling fast)
+      drawPixelRect(ctx, x, y + 1, 1, height - 2, "#ff6600");
+      drawPixelRect(ctx, x + width - 1, y + 1, 1, height - 2, "#ff6600");
+      
+      // Tail trail effect
+      ctx.globalAlpha = 0.4;
+      drawPixelRect(ctx, x + 2, y - 8, width - 4, 6, "#ff6600");
+      drawPixelRect(ctx, x + 3, y - 14, width - 6, 5, "#ff4400");
+      ctx.globalAlpha = 0.2;
+      drawPixelRect(ctx, x + 3, y - 18, width - 6, 4, "#ff2200");
+      ctx.globalAlpha = 1;
+    }
     
     ctx.shadowBlur = 0;
   };
@@ -1989,13 +2096,22 @@ export default function Game() {
     const handleKeyUp = (e: KeyboardEvent) => {
       keysRef.current.delete(e.key);
     };
+    
+    // Fix: Reset all controls when window loses focus to prevent stuck movement
+    const handleBlur = () => {
+      keysRef.current.clear();
+      touchRef.current = { left: false, right: false, fire: false };
+      swipeTouchRef.current = { startX: 0, currentX: 0, active: false };
+    };
 
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
   }, [screen, togglePause]);
 
@@ -2198,6 +2314,9 @@ export default function Game() {
               }
             }}
             onTouchEnd={() => {
+              swipeTouchRef.current.active = false;
+            }}
+            onTouchCancel={() => {
               swipeTouchRef.current.active = false;
             }}
             data-testid="canvas-game"
@@ -2785,6 +2904,8 @@ export default function Game() {
               <p><span style={{ color: "#ff6600" }}>5-15 seeds</span> fall with fire trails</p>
               <p><span style={{ color: "#ff0000" }}>Contact:</span> Lose 1 life (shield protects)</p>
               <p>Warning text "SEED STORM!" appears during event</p>
+              <p className="mt-2"><span style={{ color: "#ffffff", textShadow: "0 0 5px #fff" }}>WHITE-HOT SEED:</span> Rare glowing white seed!</p>
+              <p><span style={{ color: "#88ff88" }}>Shoot it:</span> Get 5 sec shield + 5 sec rapid fire!</p>
             </div>
           </Card>
 
@@ -2800,7 +2921,7 @@ export default function Game() {
               <p>Survive to 4 minutes for max firepower!</p>
               <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
               <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>
-              <p><span style={{ color: "#ff6600" }}>SEED STORM:</span> Move to the edges when it hits!</p>
+              <p><span style={{ color: "#ff6600" }}>SEED STORM:</span> Move to edges or shoot the white one!</p>
             </div>
           </Card>
 
@@ -2867,7 +2988,7 @@ export default function Game() {
               </div>
 
               <div>
-                <p className="text-[10px] mb-2" style={{ color: "#ff6600" }}>SEED STORM (dodge!)</p>
+                <p className="text-[10px] mb-2" style={{ color: "#ff6600" }}>SEED STORM (dodge or shoot white!)</p>
                 <div className="flex gap-4 items-center">
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-12 flex items-center justify-center" style={{ boxShadow: "0 0 10px #ff6600" }}>
@@ -2879,6 +3000,17 @@ export default function Game() {
                       </svg>
                     </div>
                     <span className="text-[8px] mt-1" style={{ color: "#ff6600" }}>Meteor Seed</span>
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <div className="w-10 h-12 flex items-center justify-center" style={{ boxShadow: "0 0 15px #ffffff, 0 0 25px #ffffff" }}>
+                      <svg width="24" height="32" viewBox="0 0 24 32">
+                        <ellipse cx="12" cy="20" rx="6" ry="8" fill="#ffffff" stroke="#eeeeee" strokeWidth="1"/>
+                        <line x1="12" y1="4" x2="12" y2="12" stroke="#ffffff" strokeWidth="3" opacity="0.8"/>
+                        <line x1="12" y1="0" x2="12" y2="8" stroke="#ffffcc" strokeWidth="2" opacity="0.5"/>
+                        <line x1="6" y1="20" x2="18" y2="20" stroke="#ddccbb" strokeWidth="1"/>
+                      </svg>
+                    </div>
+                    <span className="text-[8px] mt-1" style={{ color: "#ffffff", textShadow: "0 0 5px #fff" }}>White-Hot!</span>
                   </div>
                 </div>
               </div>
