@@ -107,7 +107,7 @@ export function validateScore(score: number, playTimeMs: number): { valid: boole
 }
 
 const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_MS = 10000;
+const RATE_LIMIT_MS = 3000; // 3 seconds between submissions (reduced from 10)
 
 export function getClientIdentifier(req: { ip?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
   const forwarded = req.headers?.['x-forwarded-for'];
