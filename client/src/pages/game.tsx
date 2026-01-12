@@ -384,6 +384,9 @@ export default function Game() {
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
+  const [shopQuantities, setShopQuantities] = useState<Record<BoostType, number>>({
+    extra_life: 1, shield_boost: 1, rapid_fire: 1, side_guns: 1, machine_gun: 1, skip_storm: 1
+  });
   
   // Per-life boost tracking: stores the loadout slots and current life index
   // Life 1 = index 0, Life 2 = index 1, Life 3 = index 2
@@ -4049,10 +4052,26 @@ export default function Game() {
     );
   }
 
+  const updateShopQty = (type: BoostType, delta: number) => {
+    setShopQuantities(prev => ({
+      ...prev,
+      [type]: Math.max(1, Math.min(20, prev[type] + delta))
+    }));
+  };
+
   // ==========================================
   // BOOST SHOP SCREEN
   // ==========================================
   if (screen === "shop") {
+    const SHOP_BOOSTS: { type: BoostType; icon: string; name: string; desc: string; color: string; textColor: string }[] = [
+      { type: "extra_life", icon: "❤️", name: "EXTRA LIFE", desc: "+1 life instant", color: "#00ff00", textColor: "#000" },
+      { type: "shield_boost", icon: "🛡️", name: "SHIELD", desc: "5 sec protection", color: "#00ffff", textColor: "#000" },
+      { type: "rapid_fire", icon: "⚡", name: "RAPID FIRE", desc: "5 sec fast shots", color: "#ff6600", textColor: "#fff" },
+      { type: "side_guns", icon: "🔫", name: "SIDE GUNS", desc: "5 sec extra guns", color: "#ff00ff", textColor: "#fff" },
+      { type: "machine_gun", icon: "💥", name: "MACHINE GUN", desc: "5 sec rapid barrels", color: "#ff0000", textColor: "#fff" },
+      { type: "skip_storm", icon: "🌀", name: "SKIP STORM", desc: "No meteors this life", color: "#8800ff", textColor: "#fff" },
+    ];
+
     return (
       <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
@@ -4067,87 +4086,55 @@ export default function Game() {
         </h1>
 
         <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
-          Buy with Telegram Stars • Use per life
+          Buy 1-20 at a time • Use per life • Unused stay in inventory
         </p>
 
         <div className="grid grid-cols-2 gap-3 w-full max-w-sm mb-4">
-          {/* Extra Life */}
-          <Card className="p-3 border-2" style={{ borderColor: "#00ff00", background: "rgba(0,255,0,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">❤️</span>
-              <p className="text-xs font-bold" style={{ color: "#00ff00" }}>EXTRA LIFE</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>+1 life instant</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.extra_life}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.extra_life}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#00ff00", color: "#000" }}
-                onClick={() => handlePurchaseBoost("extra_life")} data-testid="button-buy-extra_life">BUY</Button>
-            </div>
-          </Card>
-
-          {/* Shield Boost */}
-          <Card className="p-3 border-2" style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">🛡️</span>
-              <p className="text-xs font-bold" style={{ color: "#00ffff" }}>SHIELD</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>5 sec protection</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.shield_boost}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.shield_boost}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#00ffff", color: "#000" }}
-                onClick={() => handlePurchaseBoost("shield_boost")} data-testid="button-buy-shield_boost">BUY</Button>
-            </div>
-          </Card>
-
-          {/* Rapid Fire */}
-          <Card className="p-3 border-2" style={{ borderColor: "#ff6600", background: "rgba(255,102,0,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">⚡</span>
-              <p className="text-xs font-bold" style={{ color: "#ff6600" }}>RAPID FIRE</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>5 sec fast shots</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.rapid_fire}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.rapid_fire}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#ff6600", color: "#fff" }}
-                onClick={() => handlePurchaseBoost("rapid_fire")} data-testid="button-buy-rapid_fire">BUY</Button>
-            </div>
-          </Card>
-
-          {/* Side Guns */}
-          <Card className="p-3 border-2" style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">🔫</span>
-              <p className="text-xs font-bold" style={{ color: "#ff00ff" }}>SIDE GUNS</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>5 sec extra guns</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.side_guns}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.side_guns}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#ff00ff", color: "#fff" }}
-                onClick={() => handlePurchaseBoost("side_guns")} data-testid="button-buy-side_guns">BUY</Button>
-            </div>
-          </Card>
-
-          {/* Machine Gun */}
-          <Card className="p-3 border-2" style={{ borderColor: "#ff0000", background: "rgba(255,0,0,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">💥</span>
-              <p className="text-xs font-bold" style={{ color: "#ff0000" }}>MACHINE GUN</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>5 sec rapid barrels</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.machine_gun}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.machine_gun}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#ff0000", color: "#fff" }}
-                onClick={() => handlePurchaseBoost("machine_gun")} data-testid="button-buy-machine_gun">BUY</Button>
-            </div>
-          </Card>
-
-          {/* Skip Storm */}
-          <Card className="p-3 border-2" style={{ borderColor: "#8800ff", background: "rgba(136,0,255,0.1)" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-2xl mb-1">🌀</span>
-              <p className="text-xs font-bold" style={{ color: "#8800ff" }}>SKIP STORM</p>
-              <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>No meteors this life</p>
-              <p className="text-[10px] mb-2" style={{ color: "#ffff00" }}>{BOOST_PRICES.skip_storm}⭐</p>
-              <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory.skip_storm}</p>
-              <Button size="sm" className="w-full text-xs" style={{ background: "#8800ff", color: "#fff" }}
-                onClick={() => handlePurchaseBoost("skip_storm")} data-testid="button-buy-skip_storm">BUY</Button>
-            </div>
-          </Card>
+          {SHOP_BOOSTS.map((boost) => {
+            const qty = shopQuantities[boost.type];
+            const price = BOOST_PRICES[boost.type];
+            const total = price * qty;
+            
+            return (
+              <Card key={boost.type} className="p-3 border-2" style={{ borderColor: boost.color, background: `${boost.color}15` }}>
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-2xl mb-1">{boost.icon}</span>
+                  <p className="text-xs font-bold" style={{ color: boost.color }}>{boost.name}</p>
+                  <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>{boost.desc}</p>
+                  <p className="text-[10px]" style={{ color: "#ffff00" }}>{price}⭐ each</p>
+                  <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory[boost.type]}</p>
+                  
+                  <div className="flex items-center gap-1 mb-2">
+                    <Button 
+                      size="sm" 
+                      className="w-6 h-6 p-0 text-xs"
+                      style={{ background: "#333", color: "#fff" }}
+                      onClick={() => updateShopQty(boost.type, -1)}
+                      data-testid={`button-qty-minus-${boost.type}`}
+                    >-</Button>
+                    <span className="text-sm font-bold w-8 text-center" style={{ color: "#fff" }}>{qty}</span>
+                    <Button 
+                      size="sm" 
+                      className="w-6 h-6 p-0 text-xs"
+                      style={{ background: "#333", color: "#fff" }}
+                      onClick={() => updateShopQty(boost.type, 1)}
+                      data-testid={`button-qty-plus-${boost.type}`}
+                    >+</Button>
+                  </div>
+                  
+                  <Button 
+                    size="sm" 
+                    className="w-full text-xs" 
+                    style={{ background: boost.color, color: boost.textColor }}
+                    onClick={() => handlePurchaseBoost(boost.type, qty)}
+                    data-testid={`button-buy-${boost.type}`}
+                  >
+                    BUY {qty} = {total}⭐
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
         </div>
 
         <p className="text-[10px] mb-3 text-center" style={{ color: "#ff00ff" }}>
