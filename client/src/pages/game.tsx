@@ -3260,9 +3260,14 @@ export default function Game() {
             
             <Button
               onClick={() => {
-                initStars();
-                resetGame();
-                setScreen("game");
+                // Clear active boosts - player must select fresh from loadout
+                activeBoostsRef.current = {
+                  slots: [null, null, null],
+                  currentLifeIndex: 0,
+                  skipStormActive: false,
+                };
+                setLoadout([null, null, null]);
+                setScreen("loadout");
               }}
               className="w-full py-4 text-sm"
               style={{ 
@@ -3276,7 +3281,16 @@ export default function Game() {
             </Button>
             
             <Button
-              onClick={() => setScreen("title")}
+              onClick={() => {
+                // Clear active boosts when going to main menu
+                activeBoostsRef.current = {
+                  slots: [null, null, null],
+                  currentLifeIndex: 0,
+                  skipStormActive: false,
+                };
+                setLoadout([null, null, null]);
+                setScreen("title");
+              }}
               variant="outline"
               className="w-full py-4 text-sm border-2"
               style={{ borderColor: "#00ffff", color: "#00ffff" }}
