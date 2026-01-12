@@ -811,14 +811,20 @@ export async function registerRoutes(
       const totalStars = price * quantity;
       
       const boostNames: Record<BoostType, string> = {
+        extra_life: "Extra Life Boost",
+        shield_boost: "Shield Boost",
+        rapid_fire: "Rapid Fire Boost",
         side_guns: "Side Guns Boost",
         machine_gun: "Machine Gun Boost", 
         skip_storm: "Skip Storm Boost",
       };
 
       const boostDescriptions: Record<BoostType, string> = {
-        side_guns: "Start each life with both side guns unlocked instantly",
-        machine_gun: "Unlock machine guns at 90 sec instead of 4 min, carries over if you die before 90s",
+        extra_life: "Start with an extra life",
+        shield_boost: "5 second shield at start of life",
+        rapid_fire: "5 second rapid fire at start of life",
+        side_guns: "5 second side guns at start of life",
+        machine_gun: "5 second machine guns at start of life",
         skip_storm: "No meteor showers (SEED STORM) for that life",
       };
 

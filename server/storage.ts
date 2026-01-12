@@ -108,7 +108,7 @@ export interface IStorage {
     todayOwnerEarnings: number;
     totalPlayers: number;
     activePlayers: number;
-    purchaseBreakdown: { side_guns: number; machine_gun: number; skip_storm: number };
+    purchaseBreakdown: { extra_life: number; shield_boost: number; rapid_fire: number; side_guns: number; machine_gun: number; skip_storm: number };
   }>;
   getPrizePoolInfo(date: string): Promise<{
     date: string;
@@ -564,7 +564,7 @@ export class DatabaseStorage implements IStorage {
     todayOwnerEarnings: number;
     totalPlayers: number;
     activePlayers: number;
-    purchaseBreakdown: { side_guns: number; machine_gun: number; skip_storm: number };
+    purchaseBreakdown: { extra_life: number; shield_boost: number; rapid_fire: number; side_guns: number; machine_gun: number; skip_storm: number };
   }> {
     const today = new Date().toISOString().split('T')[0];
     
@@ -582,6 +582,9 @@ export class DatabaseStorage implements IStorage {
     ).length;
     
     const purchaseBreakdown = {
+      extra_life: allPurchases.filter(p => p.boostType === 'extra_life').length,
+      shield_boost: allPurchases.filter(p => p.boostType === 'shield_boost').length,
+      rapid_fire: allPurchases.filter(p => p.boostType === 'rapid_fire').length,
       side_guns: allPurchases.filter(p => p.boostType === 'side_guns').length,
       machine_gun: allPurchases.filter(p => p.boostType === 'machine_gun').length,
       skip_storm: allPurchases.filter(p => p.boostType === 'skip_storm').length,

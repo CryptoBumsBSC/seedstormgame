@@ -886,9 +886,30 @@ export default function Game() {
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
+    // Apply starting boosts
+    const boosts = activeBoostsRef.current;
+    const BOOST_DURATION_MS = 5000; // 5 seconds for timed boosts
+    
+    // Extra life boost: start with 4 lives instead of 3
+    const startingLives = 3 + boosts.extraLife;
+    
+    // Timed boosts: apply at game start
+    if (boosts.shieldBoost > 0) {
+      shieldEndRef.current = BOOST_DURATION_MS;
+    }
+    if (boosts.rapidFire > 0) {
+      rapidFireEndRef.current = BOOST_DURATION_MS;
+    }
+    if (boosts.sideGuns > 0) {
+      weaponLevelRef.current = 2; // Both side guns
+    }
+    if (boosts.machineGun > 0) {
+      weaponLevelRef.current = 3; // Machine gun
+    }
+    
     setGameState({
       score: 0,
-      lives: 3,
+      lives: startingLives,
       wave: 1,
       gameTime: 0,
       isPlaying: true,
