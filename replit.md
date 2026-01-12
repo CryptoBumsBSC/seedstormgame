@@ -27,11 +27,12 @@ Players buy boosts with Telegram Stars, stored in inventory, used per-life:
 - **Skip Storm** (20★): No meteor showers for that life
 
 ### Inventory & Loadout System
-- Buy boosts → stored in player inventory
-- Before game, select boosts for each life (max 3 boosts per life)
+- Buy boosts (1-20 quantity at once) → stored in player inventory
+- Before game, select boosts for each life (1 boost per life slot, 3 slots total)
 - Loadout screen shows 2x3 grid with +/- buttons
 - "Selected: X/3" counter enforces the limit
-- Unused boosts saved for future games
+- **Boosts are consumable**: Used boosts are removed from inventory when game starts
+- Unused boosts in inventory stay for future games without additional purchase
 - Timed boosts (shield, rapid fire, side guns, machine gun) last 5 seconds at life start
 
 ### Daily Prize Pool
@@ -177,6 +178,11 @@ Password-protected admin panel with tabs:
 - **Prize Pool**: Today's pool info, threshold status, distribute prizes button
 
 ## Recent Changes
+- 2026-01-12: Quantity selector and inventory consumption
+  - Buy 1-20 boosts at once with quantity +/- buttons in shop
+  - Boosts consumed from inventory when game starts
+  - Loadout clears after game to prevent reuse
+  - Remaining inventory available for future games
 - 2026-01-12: Fixed Telegram Stars payment webhook
   - Added /api/telegram/setup-webhook endpoint to register payment webhook
   - Webhook URL: https://galaga-clone--oscarjameshardi.replit.app/api/telegram/webhook
