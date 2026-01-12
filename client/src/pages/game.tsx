@@ -3986,30 +3986,6 @@ export default function Game() {
   // BOOST SHOP SCREEN
   // ==========================================
   if (screen === "shop") {
-    const boostItems = [
-      { 
-        id: "side_guns" as const, 
-        name: "SIDE GUNS", 
-        price: BOOST_PRICES.side_guns,
-        description: "Start with left+right guns",
-        icon: "🔫"
-      },
-      { 
-        id: "machine_gun" as const, 
-        name: "MACHINE GUN", 
-        price: BOOST_PRICES.machine_gun,
-        description: "Unlock at 90 sec (not 4 min)",
-        icon: "💥"
-      },
-      { 
-        id: "skip_storm" as const, 
-        name: "SKIP STORMS", 
-        price: BOOST_PRICES.skip_storm,
-        description: "No meteor showers",
-        icon: "🌀"
-      },
-    ];
-
     return (
       <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
@@ -4027,40 +4003,102 @@ export default function Game() {
           Buy with Telegram Stars • Use per life
         </p>
 
-        <div className="flex flex-col gap-3 w-full max-w-xs mb-4">
-          {boostItems.map(item => (
-            <Card 
-              key={item.id}
-              className="p-3 border-2"
-              style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm font-bold" style={{ color: "#00ffff" }}>
-                    {item.icon} {item.name}
-                  </p>
-                  <p className="text-[9px]" style={{ color: "#888" }}>{item.description}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "#ffff00" }}>
-                    Owned: {inventory[item.id]}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-xs font-bold" style={{ color: "#ffff00" }}>
-                    {item.price}⭐
-                  </span>
-                  <Button
-                    size="sm"
-                    className="text-[10px] px-3 py-1"
-                    style={{ background: "#ff00ff", color: "#fff" }}
-                    onClick={() => handlePurchaseBoost(item.id)}
-                    data-testid={`button-buy-${item.id}`}
-                  >
-                    BUY
-                  </Button>
-                </div>
+        <div className="flex flex-col gap-4 w-full max-w-xs mb-4">
+          {/* Side Guns Boost */}
+          <Card 
+            className="p-4 border-2"
+            style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.15)" }}
+          >
+            <div className="flex justify-between items-center gap-2">
+              <div className="flex-1">
+                <p className="text-base font-bold mb-1" style={{ color: "#00ffff" }}>
+                  🔫 SIDE GUNS
+                </p>
+                <p className="text-[10px] mb-1" style={{ color: "#aaa" }}>Start with left+right guns</p>
+                <p className="text-xs" style={{ color: "#ffff00" }}>
+                  Owned: {inventory.side_guns}
+                </p>
               </div>
-            </Card>
-          ))}
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-sm font-bold" style={{ color: "#ffff00" }}>
+                  100⭐
+                </span>
+                <Button
+                  size="sm"
+                  className="px-4 py-2"
+                  style={{ background: "#ff00ff", color: "#fff" }}
+                  onClick={() => handlePurchaseBoost("side_guns")}
+                  data-testid="button-buy-side_guns"
+                >
+                  BUY
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Machine Gun Boost */}
+          <Card 
+            className="p-4 border-2"
+            style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.15)" }}
+          >
+            <div className="flex justify-between items-center gap-2">
+              <div className="flex-1">
+                <p className="text-base font-bold mb-1" style={{ color: "#00ffff" }}>
+                  💥 MACHINE GUN
+                </p>
+                <p className="text-[10px] mb-1" style={{ color: "#aaa" }}>Unlock at 90 sec (not 4 min)</p>
+                <p className="text-xs" style={{ color: "#ffff00" }}>
+                  Owned: {inventory.machine_gun}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-sm font-bold" style={{ color: "#ffff00" }}>
+                  500⭐
+                </span>
+                <Button
+                  size="sm"
+                  className="px-4 py-2"
+                  style={{ background: "#ff00ff", color: "#fff" }}
+                  onClick={() => handlePurchaseBoost("machine_gun")}
+                  data-testid="button-buy-machine_gun"
+                >
+                  BUY
+                </Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Skip Storm Boost */}
+          <Card 
+            className="p-4 border-2"
+            style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.15)" }}
+          >
+            <div className="flex justify-between items-center gap-2">
+              <div className="flex-1">
+                <p className="text-base font-bold mb-1" style={{ color: "#00ffff" }}>
+                  🌀 SKIP STORMS
+                </p>
+                <p className="text-[10px] mb-1" style={{ color: "#aaa" }}>No meteor showers</p>
+                <p className="text-xs" style={{ color: "#ffff00" }}>
+                  Owned: {inventory.skip_storm}
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className="text-sm font-bold" style={{ color: "#ffff00" }}>
+                  100⭐
+                </span>
+                <Button
+                  size="sm"
+                  className="px-4 py-2"
+                  style={{ background: "#ff00ff", color: "#fff" }}
+                  onClick={() => handlePurchaseBoost("skip_storm")}
+                  data-testid="button-buy-skip_storm"
+                >
+                  BUY
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
 
         <div className="w-full max-w-xs mb-4">
