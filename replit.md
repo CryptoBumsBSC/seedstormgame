@@ -10,12 +10,46 @@ SEED STORM is a retro arcade vertical space shooter game where you play as "Dudl
 - Sound effects, particle explosions, power-ups all working
 - Deployed at: https://galaga-clone--oscarjameshardi.replit.app
 
-## Telegram Bot Setup (In Progress)
-- Bot created: @seedstormbot
-- Banner images available at:
-  - /banner.png (640x360 for BotFather)
-  - /download (page with download button)
-- Next step: Complete /newapp in BotFather with 640x360 image
+## Telegram Bot Setup
+- Bot: @SeedStormBot
+- Token stored in: TELEGRAM_BOT_TOKEN secret
+- Banner: /banner.png (640x360)
+
+## Telegram Stars Monetization
+
+### Boosts (Per-Life Purchases)
+Players buy boosts with Telegram Stars, stored in inventory, used per-life:
+- **Side Guns** (100★/life): Start with left+right guns instantly
+- **Machine Gun** (500★/life): Unlocks at 90 sec (not 4 min). Carries to next life if die before 90 sec
+- **Skip Seed Storm** (100★/life): No meteor showers that life
+
+### Inventory System
+- Buy boosts → stored in player inventory
+- Before game, select how many of each to use per life
+- Unused boosts saved for future games
+- Boosts last same duration as naturally earned power-ups
+
+### Daily Prize Pool
+Revenue from Stars purchases is split:
+- **50%** → Owner (always)
+- **40%** → Top 3 daily winners (25% / 10% / 5%)
+- **10%** → Up to 10 random players that day (1% each)
+- **Unclaimed** → Goes to owner
+
+**Minimum Threshold**: 101★ daily spending to activate prizes. Under 100★ = all to owner.
+
+### Leaderboards
+- **Daily**: Single board showing all players with icons:
+  - 🔥💨 (lit joint + smoke) = used paid boost
+  - 💎 (diamond) = pure skill, no boost
+- **All-Time Boosted**: "BLAZED LEGENDS" - top boosted scores
+- **All-Time Pure**: "MR NATURAL" - top pure (no boost) scores
+
+### Player Tracking
+All players logged with:
+- Telegram @username and user ID
+- First/last played dates
+- Total games, Stars spent, Stars won
 
 ## Tech Stack
 - **Frontend**: React + TypeScript + Vite

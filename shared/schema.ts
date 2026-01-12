@@ -71,6 +71,97 @@ export const adClicks = pgTable("ad_clicks", {
   clickedAt: timestamp("clicked_at").defaultNow().notNull(),
 });
 
+// Telegram Stars Monetization Tables
+
+export const telegramPlayers = pgTable("telegram_players", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull().unique(),
+  username: text("username"), // @username (may be null if user has no username)
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  totalGamesPlayed: integer("total_games_played").default(0).notNull(),
+  totalStarsSpent: integer("total_stars_spent").default(0).notNull(),
+  totalStarsWon: integer("total_stars_won").default(0).notNull(),
+  firstPlayedAt: timestamp("first_played_at").defaultNow().notNull(),
+  lastPlayedAt: timestamp("last_played_at").defaultNow().notNull(),
+});
+
+export const playerInventory = pgTable("player_inventory", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  boostType: text("boost_type").notNull(), // 'side_guns' | 'machine_gun' | 'skip_storm'
+  quantity: integer("quantity").default(0).notNull(),
+});
+
+export const starPurchases = pgTable("star_purchases", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  boostType: text("boost_type").notNull(),
+  starsAmount: integer("stars_amount").notNull(),
+  quantity: integer("quantity").notNull(),
+  telegramPaymentId: text("telegram_payment_id").notNull().unique(),
+  purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
+});
+
+export const dailyPrizePools = pgTable("daily_prize_pools", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull().unique(), // YYYY-MM-DD format
+  totalStars: integer("total_stars").default(0).notNull(),
+  ownerShare: integer("owner_share").default(0).notNull(),
+  prizePool: integer("prize_pool").default(0).notNull(),
+  distributed: boolean("distributed").default(false).notNull(),
+  firstPlaceTelegramId: text("first_place_telegram_id"),
+  secondPlaceTelegramId: text("second_place_telegram_id"),
+  thirdPlaceTelegramId: text("third_place_telegram_id"),
+  firstPrize: integer("first_prize").default(0),
+  secondPrize: integer("second_prize").default(0),
+  thirdPrize: integer("third_prize").default(0),
+  randomWinners: text("random_winners"), // JSON array of telegram IDs
+  randomPrizeEach: integer("random_prize_each").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const boostUsageLog = pgTable("boost_usage_log", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  boostType: text("boost_type").notNull(),
+  gameSessionId: text("game_session_id").notNull(),
+  lifeNumber: integer("life_number").notNull(),
+  usedAt: timestamp("used_at").defaultNow().notNull(),
+});
+
+export const dailyScores = pgTable("daily_scores", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  playerName: text("player_name").notNull(),
+  score: integer("score").notNull(),
+  wave: integer("wave").notNull(),
+  playTime: integer("play_time").notNull(),
+  usedBoosts: boolean("used_boosts").default(false).notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const allTimeBoostedScores = pgTable("all_time_boosted_scores", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  playerName: text("player_name").notNull(),
+  score: integer("score").notNull(),
+  wave: integer("wave").notNull(),
+  playTime: integer("play_time").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const allTimePureScores = pgTable("all_time_pure_scores", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  playerName: text("player_name").notNull(),
+  score: integer("score").notNull(),
+  wave: integer("wave").notNull(),
+  playTime: integer("play_time").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Zod Schemas for validation
 export const insertScoreSchema = createInsertSchema(scores).omit({ id: true, createdAt: true });
 export type InsertScore = z.infer<typeof insertScoreSchema>;
@@ -102,6 +193,73 @@ export type Payment = typeof payments.$inferSelect;
 
 export type Referral = typeof referrals.$inferSelect;
 export type WeeklyPrizePool = typeof weeklyPools.$inferSelect;
+
+// Telegram Stars Types
+export const boostTypes = ["side_guns", "machine_gun", "skip_storm"] as const;
+export type BoostType = typeof boostTypes[number];
+
+export const insertTelegramPlayerSchema = z.object({
+  telegramId: z.string(),
+  username: z.string().nullable().optional(),
+  firstName: z.string().nullable().optional(),
+  lastName: z.string().nullable().optional(),
+});
+export type InsertTelegramPlayer = z.infer<typeof insertTelegramPlayerSchema>;
+export type TelegramPlayer = typeof telegramPlayers.$inferSelect;
+
+export const insertPlayerInventorySchema = z.object({
+  telegramId: z.string(),
+  boostType: z.enum(boostTypes),
+  quantity: z.number().default(0),
+});
+export type InsertPlayerInventory = z.infer<typeof insertPlayerInventorySchema>;
+export type PlayerInventory = typeof playerInventory.$inferSelect;
+
+export const insertStarPurchaseSchema = z.object({
+  telegramId: z.string(),
+  boostType: z.enum(boostTypes),
+  starsAmount: z.number(),
+  quantity: z.number(),
+  telegramPaymentId: z.string(),
+});
+export type InsertStarPurchase = z.infer<typeof insertStarPurchaseSchema>;
+export type StarPurchase = typeof starPurchases.$inferSelect;
+
+export type DailyPrizePool = typeof dailyPrizePools.$inferSelect;
+export type BoostUsageLog = typeof boostUsageLog.$inferSelect;
+
+export const insertDailyScoreSchema = z.object({
+  telegramId: z.string(),
+  playerName: z.string(),
+  score: z.number(),
+  wave: z.number(),
+  playTime: z.number(),
+  usedBoosts: z.boolean().default(false),
+  date: z.string(),
+});
+export type InsertDailyScore = z.infer<typeof insertDailyScoreSchema>;
+export type DailyScore = typeof dailyScores.$inferSelect;
+
+export type AllTimeBoostedScore = typeof allTimeBoostedScores.$inferSelect;
+export type AllTimePureScore = typeof allTimePureScores.$inferSelect;
+
+// Boost pricing constants
+export const BOOST_PRICES = {
+  side_guns: 100,
+  machine_gun: 500,
+  skip_storm: 100,
+} as const;
+
+// Prize distribution constants
+export const PRIZE_CONFIG = {
+  MIN_THRESHOLD: 101, // Minimum stars for prizes to activate
+  OWNER_PERCENT: 50,
+  FIRST_PLACE_PERCENT: 25,
+  SECOND_PLACE_PERCENT: 10,
+  THIRD_PLACE_PERCENT: 5,
+  RANDOM_PERCENT_EACH: 1,
+  MAX_RANDOM_WINNERS: 10,
+} as const;
 
 // Game Types (client-side only)
 export interface GameState {
