@@ -19,15 +19,20 @@ SEED STORM is a retro arcade vertical space shooter game where you play as "Dudl
 
 ### Boosts (Per-Life Purchases)
 Players buy boosts with Telegram Stars, stored in inventory, used per-life:
-- **Side Guns** (100★/life): Start with left+right guns instantly
-- **Machine Gun** (500★/life): Unlocks at 90 sec (not 4 min). Carries to next life if die before 90 sec
-- **Skip Seed Storm** (100★/life): No meteor showers that life
+- **Extra Life** (3★): Start with an extra life (max 4)
+- **Shield Boost** (3★): 5-second shield at start of life
+- **Rapid Fire** (3★): 5-second rapid fire at start of life
+- **Side Guns** (5★): 5-second side guns at start of life
+- **Machine Gun** (10★): 5-second machine guns at start of life
+- **Skip Storm** (20★): No meteor showers for that life
 
-### Inventory System
+### Inventory & Loadout System
 - Buy boosts → stored in player inventory
-- Before game, select how many of each to use per life
+- Before game, select boosts for each life (max 3 boosts per life)
+- Loadout screen shows 2x3 grid with +/- buttons
+- "Selected: X/3" counter enforces the limit
 - Unused boosts saved for future games
-- Boosts last same duration as naturally earned power-ups
+- Timed boosts (shield, rapid fire, side guns, machine gun) last 5 seconds at life start
 
 ### Daily Prize Pool
 Revenue from Stars purchases is split:
@@ -172,10 +177,16 @@ Password-protected admin panel with tabs:
 - **Prize Pool**: Today's pool info, threshold status, distribute prizes button
 
 ## Recent Changes
+- 2026-01-12: Expanded Boost System (6 Boosts)
+  - **New Boosts**: Extra Life (3★), Shield Boost (3★), Rapid Fire (3★), Side Guns (5★), Machine Gun (10★), Skip Storm (20★)
+  - **Max 3 Boosts Per Life**: Loadout screen enforces limit with "Selected: X/3" counter
+  - **Timed Boost Effects**: Shield, rapid fire, side guns, machine gun all last 5 seconds at life start
+  - **Extra Life Capped**: Maximum 4 starting lives with extra life boost
+  - **2x3 Grid UI**: Both shop and loadout screens use color-coded 2x3 grid layout
 - 2026-01-12: Complete Telegram Stars Monetization System
-  - **Boost Shop**: Purchase Side Guns (100★), Machine Gun (500★), Skip Storm (100★)
+  - **Boost Shop**: Purchase all 6 boost types with Telegram Stars
   - **Loadout Screen**: Select boosts per life before each game
-  - **Per-Life Boost Logic**: Boosts activate per life, Machine Gun carries over if die before 90s
+  - **Per-Life Boost Logic**: Boosts activate per life with proper timing
   - **Telegram Stars Payments**: WebApp.openInvoice integration with secure webhook handling
   - **Daily Prize Pool**: 101★ minimum, 50% owner, 40% top 3 (25/10/5%), 10% random
   - **Leaderboard Tabs**: Daily (🔥💨/💎 icons), BLAZED LEGENDS, MR NATURAL
