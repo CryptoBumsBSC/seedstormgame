@@ -99,6 +99,25 @@ export interface IStorage {
   updateAllTimePureScores(telegramId: string, playerName: string, score: number, wave: number, playTime: number): Promise<void>;
   getAllTimeBoostedScores(): Promise<AllTimeBoostedScore[]>;
   getAllTimePureScores(): Promise<AllTimePureScore[]>;
+  
+  // Admin stats
+  getRevenueStats(): Promise<{
+    totalStarsSpent: number;
+    todayStarsSpent: number;
+    ownerEarnings: number;
+    todayOwnerEarnings: number;
+    totalPlayers: number;
+    activePlayers: number;
+    purchaseBreakdown: { side_guns: number; machine_gun: number; skip_storm: number };
+  }>;
+  getPrizePoolInfo(date: string): Promise<{
+    date: string;
+    totalSpent: number;
+    prizePool: number;
+    ownerShare: number;
+    thresholdMet: boolean;
+    distributed: boolean;
+  }>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -536,6 +555,83 @@ export class DatabaseStorage implements IStorage {
 
   async getAllTimePureScores(): Promise<AllTimePureScore[]> {
     return await db.select().from(allTimePureScores).orderBy(desc(allTimePureScores.score)).limit(3);
+  }
+
+  async getRevenueStats(): Promise<{
+    totalStarsSpent: number;
+    todayStarsSpent: number;
+    ownerEarnings: number;
+    todayOwnerEarnings: number;
+    totalPlayers: number;
+    activePlayers: number;
+    purchaseBreakdown: { side_guns: number; machine_gun: number; skip_storm: number };
+  }> {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const allPurchases = await db.select().from(starPurchases);
+    const todayPurchases = allPurchases.filter(p => 
+      new Date(p.purchasedAt).toISOString().split('T')[0] === today
+    );
+    
+    const totalStarsSpent = allPurchases.reduce((sum, p) => sum + p.starsAmount, 0);
+    const todayStarsSpent = todayPurchases.reduce((sum, p) => sum + p.starsAmount, 0);
+    
+    const allPlayers = await db.select().from(telegramPlayers);
+    const activePlayers = allPlayers.filter(p => 
+      p.lastPlayedAt && new Date(p.lastPlayedAt).toISOString().split('T')[0] === today
+    ).length;
+    
+    const purchaseBreakdown = {
+      side_guns: allPurchases.filter(p => p.boostType === 'side_guns').length,
+      machine_gun: allPurchases.filter(p => p.boostType === 'machine_gun').length,
+      skip_storm: allPurchases.filter(p => p.boostType === 'skip_storm').length,
+    };
+    
+    return {
+      totalStarsSpent,
+      todayStarsSpent,
+      ownerEarnings: Math.floor(totalStarsSpent * 0.5),
+      todayOwnerEarnings: Math.floor(todayStarsSpent * 0.5),
+      totalPlayers: allPlayers.length,
+      activePlayers,
+      purchaseBreakdown,
+    };
+  }
+
+  async getPrizePoolInfo(date: string): Promise<{
+    date: string;
+    totalSpent: number;
+    prizePool: number;
+    ownerShare: number;
+    thresholdMet: boolean;
+    distributed: boolean;
+  }> {
+    const pool = await db.select().from(dailyPrizePools).where(eq(dailyPrizePools.date, date));
+    
+    if (pool.length === 0) {
+      return {
+        date,
+        totalSpent: 0,
+        prizePool: 0,
+        ownerShare: 0,
+        thresholdMet: false,
+        distributed: false,
+      };
+    }
+    
+    const poolData = pool[0];
+    const totalSpent = poolData.totalStars;
+    const ownerShare = Math.floor(totalSpent * 0.5);
+    const prizePool = totalSpent - ownerShare;
+    
+    return {
+      date,
+      totalSpent,
+      prizePool,
+      ownerShare,
+      thresholdMet: totalSpent >= 101,
+      distributed: poolData.distributed,
+    };
   }
 }
 

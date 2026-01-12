@@ -713,6 +713,49 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get all Telegram players (alternate path for admin panel)
+  app.get("/api/admin/telegram/players", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const players = await storage.getAllTelegramPlayers();
+      res.json(players);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch Telegram players" });
+    }
+  });
+
+  // Admin: Get revenue statistics
+  app.get("/api/admin/telegram/revenue", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const revenue = await storage.getRevenueStats();
+      res.json(revenue);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch revenue stats" });
+    }
+  });
+
+  // Admin: Get today's prize pool info
+  app.get("/api/admin/telegram/prize-pool", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const today = new Date().toISOString().split('T')[0];
+      const pool = await storage.getPrizePoolInfo(today);
+      res.json(pool);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch prize pool" });
+    }
+  });
+
   // Admin: Distribute daily prizes (run at end of day)
   app.post("/api/admin/distribute-prizes", async (req, res) => {
     try {
@@ -724,6 +767,21 @@ export async function registerRoutes(
       const targetDate = date || new Date().toISOString().split('T')[0];
       await storage.distributeDailyPrizes(targetDate);
       res.json({ success: true, message: `Prizes distributed for ${targetDate}` });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to distribute prizes" });
+    }
+  });
+
+  // Admin: Distribute daily prizes (alternate path)
+  app.post("/api/admin/telegram/distribute-prizes", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const today = new Date().toISOString().split('T')[0];
+      await storage.distributeDailyPrizes(today);
+      res.json({ success: true, message: `Prizes distributed for ${today}` });
     } catch (error) {
       res.status(500).json({ error: "Failed to distribute prizes" });
     }
@@ -839,8 +897,8 @@ export async function registerRoutes(
           telegramId,
           boostType,
           quantity,
-          starsSpent: payment.total_amount,
-          transactionId: payment.telegram_payment_charge_id,
+          starsAmount: payment.total_amount,
+          telegramPaymentId: payment.telegram_payment_charge_id,
         });
         
         // Add boosts to player inventory
@@ -861,44 +919,28 @@ export async function registerRoutes(
     }
   });
 
-  // Confirm payment after WebApp.openInvoice returns 'paid'
+  // Sync inventory after WebApp.openInvoice returns 'paid'
+  // NOTE: This endpoint is READ-ONLY - actual inventory updates happen in webhook
+  // This just returns the current inventory so client can sync after payment
   app.post("/api/telegram/confirm-payment", async (req, res) => {
     try {
-      const { telegramId, boostType, quantity, totalStars } = req.body;
+      const { telegramId } = req.body;
       
-      if (!telegramId || !boostType || !quantity) {
-        return res.status(400).json({ error: "Missing required fields" });
+      if (!telegramId) {
+        return res.status(400).json({ error: "Missing telegramId" });
       }
       
-      // Generate a unique transaction ID for manual confirmations
-      const txId = `manual_${telegramId}_${Date.now()}`;
-      
-      // Record the purchase
-      await storage.recordStarPurchase({
-        telegramId,
-        boostType,
-        quantity,
-        starsSpent: totalStars,
-        transactionId: txId,
-      });
-      
-      // Add boosts to inventory
-      await storage.addToInventory(telegramId, boostType, quantity);
-      
-      // Add to prize pool
-      await storage.addToDailyPool(totalStars);
-      
-      // Get updated inventory
+      // Only return current inventory - all modifications happen via webhook
       const inventory = await storage.getPlayerInventory(telegramId);
       
       res.json({ 
         success: true, 
         inventory,
-        message: `Added ${quantity}x ${boostType} to your inventory!`
+        message: "Inventory synced - purchases are processed via Telegram webhook"
       });
     } catch (error) {
-      console.error("Payment confirmation error:", error);
-      res.status(500).json({ error: "Failed to confirm payment" });
+      console.error("Payment sync error:", error);
+      res.status(500).json({ error: "Failed to sync inventory" });
     }
   });
 

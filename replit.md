@@ -164,7 +164,23 @@ shared/
 - **Border Radius**: Small (retro pixel look)
 - **Shadows**: Magenta glow effects
 
+## Admin Panel (/admin)
+Password-protected admin panel with tabs:
+- **Scores**: View all scores with suspicious activity detection (>2 pts/sec highlighted)
+- **Players**: All Telegram players with @username, ID, games played, Stars spent/won, dates
+- **Revenue**: Total and daily Stars spent, owner earnings, purchase breakdown by boost type
+- **Prize Pool**: Today's pool info, threshold status, distribute prizes button
+
 ## Recent Changes
+- 2026-01-12: Complete Telegram Stars Monetization System
+  - **Boost Shop**: Purchase Side Guns (100★), Machine Gun (500★), Skip Storm (100★)
+  - **Loadout Screen**: Select boosts per life before each game
+  - **Per-Life Boost Logic**: Boosts activate per life, Machine Gun carries over if die before 90s
+  - **Telegram Stars Payments**: WebApp.openInvoice integration with secure webhook handling
+  - **Daily Prize Pool**: 101★ minimum, 50% owner, 40% top 3 (25/10/5%), 10% random
+  - **Leaderboard Tabs**: Daily (🔥💨/💎 icons), BLAZED LEGENDS, MR NATURAL
+  - **How To Play**: Added Stars boosts, prizes, and leaderboard documentation
+  - **Admin Panel**: Player tracking, revenue stats, prize pool management
 - 2026-01-12: Visual polish (Phase 3)
   - **Damage Flash**: Red screen flash when player takes damage
   - **Enemy Formations**: V-shape, diagonal lines, horizontal lines spawn after 45 sec (15% chance)
