@@ -3003,10 +3003,10 @@ export default function Game() {
         ) : (
           <div 
             className="w-[320px] h-[100px] mb-4 flex items-center justify-center border-2 border-dashed rounded"
-            style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
+            style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.1)" }}
             data-testid="placeholder-ad-title"
           >
-            <p className="text-sm font-bold" style={{ color: "#ff00ff" }}>YOUR AD HERE</p>
+            <p className="text-sm font-bold" style={{ color: "#00ffff" }}>YOUR AD HERE</p>
           </div>
         )}
 
