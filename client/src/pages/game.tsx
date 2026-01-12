@@ -30,14 +30,12 @@ interface PlayerInventory {
   skip_storm: number;
 }
 
-interface BoostLoadout {
-  extra_life: number;
-  shield_boost: number;
-  rapid_fire: number;
-  side_guns: number;
-  machine_gun: number;
-  skip_storm: number;
-}
+// Per-life boost slot: each life can have one boost assigned
+type BoostSlot = BoostType | null;
+
+// Loadout is an array of 3 slots (one per life)
+// Life 1 uses slot[0], Life 2 uses slot[1], Life 3 uses slot[2]
+type BoostLoadout = [BoostSlot, BoostSlot, BoostSlot];
 
 const BOOST_PRICES = {
   extra_life: 3,
@@ -381,24 +379,19 @@ export default function Game() {
   const [inventory, setInventory] = useState<PlayerInventory>({ 
     extra_life: 0, shield_boost: 0, rapid_fire: 0, side_guns: 0, machine_gun: 0, skip_storm: 0 
   });
-  const [loadout, setLoadout] = useState<BoostLoadout>({ 
-    extra_life: 0, shield_boost: 0, rapid_fire: 0, side_guns: 0, machine_gun: 0, skip_storm: 0 
-  });
+  const [loadout, setLoadout] = useState<BoostLoadout>([null, null, null]);
   const [telegramId, setTelegramId] = useState<string | null>(null);
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
   
-  // Active boosts for current game (per-life tracking)
-  // Each boost is either count (uses per life) or active timer (seconds remaining)
+  // Per-life boost tracking: stores the loadout slots and current life index
+  // Life 1 = index 0, Life 2 = index 1, Life 3 = index 2
   const activeBoostsRef = useRef<{
-    extraLife: number;        // Uses remaining
-    shieldBoost: number;      // Uses remaining (gives 5 sec shield)
-    rapidFire: number;        // Uses remaining (gives 5 sec rapid fire)
-    sideGuns: number;         // Uses remaining (gives 5 sec side guns)
-    machineGun: number;       // Uses remaining (gives 5 sec machine gun)
-    skipStorm: number;        // Uses remaining (skip storms for entire life)
-  }>({ extraLife: 0, shieldBoost: 0, rapidFire: 0, sideGuns: 0, machineGun: 0, skipStorm: 0 });
+    slots: BoostLoadout;      // The 3 boost slots [life1, life2, life3]
+    currentLifeIndex: number; // Which life we're on (0, 1, or 2)
+    skipStormActive: boolean; // If current life has skip storm active
+  }>({ slots: [null, null, null], currentLifeIndex: 0, skipStormActive: false });
   
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
@@ -797,7 +790,7 @@ export default function Game() {
     if (meteorShowerActiveRef.current) return;
     // Skip storm boost - no meteor showers this life
     const boosts = activeBoostsRef.current;
-    if (boosts.skipStorm > 0) return;
+    if (boosts.skipStormActive) return;
     // Min 15 seconds between showers
     if (gameTimeRef.current - lastMeteorShowerRef.current < 15000) return;
     // 3% chance per check
@@ -891,24 +884,26 @@ export default function Game() {
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
-    // Apply starting boosts (timed boosts set relative to gameTimeRef.current which is 0 at start)
+    // Apply boost for Life 1 (slot 0)
     const boosts = activeBoostsRef.current;
+    boosts.currentLifeIndex = 0;
+    const life1Boost = boosts.slots[0];
     
-    // Extra life boost: start with 4 lives instead of 3 (capped at 4 max)
-    const startingLives = Math.min(3 + boosts.extraLife, 4);
+    // Count extra_life boosts to determine starting lives
+    const extraLives = boosts.slots.filter(s => s === 'extra_life').length;
+    const startingLives = Math.min(3 + extraLives, 4);
     
-    // Timed boosts: apply relative to current game time (0 at start)
-    if (boosts.shieldBoost > 0) {
+    // Apply timed boost for life 1 (if not extra_life or skip_storm)
+    if (life1Boost === 'shield_boost') {
       shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
-    }
-    if (boosts.rapidFire > 0) {
+    } else if (life1Boost === 'rapid_fire') {
       rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
-    }
-    if (boosts.sideGuns > 0) {
+    } else if (life1Boost === 'side_guns') {
       sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
-    }
-    if (boosts.machineGun > 0) {
+    } else if (life1Boost === 'machine_gun') {
       machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
+    } else if (life1Boost === 'skip_storm') {
+      boosts.skipStormActive = true;
     }
     
     setGameState({
@@ -946,32 +941,30 @@ export default function Game() {
     }));
   }, []);
   
-  // Handle boost depletion when player loses a life and apply boosts for new life
+  // Handle boost when player loses a life - apply boost for next life
   const handleLifeLost = useCallback(() => {
     const boosts = activeBoostsRef.current;
     
-    // First, apply timed boosts for the NEW life (before decrementing)
-    // These boosts were selected in loadout and give effects at start of each life
-    if (boosts.shieldBoost > 0) {
-      shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
-    }
-    if (boosts.rapidFire > 0) {
-      rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
-    }
-    if (boosts.sideGuns > 0) {
-      sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
-    }
-    if (boosts.machineGun > 0) {
-      machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
-    }
+    // Move to next life slot
+    boosts.currentLifeIndex++;
+    boosts.skipStormActive = false; // Reset skip storm for new life
     
-    // Then decrement per-life boosts (all boosts are per-life now)
-    if (boosts.extraLife > 0) boosts.extraLife--;
-    if (boosts.shieldBoost > 0) boosts.shieldBoost--;
-    if (boosts.rapidFire > 0) boosts.rapidFire--;
-    if (boosts.sideGuns > 0) boosts.sideGuns--;
-    if (boosts.machineGun > 0) boosts.machineGun--;
-    if (boosts.skipStorm > 0) boosts.skipStorm--;
+    // Apply boost for the new life (if we have a slot for it)
+    if (boosts.currentLifeIndex < 3) {
+      const nextBoost = boosts.slots[boosts.currentLifeIndex];
+      
+      if (nextBoost === 'shield_boost') {
+        shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
+      } else if (nextBoost === 'rapid_fire') {
+        rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
+      } else if (nextBoost === 'side_guns') {
+        sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
+      } else if (nextBoost === 'machine_gun') {
+        machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
+      } else if (nextBoost === 'skip_storm') {
+        boosts.skipStormActive = true;
+      }
+    }
     
     // Reset weapon level for new life (will be recalculated in update loop)
     weaponLevelRef.current = 0;
@@ -2919,7 +2912,7 @@ export default function Game() {
           <Button
             onClick={() => {
               // Reset loadout and go to loadout screen
-              setLoadout({ extra_life: 0, shield_boost: 0, rapid_fire: 0, side_guns: 0, machine_gun: 0, skip_storm: 0 });
+              setLoadout([null, null, null]);
               setScreen("loadout");
             }}
             className="w-full py-8 text-lg font-bold animate-bounce"
@@ -4200,19 +4193,36 @@ export default function Game() {
   if (screen === "loadout") {
     const hasAnyBoosts = inventory.extra_life > 0 || inventory.shield_boost > 0 || inventory.rapid_fire > 0 || 
                          inventory.side_guns > 0 || inventory.machine_gun > 0 || inventory.skip_storm > 0;
-    const totalBoostsSelected = loadout.extra_life + loadout.shield_boost + loadout.rapid_fire + 
-                                loadout.side_guns + loadout.machine_gun + loadout.skip_storm;
-    const canAddMoreBoosts = totalBoostsSelected < MAX_BOOSTS_PER_LIFE;
+    const totalBoostsSelected = loadout.filter(slot => slot !== null).length;
+
+    // Count how many of each boost type are used across all slots
+    const getUsedCount = (boostType: BoostType): number => {
+      return loadout.filter(slot => slot === boostType).length;
+    };
+
+    // Check if we can add a boost type to a slot
+    const canAddBoost = (boostType: BoostType): boolean => {
+      const inventoryCount = inventory[boostType];
+      const usedCount = getUsedCount(boostType);
+      return usedCount < inventoryCount;
+    };
+
+    // Boost info for display
+    const BOOST_INFO: Record<BoostType, { icon: string; label: string; color: string }> = {
+      extra_life: { icon: "❤️", label: "+1 LIFE", color: "#00ff00" },
+      shield_boost: { icon: "🛡️", label: "SHIELD 5s", color: "#00ffff" },
+      rapid_fire: { icon: "⚡", label: "RAPID 5s", color: "#ff6600" },
+      side_guns: { icon: "🔫", label: "GUNS 5s", color: "#ff00ff" },
+      machine_gun: { icon: "💥", label: "M.GUN 5s", color: "#ff0000" },
+      skip_storm: { icon: "🌀", label: "NO STORM", color: "#8800ff" },
+    };
 
     const handleStartGame = () => {
-      // Set up active boosts for the game
+      // Set up active boosts for the game - copy the loadout to activeBoostsRef
       activeBoostsRef.current = {
-        extraLife: loadout.extra_life,
-        shieldBoost: loadout.shield_boost,
-        rapidFire: loadout.rapid_fire,
-        sideGuns: loadout.side_guns,
-        machineGun: loadout.machine_gun,
-        skipStorm: loadout.skip_storm,
+        slots: [...loadout] as BoostLoadout,
+        currentLifeIndex: 0,
+        skipStormActive: false,
       };
       
       // Track if using boosts
@@ -4225,6 +4235,15 @@ export default function Game() {
       setScreen("game");
     };
 
+    // Set boost for a specific life slot
+    const setSlotBoost = (slotIndex: number, boost: BoostSlot) => {
+      setLoadout(prev => {
+        const newLoadout: BoostLoadout = [...prev] as BoostLoadout;
+        newLoadout[slotIndex] = boost;
+        return newLoadout;
+      });
+    };
+
     return (
       <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
@@ -4235,126 +4254,84 @@ export default function Game() {
           }}
           data-testid="text-loadout-title"
         >
-          🎮 SELECT BOOSTS
+          🎮 BOOST PER LIFE
         </h1>
 
-        <p className="text-[10px] mb-2 text-center" style={{ color: "#888" }}>
-          Max {MAX_BOOSTS_PER_LIFE} boosts per life - choose wisely!
-        </p>
-        
-        <p className="text-sm mb-4 text-center font-bold" style={{ color: totalBoostsSelected >= MAX_BOOSTS_PER_LIFE ? "#ff0000" : "#00ff00" }}>
-          Selected: {totalBoostsSelected}/{MAX_BOOSTS_PER_LIFE}
+        <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
+          Choose 1 boost for each life (or leave empty)
         </p>
 
-        <div className="grid grid-cols-2 gap-2 w-full max-w-sm mb-4">
-          {/* Extra Life */}
-          <Card className="p-2 border" style={{ borderColor: inventory.extra_life > 0 ? "#00ff00" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">❤️</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.extra_life > 0 ? "#00ff00" : "#555" }}>EXTRA LIFE</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.extra_life}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.extra_life === 0}
-                  onClick={() => setLoadout(l => ({ ...l, extra_life: l.extra_life - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.extra_life}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.extra_life >= inventory.extra_life || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, extra_life: l.extra_life + 1 }))}>+</Button>
+        {/* 3 Life Slots */}
+        <div className="flex flex-col gap-3 w-full max-w-sm mb-4">
+          {[0, 1, 2].map((slotIndex) => (
+            <Card key={slotIndex} className="p-3 border-2" style={{ borderColor: loadout[slotIndex] ? BOOST_INFO[loadout[slotIndex]!].color : "#444" }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-bold" style={{ color: "#ffff00" }}>LIFE {slotIndex + 1}</span>
+                  {loadout[slotIndex] && (
+                    <span className="text-lg">{BOOST_INFO[loadout[slotIndex]!].icon}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {loadout[slotIndex] ? (
+                    <>
+                      <span className="text-xs font-bold" style={{ color: BOOST_INFO[loadout[slotIndex]!].color }}>
+                        {BOOST_INFO[loadout[slotIndex]!].label}
+                      </span>
+                      <Button 
+                        size="sm" 
+                        className="w-6 h-6 p-0 ml-2" 
+                        style={{ background: "#ff0000" }}
+                        onClick={() => setSlotBoost(slotIndex, null)}
+                      >
+                        X
+                      </Button>
+                    </>
+                  ) : (
+                    <span className="text-xs" style={{ color: "#666" }}>No boost</span>
+                  )}
+                </div>
               </div>
-            </div>
-          </Card>
-
-          {/* Shield Boost */}
-          <Card className="p-2 border" style={{ borderColor: inventory.shield_boost > 0 ? "#00ffff" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">🛡️</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.shield_boost > 0 ? "#00ffff" : "#555" }}>SHIELD 5s</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.shield_boost}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.shield_boost === 0}
-                  onClick={() => setLoadout(l => ({ ...l, shield_boost: l.shield_boost - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.shield_boost}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.shield_boost >= inventory.shield_boost || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, shield_boost: l.shield_boost + 1 }))}>+</Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Rapid Fire */}
-          <Card className="p-2 border" style={{ borderColor: inventory.rapid_fire > 0 ? "#ff6600" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">⚡</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.rapid_fire > 0 ? "#ff6600" : "#555" }}>RAPID 5s</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.rapid_fire}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.rapid_fire === 0}
-                  onClick={() => setLoadout(l => ({ ...l, rapid_fire: l.rapid_fire - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.rapid_fire}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.rapid_fire >= inventory.rapid_fire || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, rapid_fire: l.rapid_fire + 1 }))}>+</Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Side Guns */}
-          <Card className="p-2 border" style={{ borderColor: inventory.side_guns > 0 ? "#ff00ff" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">🔫</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.side_guns > 0 ? "#ff00ff" : "#555" }}>GUNS 5s</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.side_guns}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.side_guns === 0}
-                  onClick={() => setLoadout(l => ({ ...l, side_guns: l.side_guns - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.side_guns}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.side_guns >= inventory.side_guns || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, side_guns: l.side_guns + 1 }))}>+</Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Machine Gun */}
-          <Card className="p-2 border" style={{ borderColor: inventory.machine_gun > 0 ? "#ff0000" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">💥</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.machine_gun > 0 ? "#ff0000" : "#555" }}>M.GUN 5s</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.machine_gun}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.machine_gun === 0}
-                  onClick={() => setLoadout(l => ({ ...l, machine_gun: l.machine_gun - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.machine_gun}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.machine_gun >= inventory.machine_gun || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, machine_gun: l.machine_gun + 1 }))}>+</Button>
-              </div>
-            </div>
-          </Card>
-
-          {/* Skip Storm */}
-          <Card className="p-2 border" style={{ borderColor: inventory.skip_storm > 0 ? "#8800ff" : "#333" }}>
-            <div className="flex flex-col items-center text-center">
-              <span className="text-lg">🌀</span>
-              <p className="text-[10px] font-bold" style={{ color: inventory.skip_storm > 0 ? "#8800ff" : "#555" }}>SKIP STORM</p>
-              <p className="text-[8px]" style={{ color: "#888" }}>Have: {inventory.skip_storm}</p>
-              <div className="flex items-center gap-1 mt-1">
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#ff0000" }}
-                  disabled={loadout.skip_storm === 0}
-                  onClick={() => setLoadout(l => ({ ...l, skip_storm: l.skip_storm - 1 }))}>-</Button>
-                <span className="text-sm font-bold w-4 text-center" style={{ color: "#ffff00" }}>{loadout.skip_storm}</span>
-                <Button size="sm" className="w-6 h-6 p-0" style={{ background: "#00ff00", color: "#000" }}
-                  disabled={loadout.skip_storm >= inventory.skip_storm || !canAddMoreBoosts}
-                  onClick={() => setLoadout(l => ({ ...l, skip_storm: l.skip_storm + 1 }))}>+</Button>
-              </div>
-            </div>
-          </Card>
+              
+              {/* Boost selection buttons */}
+              {!loadout[slotIndex] && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {(Object.keys(BOOST_INFO) as BoostType[]).map((boostType) => (
+                    <Button
+                      key={boostType}
+                      size="sm"
+                      className="px-2 py-1 text-[10px]"
+                      style={{ 
+                        background: canAddBoost(boostType) ? BOOST_INFO[boostType].color : "#333",
+                        color: canAddBoost(boostType) ? "#000" : "#666",
+                        opacity: canAddBoost(boostType) ? 1 : 0.5
+                      }}
+                      disabled={!canAddBoost(boostType)}
+                      onClick={() => setSlotBoost(slotIndex, boostType)}
+                    >
+                      {BOOST_INFO[boostType].icon} {BOOST_INFO[boostType].label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </Card>
+          ))}
         </div>
+
+        {/* Inventory display */}
+        <Card className="p-2 mb-4 w-full max-w-sm border" style={{ borderColor: "#444" }}>
+          <p className="text-[10px] text-center mb-2" style={{ color: "#888" }}>YOUR INVENTORY</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {(Object.keys(BOOST_INFO) as BoostType[]).map((boostType) => (
+              <div key={boostType} className="flex items-center gap-1">
+                <span className="text-xs">{BOOST_INFO[boostType].icon}</span>
+                <span className="text-[10px]" style={{ color: inventory[boostType] > 0 ? BOOST_INFO[boostType].color : "#555" }}>
+                  {inventory[boostType]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         {totalBoostsSelected > 0 && (
           <p className="text-[10px] mb-4" style={{ color: "#ff00ff" }}>
@@ -4378,7 +4355,7 @@ export default function Game() {
 
         <Button
           onClick={() => {
-            setLoadout({ extra_life: 0, shield_boost: 0, rapid_fire: 0, side_guns: 0, machine_gun: 0, skip_storm: 0 });
+            setLoadout([null, null, null]);
             setScreen("title");
           }}
           variant="outline"
