@@ -36,6 +36,50 @@ export async function registerRoutes(
     res.sendFile(filePath);
   });
 
+  // Game guide images download page
+  app.get("/guide-images", (req, res) => {
+    const images = [
+      { name: "1-cover", file: "game_guide_cover_page.png", title: "Cover Page" },
+      { name: "2-controls", file: "controls_instruction_page.png", title: "Controls" },
+      { name: "3-enemies", file: "enemies_guide_page.png", title: "Enemies" },
+      { name: "4-hazards", file: "hazards_warning_page.png", title: "Hazards" },
+      { name: "5-powerups", file: "power-ups_guide_page.png", title: "Power-Ups" },
+      { name: "6-special", file: "special_items_guide_page.png", title: "Special Items" },
+      { name: "7-tips", file: "tips_and_strategy_page.png", title: "Tips & Strategy" }
+    ];
+    
+    let html = `<!DOCTYPE html><html><head><title>SEED STORM Guide Images</title>
+      <style>
+        body { background: #0a0a0f; color: #0f0; font-family: monospace; padding: 20px; text-align: center; }
+        h1 { color: #0ff; text-shadow: 0 0 10px #0ff; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #1a1a2e; border: 2px solid #ff00ff; border-radius: 10px; padding: 15px; }
+        .card img { max-width: 100%; border: 2px solid #0f0; }
+        .card h3 { color: #ff0; margin: 10px 0; }
+        a.btn { display: inline-block; background: #0f0; color: #000; padding: 10px 20px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px; }
+        a.btn:hover { background: #0ff; }
+      </style>
+    </head><body>
+      <h1>SEED STORM - Game Guide Images</h1>
+      <p>Click each image to download</p>
+      <div class="grid">`;
+    
+    images.forEach(img => {
+      const imgPath = path.resolve(process.cwd(), `attached_assets/generated_images/${img.file}`);
+      if (fs.existsSync(imgPath)) {
+        const imageData = fs.readFileSync(imgPath).toString('base64');
+        html += `<div class="card">
+          <h3>${img.title}</h3>
+          <img src="data:image/png;base64,${imageData}" alt="${img.title}"/>
+          <br/><a class="btn" href="data:image/png;base64,${imageData}" download="seed_storm_${img.name}.png">DOWNLOAD</a>
+        </div>`;
+      }
+    });
+    
+    html += `</div></body></html>`;
+    res.send(html);
+  });
+
   // Download page for banner (640x360 for Telegram)
   app.get("/download", (req, res) => {
     const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/seed_storm_telegram_640x360.png");
