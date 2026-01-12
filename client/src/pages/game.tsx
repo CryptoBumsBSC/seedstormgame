@@ -253,6 +253,21 @@ export default function Game() {
   const meteorShowerEndRef = useRef<number>(0);
   const lastMeteorShowerRef = useRef<number>(0);
   const whiteHotSpawnedRef = useRef<boolean>(false); // Track if white-hot already spawned this shower
+  
+  // New gameplay features
+  const comboCountRef = useRef<number>(0);
+  const comboMultiplierRef = useRef<number>(1);
+  const lastKillTimeRef = useRef<number>(0);
+  const killStreakRef = useRef<number>(0);
+  const totalKillsRef = useRef<number>(0);
+  const personalBestRef = useRef<number>(0);
+  const bossRef = useRef<{ active: boolean; health: number; x: number; y: number; direction: number; spawnTime: number } | null>(null);
+  const bossKilledRef = useRef<boolean>(false);
+  const budRageActiveRef = useRef<boolean>(false);
+  const machineGunPreviewRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  const screenShakeRef = useRef<{ intensity: number; duration: number }>({ intensity: 0, duration: 0 });
+  const slowMoRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  const starSpeedMultiplierRef = useRef<number>(1);
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -322,11 +337,12 @@ export default function Game() {
       soundSystem.shoot();
       const weaponLevel = weaponLevelRef.current;
       const player = playerRef.current;
+      const machineGunActive = weaponLevel >= 3 || machineGunPreviewRef.current.active;
       
       // Center gun (always active)
       const centerX = player.x + player.width / 2;
       
-      if (weaponLevel >= 3) {
+      if (machineGunActive) {
         // Double barrel machine gun - 2 projectiles from center
         projectilesRef.current.push({
           id: generateId(),
@@ -494,8 +510,8 @@ export default function Game() {
     if (gameTimeSec < 90) return;
     // Only spawn if not recently spawned (min 20 sec between spawns)
     if (gameTimeRef.current - lastBudAngelSpawnRef.current < 20000) return;
-    // 5% chance per spawn attempt
-    if (Math.random() > 0.05) return;
+    // 4.5% chance per spawn attempt (reduced 10% from 5%)
+    if (Math.random() > 0.045) return;
     
     lastBudAngelSpawnRef.current = gameTimeRef.current;
     specialObjectsRef.current.push({
@@ -601,6 +617,19 @@ export default function Game() {
     meteorShowerEndRef.current = 0;
     lastMeteorShowerRef.current = 0;
     whiteHotSpawnedRef.current = false;
+    // Reset new gameplay features
+    comboCountRef.current = 0;
+    comboMultiplierRef.current = 1;
+    lastKillTimeRef.current = 0;
+    killStreakRef.current = 0;
+    totalKillsRef.current = 0;
+    bossRef.current = null;
+    bossKilledRef.current = false;
+    budRageActiveRef.current = false;
+    machineGunPreviewRef.current = { active: false, endTime: 0 };
+    screenShakeRef.current = { intensity: 0, duration: 0 };
+    slowMoRef.current = { active: false, endTime: 0 };
+    starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
     setGameState({
@@ -659,8 +688,38 @@ export default function Game() {
       setGameState(prev => ({ ...prev, wave: newDifficulty }));
     }
 
+    // Star speed increases with game progress
+    starSpeedMultiplierRef.current = 1 + (gameTimeSec / 120); // Doubles every 2 minutes
+    
+    // Screen shake decay
+    if (screenShakeRef.current.duration > 0) {
+      screenShakeRef.current.duration -= deltaTime;
+      if (screenShakeRef.current.duration <= 0) {
+        screenShakeRef.current = { intensity: 0, duration: 0 };
+      }
+    }
+    
+    // Slow-mo check
+    if (slowMoRef.current.active && gameTimeRef.current > slowMoRef.current.endTime) {
+      slowMoRef.current.active = false;
+    }
+    
+    // Machine gun preview at 3:30 (210 seconds)
+    if (gameTimeSec >= 210 && gameTimeSec < 215 && !machineGunPreviewRef.current.active && weaponLevelRef.current < 3) {
+      machineGunPreviewRef.current = { active: true, endTime: gameTimeRef.current + 5000 };
+    }
+    if (machineGunPreviewRef.current.active && gameTimeRef.current > machineGunPreviewRef.current.endTime) {
+      machineGunPreviewRef.current.active = false;
+    }
+    
+    // Combo decay - reset if no kills for 2 seconds
+    if (gameTimeRef.current - lastKillTimeRef.current > 2000 && comboCountRef.current > 0) {
+      comboCountRef.current = 0;
+      comboMultiplierRef.current = 1;
+    }
+    
     starsRef.current.forEach(star => {
-      star.y += star.speed;
+      star.y += star.speed * starSpeedMultiplierRef.current;
       if (star.y > CANVAS_HEIGHT) {
         star.y = -star.size;
         star.x = Math.random() * CANVAS_WIDTH;
@@ -683,10 +742,12 @@ export default function Game() {
     shootCooldownRef.current -= deltaTime;
     invincibilityRef.current = Math.max(0, invincibilityRef.current - deltaTime);
     
-    // Faster shooting with machine gun (level 3)
+    // Faster shooting with machine gun (level 3 or preview active)
     const rapidFireActive = rapidFireEndRef.current > gameTimeRef.current;
-    const baseDelay = weaponLevelRef.current >= 3 ? 120 : 200;
-    const shootDelay = rapidFireActive ? baseDelay * 0.5 : baseDelay; // Rapid fire halves the delay
+    const budRageBonus = budRageActiveRef.current ? 0.75 : 1; // 25% faster when Bud Rage active
+    const machineGunActive = weaponLevelRef.current >= 3 || machineGunPreviewRef.current.active;
+    const baseDelay = machineGunActive ? 120 : 200;
+    const shootDelay = (rapidFireActive ? baseDelay * 0.5 : baseDelay) * budRageBonus;
     if ((keysRef.current.has(" ") || keysRef.current.has("ArrowUp") || touchRef.current.fire) && 
         shootCooldownRef.current <= 0) {
       shoot(true, player.x + player.width / 2, player.y);
@@ -732,9 +793,14 @@ export default function Game() {
       
       if (checkCollision(obj, player)) {
         if (obj.type === "budAngel") {
-          // Bud Angel grants 15 seconds of shield
+          // Bud Angel grants 15 seconds of shield (stacks if already active)
           soundSystem.powerUp();
-          shieldEndRef.current = gameTimeRef.current + 15000;
+          if (shieldEndRef.current > gameTimeRef.current) {
+            // Shield stacking - extend current shield
+            shieldEndRef.current += 15000;
+          } else {
+            shieldEndRef.current = gameTimeRef.current + 15000;
+          }
           createExplosion(obj.x + obj.width / 2, obj.y + obj.height / 2, "#88ffff");
           return false;
         } else if (obj.type === "skull") {
@@ -802,8 +868,18 @@ export default function Game() {
             // White-hot seed hit! Grant 5 sec shield + 5 sec rapid fire
             soundSystem.powerUp();
             createExplosion(seed.x + seed.width / 2, seed.y + seed.height / 2, "#ffffff");
-            shieldEndRef.current = gameTimeRef.current + 5000;
-            rapidFireEndRef.current = gameTimeRef.current + 5000;
+            // Shield stacking for white-hot seed
+            if (shieldEndRef.current > gameTimeRef.current) {
+              shieldEndRef.current += 5000;
+            } else {
+              shieldEndRef.current = gameTimeRef.current + 5000;
+            }
+            // Rapid fire stacking
+            if (rapidFireEndRef.current > gameTimeRef.current) {
+              rapidFireEndRef.current += 5000;
+            } else {
+              rapidFireEndRef.current = gameTimeRef.current + 5000;
+            }
             meteorSeedsRef.current.splice(i, 1);
             return false;
           }
@@ -818,9 +894,32 @@ export default function Game() {
               const enemyColor = strainColors[enemy.strain].fill;
               createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemyColor);
               spawnPowerUp(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+              
+              // Combo system - kills within 1.5 seconds build combo
+              const timeSinceLastKill = gameTimeRef.current - lastKillTimeRef.current;
+              if (timeSinceLastKill < 1500) {
+                comboCountRef.current++;
+                comboMultiplierRef.current = Math.min(1 + comboCountRef.current * 0.1, 3); // Max 3x multiplier
+              } else {
+                comboCountRef.current = 0;
+                comboMultiplierRef.current = 1;
+              }
+              lastKillTimeRef.current = gameTimeRef.current;
+              killStreakRef.current++;
+              totalKillsRef.current++;
+              
+              // Calculate points with combo multiplier
+              const basePoints = enemy.points;
+              const finalPoints = Math.round(basePoints * comboMultiplierRef.current);
+              
+              // Screen shake on combo kills
+              if (comboCountRef.current >= 3) {
+                screenShakeRef.current = { intensity: 3 + comboCountRef.current, duration: 150 };
+              }
+              
               setGameState(prev => ({ 
                 ...prev, 
-                score: prev.score + enemy.points 
+                score: prev.score + finalPoints 
               }));
               enemiesRef.current.splice(i, 1);
             }
@@ -883,13 +982,23 @@ export default function Game() {
             playerRef.current.speed = 8;
             break;
           case "shield":
-            shieldEndRef.current = gameTimeRef.current + 5000;
+            // Shield stacking for power-ups
+            if (shieldEndRef.current > gameTimeRef.current) {
+              shieldEndRef.current += 5000;
+            } else {
+              shieldEndRef.current = gameTimeRef.current + 5000;
+            }
             break;
           case "rapid":
-            rapidFireEndRef.current = gameTimeRef.current + 5000;
+            // Rapid fire stacking
+            if (rapidFireEndRef.current > gameTimeRef.current) {
+              rapidFireEndRef.current += 5000;
+            } else {
+              rapidFireEndRef.current = gameTimeRef.current + 5000;
+            }
             break;
           case "life":
-            setGameState(prev => ({ ...prev, lives: Math.min(prev.lives + 1, 5) }));
+            setGameState(prev => ({ ...prev, lives: Math.min(prev.lives + 1, 3) }));
             break;
         }
         return false;
@@ -1862,6 +1971,15 @@ export default function Game() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Apply screen shake effect
+    const shake = screenShakeRef.current;
+    if (shake.duration > 0 && shake.intensity > 0) {
+      const shakeX = (Math.random() - 0.5) * shake.intensity * 2;
+      const shakeY = (Math.random() - 0.5) * shake.intensity * 2;
+      ctx.save();
+      ctx.translate(shakeX, shakeY);
+    }
+
     ctx.fillStyle = "#0a0a0f";
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
@@ -2048,6 +2166,56 @@ export default function Game() {
         ctx.fillText("SEED STORM!", CANVAS_WIDTH / 2, 20);
         ctx.globalAlpha = 1;
       }
+      
+      // Combo display (top right area)
+      if (comboCountRef.current >= 2) {
+        const comboText = `${comboCountRef.current}x COMBO!`;
+        ctx.font = "7px 'Press Start 2P'";
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffff00";
+        ctx.shadowColor = "#ff8800";
+        ctx.shadowBlur = 8 + comboCountRef.current;
+        ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 80) * 0.2;
+        ctx.fillText(comboText, CANVAS_WIDTH - 10, 35);
+        // Multiplier display
+        ctx.font = "5px 'Press Start 2P'";
+        ctx.fillStyle = "#00ffff";
+        ctx.fillText(`${comboMultiplierRef.current.toFixed(1)}x PTS`, CANVAS_WIDTH - 10, 45);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+      
+      // Machine gun preview indicator
+      if (machineGunPreviewRef.current.active) {
+        ctx.font = "6px 'Press Start 2P'";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ff00ff";
+        ctx.shadowColor = "#ff00ff";
+        ctx.shadowBlur = 10;
+        ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 100) * 0.3;
+        ctx.fillText("MACHINE GUN PREVIEW!", CANVAS_WIDTH / 2, 55);
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "5px 'Press Start 2P'";
+        ctx.fillText("PERMANENT AT 4:00", CANVAS_WIDTH / 2, 65);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+      
+      // Kill streak display (left side)
+      if (killStreakRef.current >= 5) {
+        ctx.font = "6px 'Press Start 2P'";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#00ff88";
+        ctx.shadowColor = "#00ff88";
+        ctx.shadowBlur = 5;
+        ctx.fillText(`${killStreakRef.current} STREAK`, 10, 45);
+        ctx.shadowBlur = 0;
+      }
+    }
+    
+    // Restore context if screen shake was applied
+    if (screenShakeRef.current.duration > 0 && screenShakeRef.current.intensity > 0) {
+      ctx.restore();
     }
 
     if (gameState.isPaused) {
@@ -2909,6 +3077,44 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffff00" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffff00" }}>
+              <Zap className="w-4 h-4" />
+              COMBO SYSTEM
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffff00" }}>Chain kills</span> within 1.5 seconds to build combos!</p>
+              <p><span style={{ color: "#00ffff" }}>Multiplier:</span> Up to 3x points per kill</p>
+              <p><span style={{ color: "#ff8800" }}>Screen shake</span> on 3+ combo kills</p>
+              <p><span style={{ color: "#00ff88" }}>Kill streak</span> counter tracks consecutive kills</p>
+              <p>Combo resets after 2 seconds without a kill</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
+              <Zap className="w-4 h-4" />
+              MACHINE GUN PREVIEW
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ff00ff" }}>At 3:30</span> - 5 second preview of machine gun!</p>
+              <p>Test the double barrel before it's permanent</p>
+              <p><span style={{ color: "#ffff00" }}>At 4:00</span> - Machine gun unlocks permanently!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#88ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#88ffff" }}>
+              <Shield className="w-4 h-4" />
+              SHIELD STACKING
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>Shields <span style={{ color: "#88ff88" }}>STACK</span> when already active!</p>
+              <p>Collect multiple Bud Angels to extend duration</p>
+              <p>White-hot seed shield also stacks with existing shield</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
               <Heart className="w-4 h-4" />
@@ -2918,6 +3124,7 @@ export default function Game() {
               <p>Keep moving - standing still makes you a target</p>
               <p>Clear enemies before they reach the bottom</p>
               <p>Watch for hazards after 20 seconds</p>
+              <p><span style={{ color: "#ffff00" }}>Chain kills</span> for combo multiplier bonus!</p>
               <p>Survive to 4 minutes for max firepower!</p>
               <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
               <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>

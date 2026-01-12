@@ -24,8 +24,11 @@ import { eq, desc, and, gte, lte, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   getScores(): Promise<Score[]>;
+  getScoresWithStats(): Promise<(Score & { pointsPerSecond: number })[]>;
   createScore(score: InsertScore): Promise<Score>;
+  deleteScore(id: number): Promise<boolean>;
   getTopScores(limit?: number): Promise<Score[]>;
+  getDailyScores(): Promise<Score[]>;
   
   getAllTimeScores(): Promise<AllTimeScore[]>;
   updateAllTimeScores(score: InsertAllTimeScore): Promise<void>;
@@ -68,13 +71,34 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(scores).orderBy(desc(scores.score));
   }
 
+  async getScoresWithStats(): Promise<(Score & { pointsPerSecond: number })[]> {
+    const allScores = await db.select().from(scores).orderBy(desc(scores.score));
+    return allScores.map(s => ({
+      ...s,
+      pointsPerSecond: s.playTime > 0 ? s.score / (s.playTime / 1000) : 0
+    }));
+  }
+
   async createScore(insertScore: InsertScore): Promise<Score> {
     const [score] = await db.insert(scores).values(insertScore).returning();
     return score;
   }
 
+  async deleteScore(id: number): Promise<boolean> {
+    const result = await db.delete(scores).where(eq(scores.id, id));
+    return true;
+  }
+
   async getTopScores(limit: number = 10): Promise<Score[]> {
     return await db.select().from(scores).orderBy(desc(scores.score)).limit(limit);
+  }
+
+  async getDailyScores(): Promise<Score[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return await db.select().from(scores)
+      .where(gte(scores.createdAt, today))
+      .orderBy(desc(scores.score));
   }
 
   async getAllTimeScores(): Promise<AllTimeScore[]> {

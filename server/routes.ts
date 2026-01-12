@@ -409,5 +409,47 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Get all scores with stats (points per second)
+  app.get("/api/admin/scores", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const scoresWithStats = await storage.getScoresWithStats();
+      res.json(scoresWithStats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch scores" });
+    }
+  });
+
+  // Admin: Delete a score by ID
+  app.delete("/api/admin/scores/:id", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid score ID" });
+      }
+      await storage.deleteScore(id);
+      res.json({ success: true, message: "Score deleted" });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete score" });
+    }
+  });
+
+  // Daily scores endpoint
+  app.get("/api/scores/daily", async (req, res) => {
+    try {
+      const dailyScores = await storage.getDailyScores();
+      res.json(dailyScores);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily scores" });
+    }
+  });
+
   return httpServer;
 }

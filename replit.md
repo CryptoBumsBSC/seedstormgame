@@ -131,6 +131,17 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
+- 2026-01-12: Major gameplay enhancements
+  - **Combo System**: Chain kills within 1.5 sec for up to 3x point multiplier
+  - **Kill Streak**: Track consecutive kills, display at 5+ streak
+  - **Screen Shake**: Visual feedback on 3+ combo kills
+  - **Shield Stacking**: All shields now extend duration when already active
+  - **Machine Gun Preview**: 5-second preview at 3:30 before permanent unlock at 4:00
+  - **Star Speed Progression**: Background stars accelerate with game progress
+  - **Fixed 4th Life Bug**: Lives properly capped at 3 maximum
+  - **Reduced Bud Angel Spawn**: From 5% to 4.5% for better balance
+  - **Admin Panel**: Password-protected at /admin route for score management
+  - **Updated How To Play**: Added sections for combo, preview, and stacking mechanics
 - 2026-01-11: Added White-Hot Seed to SEED STORM event
   - Rare glowing white seed (10% chance, max 1 per shower)
   - Bright white glow with white flame trail

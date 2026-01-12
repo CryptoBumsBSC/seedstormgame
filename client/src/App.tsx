@@ -6,11 +6,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "./lib/web3Config";
 import Game from "@/pages/game";
+import Admin from "@/pages/admin";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Game} />
+      <Route path="/admin" component={Admin} />
     </Switch>
   );
 }
