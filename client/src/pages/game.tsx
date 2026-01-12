@@ -832,6 +832,10 @@ export default function Game() {
         tookDamageThisFrame = true;
         soundSystem.damage();
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
+        // Reset kill streak and combo on damage
+        killStreakRef.current = 0;
+        comboCountRef.current = 0;
+        comboMultiplierRef.current = 1;
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -931,6 +935,10 @@ export default function Game() {
           tookDamageThisFrame = true;
           soundSystem.damage();
           invincibilityRef.current = 1500; // 1.5 seconds of invincibility
+          // Reset kill streak and combo on damage
+          killStreakRef.current = 0;
+          comboCountRef.current = 0;
+          comboMultiplierRef.current = 1;
           setGameState(prev => {
             const newLives = prev.lives - 1;
             if (newLives <= 0) {
@@ -949,6 +957,10 @@ export default function Game() {
         tookDamageThisFrame = true;
         soundSystem.damage();
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
+        // Reset kill streak and combo on damage
+        killStreakRef.current = 0;
+        comboCountRef.current = 0;
+        comboMultiplierRef.current = 1;
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -1031,6 +1043,10 @@ export default function Game() {
         tookDamageThisFrame = true;
         soundSystem.damage();
         invincibilityRef.current = 1500;
+        // Reset kill streak and combo on damage
+        killStreakRef.current = 0;
+        comboCountRef.current = 0;
+        comboMultiplierRef.current = 1;
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -1973,7 +1989,8 @@ export default function Game() {
 
     // Apply screen shake effect
     const shake = screenShakeRef.current;
-    if (shake.duration > 0 && shake.intensity > 0) {
+    const shakeActive = shake.duration > 0 && shake.intensity > 0;
+    if (shakeActive) {
       const shakeX = (Math.random() - 0.5) * shake.intensity * 2;
       const shakeY = (Math.random() - 0.5) * shake.intensity * 2;
       ctx.save();
@@ -2213,8 +2230,8 @@ export default function Game() {
       }
     }
     
-    // Restore context if screen shake was applied
-    if (screenShakeRef.current.duration > 0 && screenShakeRef.current.intensity > 0) {
+    // Restore context if screen shake was applied (use local variable to ensure matching save/restore)
+    if (shakeActive) {
       ctx.restore();
     }
 
