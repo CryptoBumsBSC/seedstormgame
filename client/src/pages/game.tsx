@@ -71,6 +71,18 @@ interface Particle {
   size: number;
 }
 
+interface Boss {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  health: number;
+  maxHealth: number;
+  direction: number;
+  spawnTime: number;
+  shootCooldown: number;
+}
+
 interface MeteorSeed {
   id: string;
   x: number;
@@ -261,7 +273,8 @@ export default function Game() {
   const killStreakRef = useRef<number>(0);
   const totalKillsRef = useRef<number>(0);
   const personalBestRef = useRef<number>(0);
-  const bossRef = useRef<{ active: boolean; health: number; x: number; y: number; direction: number; spawnTime: number } | null>(null);
+  const bossRef = useRef<Boss | null>(null);
+  const lastBossSpawnRef = useRef<number>(0);
   const bossKilledRef = useRef<boolean>(false);
   const budRageActiveRef = useRef<boolean>(false);
   const machineGunPreviewRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
@@ -625,6 +638,7 @@ export default function Game() {
     totalKillsRef.current = 0;
     bossRef.current = null;
     bossKilledRef.current = false;
+    lastBossSpawnRef.current = 0;
     budRageActiveRef.current = false;
     machineGunPreviewRef.current = { active: false, endTime: 0 };
     screenShakeRef.current = { intensity: 0, duration: 0 };
@@ -670,7 +684,11 @@ export default function Game() {
   const update = useCallback((deltaTime: number) => {
     if (gameState.isPaused || !gameState.isPlaying) return;
 
-    gameTimeRef.current += deltaTime;
+    // Apply slow-mo effect
+    const slowMoActive = slowMoRef.current.active && gameTimeRef.current < slowMoRef.current.endTime;
+    const effectiveDelta = slowMoActive ? deltaTime * 0.3 : deltaTime;
+    
+    gameTimeRef.current += effectiveDelta;
     const gameTimeSec = gameTimeRef.current / 1000;
     
     // Weapon upgrades based on time
@@ -786,6 +804,66 @@ export default function Game() {
     // Special object spawning
     spawnBudAngel(); // Only spawns after 90 seconds
     spawnSkull(); // Max once per 30 seconds
+    
+    // Boss spawning - every 2 minutes (120 seconds), max 1 kill per game
+    if (gameTimeSec >= 120 && !bossRef.current && !bossKilledRef.current) {
+      if (gameTimeRef.current - lastBossSpawnRef.current >= 120000) {
+        lastBossSpawnRef.current = gameTimeRef.current;
+        bossRef.current = {
+          x: CANVAS_WIDTH / 2 - 40,
+          y: -80,
+          width: 80,
+          height: 60,
+          health: 10,
+          maxHealth: 10,
+          direction: 1,
+          spawnTime: gameTimeRef.current,
+          shootCooldown: 0,
+        };
+      }
+    }
+    
+    // Update boss
+    if (bossRef.current) {
+      const boss = bossRef.current;
+      
+      // Boss entry animation - move down to position
+      if (boss.y < 40) {
+        boss.y += 1;
+      } else {
+        // Side-to-side movement
+        boss.x += boss.direction * 2;
+        if (boss.x <= 10) {
+          boss.direction = 1;
+        } else if (boss.x >= CANVAS_WIDTH - boss.width - 10) {
+          boss.direction = -1;
+        }
+        
+        // Boss shooting
+        boss.shootCooldown -= deltaTime;
+        if (boss.shootCooldown <= 0) {
+          // Fire 3 projectiles in a spread
+          const centerX = boss.x + boss.width / 2;
+          for (let angle = -0.3; angle <= 0.3; angle += 0.3) {
+            projectilesRef.current.push({
+              id: generateId(),
+              x: centerX - PROJECTILE_SIZE / 2,
+              y: boss.y + boss.height,
+              width: PROJECTILE_SIZE,
+              height: PROJECTILE_SIZE * 2,
+              speed: 5 + Math.abs(angle) * 2,
+              isPlayerBullet: false,
+            });
+          }
+          boss.shootCooldown = 800; // Fires every 0.8 seconds
+        }
+      }
+      
+      // Boss times out after 30 seconds
+      if (gameTimeRef.current - boss.spawnTime > 30000) {
+        bossRef.current = null;
+      }
+    }
 
     // Update special objects and check collisions
     specialObjectsRef.current = specialObjectsRef.current.filter(obj => {
@@ -889,6 +967,39 @@ export default function Game() {
           }
         }
         
+        // Check boss collision first
+        if (bossRef.current) {
+          const boss = bossRef.current;
+          if (checkCollision(proj, boss)) {
+            boss.health--;
+            soundSystem.hit();
+            if (boss.health <= 0) {
+              // Boss defeated!
+              createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2, "#ff00ff");
+              createExplosion(boss.x + 20, boss.y + 20, "#ffff00");
+              createExplosion(boss.x + boss.width - 20, boss.y + 20, "#00ffff");
+              screenShakeRef.current = { intensity: 15, duration: 500 };
+              
+              // Big score bonus
+              const bossPoints = 50;
+              setGameState(prev => ({ ...prev, score: prev.score + bossPoints }));
+              
+              // Grant Bud Rage power-up (permanent 25% faster fire)
+              budRageActiveRef.current = true;
+              // Also grant 10 second shield
+              if (shieldEndRef.current > gameTimeRef.current) {
+                shieldEndRef.current += 10000;
+              } else {
+                shieldEndRef.current = gameTimeRef.current + 10000;
+              }
+              
+              bossRef.current = null;
+              bossKilledRef.current = true; // Can only kill one boss per game
+            }
+            return false;
+          }
+        }
+        
         for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
           const enemy = enemiesRef.current[i];
           if (checkCollision(proj, enemy)) {
@@ -988,6 +1099,8 @@ export default function Game() {
       
       if (checkCollision(powerUp, player)) {
         soundSystem.powerUp();
+        // Trigger slow-mo effect on power-up collection
+        slowMoRef.current = { active: true, endTime: gameTimeRef.current + 300 };
         switch (powerUp.type) {
           case "speed":
             speedBoostEndRef.current = gameTimeRef.current + 5000;
@@ -1803,6 +1916,16 @@ export default function Game() {
 
   const drawProjectile = (ctx: CanvasRenderingContext2D, proj: Projectile) => {
     if (proj.isPlayerBullet) {
+      // Draw particle trail behind projectile
+      ctx.fillStyle = "rgba(0, 255, 0, 0.3)";
+      ctx.beginPath();
+      ctx.arc(proj.x + proj.width / 2, proj.y + proj.height + 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(0, 255, 0, 0.15)";
+      ctx.beginPath();
+      ctx.arc(proj.x + proj.width / 2, proj.y + proj.height + 7, 2, 0, Math.PI * 2);
+      ctx.fill();
+      
       // Cannabis seed - realistic teardrop shape with tiger stripes (50% more detail)
       ctx.shadowColor = "#00ff00";
       ctx.shadowBlur = 10;
@@ -2171,6 +2294,64 @@ export default function Game() {
       enemiesRef.current.forEach(enemy => drawEnemy(ctx, enemy));
       hazardsRef.current.forEach(hazard => drawHazard(ctx, hazard));
       specialObjectsRef.current.forEach(obj => drawSpecialObject(ctx, obj));
+      
+      // Draw boss if active
+      if (bossRef.current) {
+        const boss = bossRef.current;
+        const time = Date.now();
+        
+        // Boss body - large menacing bud
+        ctx.fillStyle = "#8B0000";
+        ctx.shadowColor = "#ff0000";
+        ctx.shadowBlur = 15 + Math.sin(time / 100) * 5;
+        
+        // Main body
+        ctx.beginPath();
+        ctx.ellipse(boss.x + boss.width / 2, boss.y + boss.height / 2, boss.width / 2, boss.height / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner glow
+        const gradient = ctx.createRadialGradient(
+          boss.x + boss.width / 2, boss.y + boss.height / 2, 0,
+          boss.x + boss.width / 2, boss.y + boss.height / 2, boss.width / 2
+        );
+        gradient.addColorStop(0, "#ff4444");
+        gradient.addColorStop(0.5, "#aa0000");
+        gradient.addColorStop(1, "#550000");
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Evil eyes
+        ctx.fillStyle = "#ffff00";
+        ctx.shadowColor = "#ffff00";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(boss.x + boss.width * 0.35, boss.y + boss.height * 0.4, 6, 0, Math.PI * 2);
+        ctx.arc(boss.x + boss.width * 0.65, boss.y + boss.height * 0.4, 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Pupils
+        ctx.fillStyle = "#000000";
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(boss.x + boss.width * 0.35, boss.y + boss.height * 0.4, 3, 0, Math.PI * 2);
+        ctx.arc(boss.x + boss.width * 0.65, boss.y + boss.height * 0.4, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Health bar
+        ctx.fillStyle = "#333";
+        ctx.fillRect(boss.x, boss.y - 15, boss.width, 8);
+        ctx.fillStyle = "#ff0000";
+        ctx.fillRect(boss.x + 1, boss.y - 14, (boss.width - 2) * (boss.health / boss.maxHealth), 6);
+        
+        // Boss label
+        ctx.font = "6px 'Press Start 2P'";
+        ctx.fillStyle = "#ff0000";
+        ctx.textAlign = "center";
+        ctx.fillText("BOSS", boss.x + boss.width / 2, boss.y - 20);
+        
+        ctx.shadowBlur = 0;
+      }
       projectilesRef.current.forEach(proj => drawProjectile(ctx, proj));
       meteorSeedsRef.current.forEach(seed => drawMeteorSeed(ctx, seed));
       
@@ -2227,6 +2408,26 @@ export default function Game() {
         ctx.shadowBlur = 5;
         ctx.fillText(`${killStreakRef.current} STREAK`, 10, 45);
         ctx.shadowBlur = 0;
+      }
+      
+      // Bud Rage indicator (permanent power-up from boss kill)
+      if (budRageActiveRef.current) {
+        ctx.font = "5px 'Press Start 2P'";
+        ctx.textAlign = "left";
+        ctx.fillStyle = "#ff4444";
+        ctx.shadowColor = "#ff0000";
+        ctx.shadowBlur = 8 + Math.sin(Date.now() / 100) * 3;
+        ctx.fillText("BUD RAGE!", 10, 58);
+        ctx.shadowBlur = 0;
+      }
+      
+      // Slow-mo visual effect
+      if (slowMoRef.current.active && gameTimeRef.current < slowMoRef.current.endTime) {
+        ctx.strokeStyle = "#00ffff";
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = 0.3;
+        ctx.strokeRect(5, 5, CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
+        ctx.globalAlpha = 1;
       }
     }
     
@@ -3061,6 +3262,21 @@ export default function Game() {
               <p><span style={{ color: "#88ffff" }}>Appears:</span> After 90 seconds of play</p>
               <p><span style={{ color: "#88ff88" }}>Collect it:</span> Grants 15 seconds of shield!</p>
               <p>Shield protects you from all damage.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff0000" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff0000" }}>
+              <Target className="w-4 h-4" />
+              BOSS ENEMY
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ff0000" }}>Spawns:</span> Every 2 minutes of play</p>
+              <p><span style={{ color: "#ffff00" }}>10 hits</span> to defeat (stays 30 seconds)</p>
+              <p>Moves side-to-side and fires spread shots!</p>
+              <p><span style={{ color: "#ff4444" }}>Kill it:</span> Get <span style={{ color: "#ff4444" }}>BUD RAGE</span> power-up!</p>
+              <p>Bud Rage = permanent 25% faster fire + 10 sec shield</p>
+              <p>Only one boss kill per game (max reward)</p>
             </div>
           </Card>
 

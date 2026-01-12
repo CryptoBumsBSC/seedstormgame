@@ -131,7 +131,14 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
-- 2026-01-12: Major gameplay enhancements
+- 2026-01-12: Major gameplay enhancements (Phase 2)
+  - **Boss Enemy**: Spawns every 2 min, 10 hits to kill, side-to-side movement, spread shot attack
+  - **Bud Rage Power-up**: Permanent 25% faster fire + 10 sec shield when boss killed
+  - **Slow-Mo Effect**: Brief slow motion when collecting power-ups
+  - **Particle Trails**: Green trails behind player projectiles
+  - **Bud Rage Indicator**: HUD display when permanent power-up is active
+  - **Slow-Mo Border**: Visual cyan border effect during slow motion
+- 2026-01-12: Major gameplay enhancements (Phase 1)
   - **Combo System**: Chain kills within 1.5 sec for up to 3x point multiplier
   - **Kill Streak**: Track consecutive kills, display at 5+ streak
   - **Screen Shake**: Visual feedback on 3+ combo kills
