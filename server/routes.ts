@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
+import { insertScoreSchema, insertPlayerSchema, BOOST_PRICES, boostTypes, type BoostType } from "@shared/schema";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
 import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier } from "./profanityFilter";
@@ -506,6 +506,399 @@ export async function registerRoutes(
       res.json(dailyScores);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch daily scores" });
+    }
+  });
+
+  // ============================================
+  // TELEGRAM STARS MONETIZATION ENDPOINTS
+  // ============================================
+
+  // Get or create Telegram player
+  app.post("/api/telegram/player", async (req, res) => {
+    try {
+      const { telegramId, username, firstName, lastName } = req.body;
+      if (!telegramId) {
+        return res.status(400).json({ error: "Missing telegramId" });
+      }
+      const player = await storage.createOrUpdateTelegramPlayer({
+        telegramId,
+        username: username || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+      });
+      res.json(player);
+    } catch (error) {
+      console.error("Telegram player error:", error);
+      res.status(500).json({ error: "Failed to create/update player" });
+    }
+  });
+
+  // Get player inventory
+  app.get("/api/telegram/inventory/:telegramId", async (req, res) => {
+    try {
+      const inventory = await storage.getPlayerInventory(req.params.telegramId);
+      // Format as object with boost types as keys
+      const inventoryMap: Record<string, number> = {
+        side_guns: 0,
+        machine_gun: 0,
+        skip_storm: 0,
+      };
+      inventory.forEach(item => {
+        inventoryMap[item.boostType] = item.quantity;
+      });
+      res.json(inventoryMap);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory" });
+    }
+  });
+
+  // Get boost prices
+  app.get("/api/telegram/boost-prices", (req, res) => {
+    res.json(BOOST_PRICES);
+  });
+
+  // Record Star purchase and add to inventory
+  app.post("/api/telegram/purchase", async (req, res) => {
+    try {
+      const { telegramId, boostType, quantity, telegramPaymentId } = req.body;
+      
+      if (!telegramId || !boostType || !quantity || !telegramPaymentId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      if (!boostTypes.includes(boostType)) {
+        return res.status(400).json({ error: "Invalid boost type" });
+      }
+      
+      const starsAmount = BOOST_PRICES[boostType as BoostType] * quantity;
+      
+      // Record purchase
+      const purchase = await storage.recordStarPurchase({
+        telegramId,
+        boostType,
+        starsAmount,
+        quantity,
+        telegramPaymentId,
+      });
+      
+      // Add to inventory
+      await storage.addToInventory(telegramId, boostType as BoostType, quantity);
+      
+      // Add to daily prize pool
+      await storage.addToDailyPool(starsAmount);
+      
+      res.json({ success: true, purchase });
+    } catch (error) {
+      console.error("Purchase error:", error);
+      res.status(500).json({ error: "Failed to record purchase" });
+    }
+  });
+
+  // Use boosts from inventory (before game start)
+  app.post("/api/telegram/use-boosts", async (req, res) => {
+    try {
+      const { telegramId, boosts } = req.body;
+      // boosts is an object like { side_guns: 2, machine_gun: 1, skip_storm: 0 }
+      
+      if (!telegramId || !boosts) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const results: Record<string, boolean> = {};
+      
+      for (const [boostType, quantity] of Object.entries(boosts)) {
+        if (boostTypes.includes(boostType as BoostType) && typeof quantity === 'number' && quantity > 0) {
+          const success = await storage.useFromInventory(telegramId, boostType as BoostType, quantity);
+          results[boostType] = success;
+        }
+      }
+      
+      res.json({ success: true, results });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to use boosts" });
+    }
+  });
+
+  // Submit Telegram score (with boost tracking)
+  app.post("/api/telegram/score", async (req, res) => {
+    try {
+      const { telegramId, playerName, score, wave, playTime, usedBoosts } = req.body;
+      
+      if (!telegramId || typeof score !== 'number' || typeof wave !== 'number') {
+        return res.status(400).json({ error: "Invalid score data" });
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Create daily score
+      const dailyScore = await storage.createDailyScore({
+        telegramId,
+        playerName: (playerName || 'PLAYER').slice(0, 10).toUpperCase(),
+        score,
+        wave,
+        playTime: playTime || 0,
+        usedBoosts: !!usedBoosts,
+        date: today,
+      });
+      
+      // Update all-time leaderboards
+      if (usedBoosts) {
+        await storage.updateAllTimeBoostedScores(telegramId, dailyScore.playerName, score, wave, playTime || 0);
+      } else {
+        await storage.updateAllTimePureScores(telegramId, dailyScore.playerName, score, wave, playTime || 0);
+      }
+      
+      // Increment games played
+      await storage.incrementPlayerGames(telegramId);
+      
+      res.json({ success: true, score: dailyScore });
+    } catch (error) {
+      console.error("Score submission error:", error);
+      res.status(500).json({ error: "Failed to submit score" });
+    }
+  });
+
+  // Get daily leaderboard (with boost icons)
+  app.get("/api/telegram/leaderboard/daily", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const scores = await storage.getDailyScoresByDate(today);
+      res.json(scores.slice(0, 50)); // Top 50
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily leaderboard" });
+    }
+  });
+
+  // Get all-time boosted leaderboard (BLAZED LEGENDS)
+  app.get("/api/telegram/leaderboard/boosted", async (req, res) => {
+    try {
+      const scores = await storage.getAllTimeBoostedScores();
+      res.json(scores);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch boosted leaderboard" });
+    }
+  });
+
+  // Get all-time pure leaderboard (MR NATURAL)
+  app.get("/api/telegram/leaderboard/pure", async (req, res) => {
+    try {
+      const scores = await storage.getAllTimePureScores();
+      res.json(scores);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch pure leaderboard" });
+    }
+  });
+
+  // Get today's prize pool info
+  app.get("/api/telegram/prize-pool", async (req, res) => {
+    try {
+      const pool = await storage.getTodayPrizePool();
+      res.json(pool);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch prize pool" });
+    }
+  });
+
+  // Admin: Get all Telegram players
+  app.get("/api/admin/telegram-players", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const players = await storage.getAllTelegramPlayers();
+      res.json(players);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch Telegram players" });
+    }
+  });
+
+  // Admin: Distribute daily prizes (run at end of day)
+  app.post("/api/admin/distribute-prizes", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const { date } = req.body;
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      await storage.distributeDailyPrizes(targetDate);
+      res.json({ success: true, message: `Prizes distributed for ${targetDate}` });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to distribute prizes" });
+    }
+  });
+
+  // ============ TELEGRAM STARS PAYMENTS ============
+
+  // Create invoice link for purchasing boosts with Telegram Stars
+  app.post("/api/telegram/create-invoice", async (req, res) => {
+    try {
+      const { telegramId, boostType, quantity } = req.body;
+      
+      if (!telegramId || !boostType || !quantity || quantity < 1) {
+        return res.status(400).json({ error: "Invalid request data" });
+      }
+
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ error: "Payment system not configured" });
+      }
+
+      const price = BOOST_PRICES[boostType as BoostType];
+      if (!price) {
+        return res.status(400).json({ error: "Invalid boost type" });
+      }
+
+      const totalStars = price * quantity;
+      
+      const boostNames: Record<BoostType, string> = {
+        side_guns: "Side Guns Boost",
+        machine_gun: "Machine Gun Boost", 
+        skip_storm: "Skip Storm Boost",
+      };
+
+      const boostDescriptions: Record<BoostType, string> = {
+        side_guns: "Start each life with both side guns unlocked instantly",
+        machine_gun: "Unlock machine guns at 90 sec instead of 4 min, carries over if you die before 90s",
+        skip_storm: "No meteor showers (SEED STORM) for that life",
+      };
+
+      const url = `https://api.telegram.org/bot${botToken}/createInvoiceLink`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${boostNames[boostType as BoostType]} x${quantity}`,
+          description: boostDescriptions[boostType as BoostType],
+          payload: JSON.stringify({ 
+            telegramId, 
+            boostType, 
+            quantity,
+            timestamp: Date.now()
+          }),
+          provider_token: '', // Empty for Telegram Stars
+          currency: 'XTR', // Telegram Stars
+          prices: [{ amount: totalStars, label: `${quantity}x ${boostNames[boostType as BoostType]}` }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!data.ok) {
+        console.error("Telegram invoice error:", data);
+        return res.status(500).json({ error: "Failed to create invoice" });
+      }
+
+      res.json({ 
+        invoiceUrl: data.result,
+        totalStars,
+        boostType,
+        quantity
+      });
+    } catch (error) {
+      console.error("Invoice creation error:", error);
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+
+  // Webhook handler for Telegram payment confirmations
+  app.post("/api/telegram/webhook", async (req, res) => {
+    try {
+      const update = req.body;
+      
+      // Handle pre-checkout query (must be answered within 10 seconds)
+      if (update.pre_checkout_query) {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        if (!botToken) {
+          return res.status(500).json({ error: "Bot not configured" });
+        }
+        
+        // Accept the pre-checkout
+        await fetch(`https://api.telegram.org/bot${botToken}/answerPreCheckoutQuery`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pre_checkout_query_id: update.pre_checkout_query.id,
+            ok: true
+          })
+        });
+        
+        return res.json({ ok: true });
+      }
+      
+      // Handle successful payment
+      if (update.message?.successful_payment) {
+        const payment = update.message.successful_payment;
+        const payload = JSON.parse(payment.invoice_payload);
+        const { telegramId, boostType, quantity } = payload;
+        
+        // Record the purchase in database
+        const purchase = await storage.recordStarPurchase({
+          telegramId,
+          boostType,
+          quantity,
+          starsSpent: payment.total_amount,
+          transactionId: payment.telegram_payment_charge_id,
+        });
+        
+        // Add boosts to player inventory
+        await storage.addToInventory(telegramId, boostType, quantity);
+        
+        // Add stars to today's prize pool
+        await storage.addToDailyPool(payment.total_amount);
+        
+        console.log(`Payment success: ${quantity}x ${boostType} for user ${telegramId}, ${payment.total_amount} Stars`);
+        
+        return res.json({ ok: true, purchase });
+      }
+      
+      res.json({ ok: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      res.status(500).json({ error: "Webhook processing failed" });
+    }
+  });
+
+  // Confirm payment after WebApp.openInvoice returns 'paid'
+  app.post("/api/telegram/confirm-payment", async (req, res) => {
+    try {
+      const { telegramId, boostType, quantity, totalStars } = req.body;
+      
+      if (!telegramId || !boostType || !quantity) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Generate a unique transaction ID for manual confirmations
+      const txId = `manual_${telegramId}_${Date.now()}`;
+      
+      // Record the purchase
+      await storage.recordStarPurchase({
+        telegramId,
+        boostType,
+        quantity,
+        starsSpent: totalStars,
+        transactionId: txId,
+      });
+      
+      // Add boosts to inventory
+      await storage.addToInventory(telegramId, boostType, quantity);
+      
+      // Add to prize pool
+      await storage.addToDailyPool(totalStars);
+      
+      // Get updated inventory
+      const inventory = await storage.getPlayerInventory(telegramId);
+      
+      res.json({ 
+        success: true, 
+        inventory,
+        message: `Added ${quantity}x ${boostType} to your inventory!`
+      });
+    } catch (error) {
+      console.error("Payment confirmation error:", error);
+      res.status(500).json({ error: "Failed to confirm payment" });
     }
   });
 

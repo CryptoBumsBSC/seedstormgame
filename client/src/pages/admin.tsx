@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Trash2, AlertTriangle, Shield, RefreshCw } from "lucide-react";
+import { Trash2, AlertTriangle, Shield, RefreshCw, Users, DollarSign, Trophy, Gift } from "lucide-react";
 
 interface ScoreWithStats {
   id: number;
@@ -16,10 +16,47 @@ interface ScoreWithStats {
   createdAt: string;
 }
 
+interface TelegramPlayer {
+  id: number;
+  telegramId: string;
+  username: string | null;
+  firstName: string | null;
+  totalGames: number;
+  totalStarsSpent: number;
+  totalStarsWon: number;
+  highScore: number;
+  firstPlayed: string;
+  lastPlayed: string;
+}
+
+interface RevenueStats {
+  totalStarsSpent: number;
+  todayStarsSpent: number;
+  ownerEarnings: number;
+  todayOwnerEarnings: number;
+  totalPlayers: number;
+  activePlayers: number;
+  purchaseBreakdown: {
+    side_guns: number;
+    machine_gun: number;
+    skip_storm: number;
+  };
+}
+
+interface PrizePoolInfo {
+  date: string;
+  totalSpent: number;
+  prizePool: number;
+  ownerShare: number;
+  thresholdMet: boolean;
+  distributed: boolean;
+}
+
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<"scores" | "players" | "revenue" | "prizes">("scores");
 
   const { data: scores = [], isLoading, refetch } = useQuery<ScoreWithStats[]>({
     queryKey: ["/api/admin/scores"],
@@ -28,6 +65,42 @@ export default function Admin() {
         headers: { "x-admin-password": password }
       });
       if (!res.ok) throw new Error("Unauthorized");
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: players = [], refetch: refetchPlayers } = useQuery<TelegramPlayer[]>({
+    queryKey: ["/api/admin/telegram/players"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/telegram/players", {
+        headers: { "x-admin-password": password }
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: revenue, refetch: refetchRevenue } = useQuery<RevenueStats>({
+    queryKey: ["/api/admin/telegram/revenue"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/telegram/revenue", {
+        headers: { "x-admin-password": password }
+      });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: prizePool, refetch: refetchPrize } = useQuery<PrizePoolInfo>({
+    queryKey: ["/api/admin/telegram/prize-pool"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/telegram/prize-pool", {
+        headers: { "x-admin-password": password }
+      });
+      if (!res.ok) return null;
       return res.json();
     },
     enabled: isAuthenticated,
@@ -45,6 +118,24 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/scores"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
+    }
+  });
+
+  const distributePrizesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/telegram/distribute-prizes", {
+        method: "POST",
+        headers: { 
+          "x-admin-password": password,
+          "Content-Type": "application/json"
+        }
+      });
+      if (!res.ok) throw new Error("Failed to distribute");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchPrize();
+      refetchPlayers();
     }
   });
 
@@ -70,11 +161,21 @@ export default function Admin() {
     }
   };
 
+  const handleDistribute = () => {
+    if (confirm("Distribute today's prize pool to winners?")) {
+      distributePrizesMutation.mutate();
+    }
+  };
+
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString();
   };
 
   if (!isAuthenticated) {
@@ -110,78 +211,314 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold" style={{ color: "#00ff00" }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-bold" style={{ color: "#00ff00" }}>
             SEED STORM ADMIN
           </h1>
           <Button 
-            onClick={() => refetch()} 
+            onClick={() => {
+              refetch();
+              refetchPlayers();
+              refetchRevenue();
+              refetchPrize();
+            }} 
             variant="outline"
             className="gap-2"
-            data-testid="button-refresh-scores"
+            data-testid="button-refresh-all"
           >
             <RefreshCw className="w-4 h-4" />
-            Refresh
+            Refresh All
           </Button>
         </div>
 
-        <Card className="p-4 mb-4 border-2" style={{ borderColor: "#ffff00", background: "rgba(255,255,0,0.1)" }}>
-          <div className="flex items-center gap-2 text-sm" style={{ color: "#ffff00" }}>
-            <AlertTriangle className="w-4 h-4" />
-            <span>Scores highlighted in RED have suspicious points-per-second ratio (over 2 pts/sec)</span>
-          </div>
-        </Card>
+        {/* Tab Navigation */}
+        <div className="flex gap-2 mb-4 flex-wrap">
+          <Button
+            size="sm"
+            onClick={() => setActiveTab("scores")}
+            style={{ 
+              background: activeTab === "scores" ? "#00ff00" : "transparent",
+              color: activeTab === "scores" ? "#000" : "#00ff00",
+              border: "1px solid #00ff00"
+            }}
+            data-testid="button-tab-scores"
+          >
+            <Trophy className="w-4 h-4 mr-1" />
+            Scores
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setActiveTab("players")}
+            style={{ 
+              background: activeTab === "players" ? "#00ffff" : "transparent",
+              color: activeTab === "players" ? "#000" : "#00ffff",
+              border: "1px solid #00ffff"
+            }}
+            data-testid="button-tab-players"
+          >
+            <Users className="w-4 h-4 mr-1" />
+            Players
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setActiveTab("revenue")}
+            style={{ 
+              background: activeTab === "revenue" ? "#ffd700" : "transparent",
+              color: activeTab === "revenue" ? "#000" : "#ffd700",
+              border: "1px solid #ffd700"
+            }}
+            data-testid="button-tab-revenue"
+          >
+            <DollarSign className="w-4 h-4 mr-1" />
+            Revenue
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setActiveTab("prizes")}
+            style={{ 
+              background: activeTab === "prizes" ? "#ff6600" : "transparent",
+              color: activeTab === "prizes" ? "#000" : "#ff6600",
+              border: "1px solid #ff6600"
+            }}
+            data-testid="button-tab-prizes"
+          >
+            <Gift className="w-4 h-4 mr-1" />
+            Prize Pool
+          </Button>
+        </div>
 
-        {isLoading ? (
-          <p style={{ color: "#aaa" }}>Loading scores...</p>
-        ) : (
-          <div className="space-y-2">
-            <div className="grid grid-cols-7 gap-2 text-xs font-bold p-2" style={{ color: "#00ffff" }}>
-              <span>RANK</span>
-              <span>NAME</span>
-              <span>SCORE</span>
-              <span>WAVE</span>
-              <span>TIME</span>
-              <span>PTS/SEC</span>
-              <span>ACTION</span>
+        {/* Scores Tab */}
+        {activeTab === "scores" && (
+          <>
+            <Card className="p-3 mb-4 border" style={{ borderColor: "#ffff00", background: "rgba(255,255,0,0.1)" }}>
+              <div className="flex items-center gap-2 text-xs" style={{ color: "#ffff00" }}>
+                <AlertTriangle className="w-4 h-4" />
+                <span>RED = suspicious (over 2 pts/sec)</span>
+              </div>
+            </Card>
+
+            {isLoading ? (
+              <p style={{ color: "#aaa" }}>Loading scores...</p>
+            ) : (
+              <div className="space-y-1 overflow-x-auto">
+                <div className="grid grid-cols-7 gap-2 text-xs font-bold p-2 min-w-[600px]" style={{ color: "#00ffff" }}>
+                  <span>RK</span>
+                  <span>NAME</span>
+                  <span>SCORE</span>
+                  <span>WAVE</span>
+                  <span>TIME</span>
+                  <span>PTS/S</span>
+                  <span>DEL</span>
+                </div>
+                {scores.map((score, index) => {
+                  const isSuspicious = score.pointsPerSecond > 2;
+                  return (
+                    <Card 
+                      key={score.id}
+                      className="grid grid-cols-7 gap-2 p-2 items-center text-xs border min-w-[600px]"
+                      style={{ 
+                        borderColor: isSuspicious ? "#ff0000" : "#333",
+                        background: isSuspicious ? "rgba(255,0,0,0.1)" : "transparent"
+                      }}
+                      data-testid={`row-score-${score.id}`}
+                    >
+                      <span style={{ color: "#888" }}>#{index + 1}</span>
+                      <span style={{ color: "#00ff00" }}>{score.playerName}</span>
+                      <span style={{ color: "#ffff00" }}>{score.score}</span>
+                      <span style={{ color: "#aaa" }}>{score.wave}</span>
+                      <span style={{ color: "#aaa" }}>{formatTime(score.playTime)}</span>
+                      <span style={{ color: isSuspicious ? "#ff0000" : "#aaa" }}>
+                        {score.pointsPerSecond.toFixed(2)}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDelete(score.id, score.playerName)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-${score.id}`}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Players Tab */}
+        {activeTab === "players" && (
+          <div className="space-y-2 overflow-x-auto">
+            <div className="text-xs mb-2" style={{ color: "#888" }}>
+              Total: {players.length} Telegram players
             </div>
-            {scores.map((score, index) => {
-              const isSuspicious = score.pointsPerSecond > 2;
-              return (
+            <div className="grid grid-cols-8 gap-1 text-[10px] font-bold p-2 min-w-[700px]" style={{ color: "#00ffff" }}>
+              <span>@USERNAME</span>
+              <span>ID</span>
+              <span>GAMES</span>
+              <span>SPENT</span>
+              <span>WON</span>
+              <span>HIGH</span>
+              <span>FIRST</span>
+              <span>LAST</span>
+            </div>
+            {players.length === 0 ? (
+              <p className="text-sm py-4" style={{ color: "#666" }}>No Telegram players yet</p>
+            ) : (
+              players.map((player) => (
                 <Card 
-                  key={score.id}
-                  className="grid grid-cols-7 gap-2 p-2 items-center text-sm border"
-                  style={{ 
-                    borderColor: isSuspicious ? "#ff0000" : "#333",
-                    background: isSuspicious ? "rgba(255,0,0,0.1)" : "transparent"
-                  }}
-                  data-testid={`row-score-${score.id}`}
+                  key={player.id}
+                  className="grid grid-cols-8 gap-1 p-2 items-center text-[10px] border min-w-[700px]"
+                  style={{ borderColor: "#333" }}
+                  data-testid={`row-player-${player.id}`}
                 >
-                  <span style={{ color: "#888" }}>#{index + 1}</span>
-                  <span style={{ color: "#00ff00" }}>{score.playerName}</span>
-                  <span style={{ color: "#ffff00" }}>{score.score}</span>
-                  <span style={{ color: "#aaa" }}>{score.wave}</span>
-                  <span style={{ color: "#aaa" }}>{formatTime(score.playTime)}</span>
-                  <span style={{ color: isSuspicious ? "#ff0000" : "#aaa" }}>
-                    {score.pointsPerSecond.toFixed(2)}
+                  <span style={{ color: "#00ffff" }}>
+                    {player.username ? `@${player.username}` : player.firstName || "Unknown"}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(score.id, score.playerName)}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-${score.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <span style={{ color: "#666" }}>{player.telegramId}</span>
+                  <span style={{ color: "#aaa" }}>{player.totalGames}</span>
+                  <span style={{ color: "#ffd700" }}>{player.totalStarsSpent} Stars</span>
+                  <span style={{ color: "#00ff00" }}>{player.totalStarsWon} Stars</span>
+                  <span style={{ color: "#ff00ff" }}>{player.highScore}</span>
+                  <span style={{ color: "#666" }}>{formatDate(player.firstPlayed)}</span>
+                  <span style={{ color: "#888" }}>{formatDate(player.lastPlayed)}</span>
                 </Card>
-              );
-            })}
+              ))
+            )}
           </div>
         )}
 
-        <div className="mt-8 text-center">
+        {/* Revenue Tab */}
+        {activeTab === "revenue" && (
+          <div className="space-y-4">
+            {!revenue ? (
+              <p style={{ color: "#666" }}>No revenue data yet</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card className="p-3 border" style={{ borderColor: "#ffd700" }}>
+                    <p className="text-[10px]" style={{ color: "#888" }}>TOTAL SPENT</p>
+                    <p className="text-lg font-bold" style={{ color: "#ffd700" }}>{revenue.totalStarsSpent} Stars</p>
+                  </Card>
+                  <Card className="p-3 border" style={{ borderColor: "#00ff00" }}>
+                    <p className="text-[10px]" style={{ color: "#888" }}>TODAY SPENT</p>
+                    <p className="text-lg font-bold" style={{ color: "#00ff00" }}>{revenue.todayStarsSpent} Stars</p>
+                  </Card>
+                  <Card className="p-3 border" style={{ borderColor: "#ff6600" }}>
+                    <p className="text-[10px]" style={{ color: "#888" }}>OWNER TOTAL</p>
+                    <p className="text-lg font-bold" style={{ color: "#ff6600" }}>{revenue.ownerEarnings} Stars</p>
+                  </Card>
+                  <Card className="p-3 border" style={{ borderColor: "#ff00ff" }}>
+                    <p className="text-[10px]" style={{ color: "#888" }}>OWNER TODAY</p>
+                    <p className="text-lg font-bold" style={{ color: "#ff00ff" }}>{revenue.todayOwnerEarnings} Stars</p>
+                  </Card>
+                </div>
+
+                <Card className="p-4 border" style={{ borderColor: "#00ffff" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#00ffff" }}>PURCHASE BREAKDOWN</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Side Guns (100 Stars)</span>
+                      <span style={{ color: "#00ff00" }}>{revenue.purchaseBreakdown.side_guns} purchases</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Machine Gun (500 Stars)</span>
+                      <span style={{ color: "#ff00ff" }}>{revenue.purchaseBreakdown.machine_gun} purchases</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Skip Storm (100 Stars)</span>
+                      <span style={{ color: "#ff6600" }}>{revenue.purchaseBreakdown.skip_storm} purchases</span>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-4 border" style={{ borderColor: "#00ff00" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#00ff00" }}>PLAYER STATS</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Total Players</span>
+                      <span style={{ color: "#00ffff" }}>{revenue.totalPlayers}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Active Today</span>
+                      <span style={{ color: "#00ff00" }}>{revenue.activePlayers}</span>
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Prize Pool Tab */}
+        {activeTab === "prizes" && (
+          <div className="space-y-4">
+            {!prizePool ? (
+              <p style={{ color: "#666" }}>No prize pool data yet</p>
+            ) : (
+              <>
+                <Card className="p-4 border" style={{ borderColor: prizePool.thresholdMet ? "#00ff00" : "#ff0000" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#ff6600" }}>TODAY'S PRIZE POOL</h3>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Date</span>
+                      <span style={{ color: "#00ffff" }}>{prizePool.date}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Total Stars Spent</span>
+                      <span style={{ color: "#ffd700" }}>{prizePool.totalSpent} Stars</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Prize Pool (50%)</span>
+                      <span style={{ color: "#00ff00" }}>{prizePool.prizePool} Stars</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Owner Share (50%)</span>
+                      <span style={{ color: "#ff6600" }}>{prizePool.ownerShare} Stars</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Threshold (101 Stars)</span>
+                      <span style={{ color: prizePool.thresholdMet ? "#00ff00" : "#ff0000" }}>
+                        {prizePool.thresholdMet ? "MET" : "NOT MET"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Distributed</span>
+                      <span style={{ color: prizePool.distributed ? "#00ff00" : "#ffff00" }}>
+                        {prizePool.distributed ? "YES" : "PENDING"}
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="p-4 border" style={{ borderColor: "#ffff00" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#ffff00" }}>PRIZE DISTRIBUTION</h3>
+                  <div className="space-y-2 text-xs mb-4" style={{ color: "#aaa" }}>
+                    <p>Top 3 Winners: 25% / 10% / 5%</p>
+                    <p>Random 10 Players: 1% each</p>
+                    <p>Unclaimed: Goes to owner</p>
+                  </div>
+                  <Button
+                    onClick={handleDistribute}
+                    disabled={prizePool.distributed || !prizePool.thresholdMet || distributePrizesMutation.isPending}
+                    style={{ 
+                      background: prizePool.distributed ? "#666" : "#ff6600",
+                      color: "#000"
+                    }}
+                    data-testid="button-distribute-prizes"
+                  >
+                    <Gift className="w-4 h-4 mr-2" />
+                    {prizePool.distributed ? "ALREADY DISTRIBUTED" : "DISTRIBUTE PRIZES"}
+                  </Button>
+                </Card>
+              </>
+            )}
+          </div>
+        )}
+
+        <div className="mt-6 text-center">
           <Button
             variant="outline"
             onClick={() => window.location.href = "/"}

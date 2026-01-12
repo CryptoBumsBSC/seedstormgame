@@ -15,8 +15,29 @@ import type {
 } from "@shared/schema";
 import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Gamepad2, HelpCircle, Crosshair, Shield, Zap, AlertTriangle, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import WebApp from "@twa-dev/sdk";
 
-type Screen = "title" | "game" | "gameover" | "leaderboard" | "help";
+type Screen = "title" | "game" | "gameover" | "leaderboard" | "help" | "shop" | "loadout";
+type LeaderboardTab = "daily" | "blazed" | "natural";
+
+// Telegram Stars Boost Types
+interface PlayerInventory {
+  side_guns: number;
+  machine_gun: number;
+  skip_storm: number;
+}
+
+interface BoostLoadout {
+  side_guns: number;  // How many lives to use this boost
+  machine_gun: number;
+  skip_storm: number;
+}
+
+const BOOST_PRICES = {
+  side_guns: 100,
+  machine_gun: 500,
+  skip_storm: 100,
+} as const;
 
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600;
@@ -295,7 +316,57 @@ export default function Game() {
     queryKey: ["/api/scores/all-time"],
   });
 
+  // Telegram leaderboard queries
+  interface DailyScoreData {
+    id: number;
+    telegramId: string;
+    playerName: string;
+    score: number;
+    wave: number;
+    playTime: number;
+    usedBoosts: boolean;
+    date: string;
+  }
+  
+  interface AllTimeScoreData {
+    id: number;
+    telegramId: string;
+    playerName: string;
+    score: number;
+    wave: number;
+    playTime: number;
+    createdAt: string;
+  }
+
+  const { data: dailyScores = [] } = useQuery<DailyScoreData[]>({
+    queryKey: ["/api/telegram/leaderboard/daily"],
+  });
+
+  const { data: boostedScores = [] } = useQuery<AllTimeScoreData[]>({
+    queryKey: ["/api/telegram/leaderboard/boosted"],
+  });
+
+  const { data: pureScores = [] } = useQuery<AllTimeScoreData[]>({
+    queryKey: ["/api/telegram/leaderboard/pure"],
+  });
+
   const [submitError, setSubmitError] = useState<string | null>(null);
+  
+  // Telegram Stars / Boost System State
+  const [inventory, setInventory] = useState<PlayerInventory>({ side_guns: 0, machine_gun: 0, skip_storm: 0 });
+  const [loadout, setLoadout] = useState<BoostLoadout>({ side_guns: 0, machine_gun: 0, skip_storm: 0 });
+  const [telegramId, setTelegramId] = useState<string | null>(null);
+  const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
+  const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
+  const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
+  
+  // Active boosts for current game (per-life tracking)
+  const activeBoostsRef = useRef<{
+    sideGunsLives: number;
+    machineGunLives: number;
+    machineGunCarryOver: boolean; // Carries to next life if didn't reach 90 sec
+    skipStormLives: number;
+  }>({ sideGunsLives: 0, machineGunLives: 0, machineGunCarryOver: false, skipStormLives: 0 });
   
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
@@ -313,6 +384,124 @@ export default function Game() {
       setSubmitError(error.message || "Please choose a different name");
     },
   });
+
+  // Initialize Telegram WebApp SDK
+  useEffect(() => {
+    try {
+      WebApp.ready();
+      const user = WebApp.initDataUnsafe?.user;
+      if (user) {
+        setTelegramId(user.id.toString());
+        setTelegramUsername(user.username || user.first_name || "Player");
+      }
+    } catch (e) {
+      console.log("Not running in Telegram Mini App context");
+    }
+  }, []);
+
+  // Fetch player inventory from server when telegramId is available
+  useEffect(() => {
+    if (telegramId) {
+      fetch(`/api/telegram/inventory/${telegramId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setInventory({
+              side_guns: data.side_guns || 0,
+              machine_gun: data.machine_gun || 0,
+              skip_storm: data.skip_storm || 0,
+            });
+          }
+        })
+        .catch(console.error);
+    }
+  }, [telegramId]);
+
+  // Purchase boost with Telegram Stars
+  const handlePurchaseBoost = useCallback(async (boostType: "side_guns" | "machine_gun" | "skip_storm", quantity: number = 1) => {
+    if (!telegramId) {
+      toast({
+        title: "Not Connected",
+        description: "Please open this app in Telegram",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/telegram/create-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId,
+          boostType,
+          quantity,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.invoiceUrl) {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create invoice",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Open Telegram's native payment UI
+      WebApp.openInvoice(data.invoiceUrl, async (status: string) => {
+        if (status === "paid") {
+          // Confirm the payment and update inventory
+          const confirmRes = await fetch("/api/telegram/confirm-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              telegramId,
+              boostType,
+              quantity,
+              totalStars: data.totalStars,
+            }),
+          });
+          
+          const confirmData = await confirmRes.json();
+          
+          if (confirmData.success && confirmData.inventory) {
+            const inv = confirmData.inventory;
+            setInventory({
+              side_guns: inv.find((i: { boostType: string; quantity: number }) => i.boostType === "side_guns")?.quantity || 0,
+              machine_gun: inv.find((i: { boostType: string; quantity: number }) => i.boostType === "machine_gun")?.quantity || 0,
+              skip_storm: inv.find((i: { boostType: string; quantity: number }) => i.boostType === "skip_storm")?.quantity || 0,
+            });
+            
+            toast({
+              title: "Purchase Successful!",
+              description: confirmData.message,
+            });
+          }
+        } else if (status === "cancelled") {
+          toast({
+            title: "Payment Cancelled",
+            description: "No Stars were charged",
+          });
+        } else if (status === "failed") {
+          toast({
+            title: "Payment Failed",
+            description: "Please try again",
+            variant: "destructive",
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Purchase error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process purchase",
+        variant: "destructive",
+      });
+    }
+  }, [telegramId, toast]);
 
   const initStars = useCallback(() => {
     starsRef.current = Array.from({ length: 100 }, () => ({
@@ -567,6 +756,9 @@ export default function Game() {
     if (gameTimeSec < 90) return;
     // Don't start if already active
     if (meteorShowerActiveRef.current) return;
+    // Skip storm boost - no meteor showers this life
+    const boosts = activeBoostsRef.current;
+    if (boosts.skipStormLives > 0) return;
     // Min 15 seconds between showers
     if (gameTimeRef.current - lastMeteorShowerRef.current < 15000) return;
     // 3% chance per check
@@ -692,6 +884,30 @@ export default function Game() {
       isPaused: !prev.isPaused,
     }));
   }, []);
+  
+  // Handle boost depletion when player loses a life
+  const handleLifeLost = useCallback(() => {
+    const boosts = activeBoostsRef.current;
+    const gameTimeSec = gameTimeRef.current / 1000;
+    
+    // Decrement per-life boosts
+    if (boosts.sideGunsLives > 0) {
+      boosts.sideGunsLives--;
+    }
+    if (boosts.skipStormLives > 0) {
+      boosts.skipStormLives--;
+    }
+    if (boosts.machineGunLives > 0) {
+      // Machine gun carries over if player died before 90s threshold
+      if (gameTimeSec < 90) {
+        boosts.machineGunCarryOver = true;
+      }
+      boosts.machineGunLives--;
+    }
+    
+    // Reset weapon level for new life (will be recalculated in update loop)
+    weaponLevelRef.current = 0;
+  }, []);
 
   const update = useCallback((deltaTime: number) => {
     if (gameState.isPaused || !gameState.isPlaying) return;
@@ -703,9 +919,23 @@ export default function Game() {
     gameTimeRef.current += effectiveDelta;
     const gameTimeSec = gameTimeRef.current / 1000;
     
-    // Weapon upgrades based on time
-    if (gameTimeSec >= 240 && weaponLevelRef.current < 3) {
+    // Weapon upgrades based on time (with boost support)
+    const boosts = activeBoostsRef.current;
+    const hasSideGunsBoost = boosts.sideGunsLives > 0;
+    const hasMachineGunBoost = boosts.machineGunLives > 0 || boosts.machineGunCarryOver;
+    
+    // Machine gun: normally at 240s, with boost at 90s
+    const machineGunThreshold = hasMachineGunBoost ? 90 : 240;
+    
+    if (gameTimeSec >= machineGunThreshold && weaponLevelRef.current < 3) {
       weaponLevelRef.current = 3; // Double barrel machine gun
+      // Mark machine gun boost as used (no longer carries over)
+      if (hasMachineGunBoost && boosts.machineGunCarryOver) {
+        boosts.machineGunCarryOver = false;
+      }
+    } else if (hasSideGunsBoost && weaponLevelRef.current < 2) {
+      // Side guns boost: start with both side guns immediately
+      weaponLevelRef.current = 2;
     } else if (gameTimeSec >= 90 && weaponLevelRef.current < 2) {
       weaponLevelRef.current = 2; // Right gun
     } else if (gameTimeSec >= 60 && weaponLevelRef.current < 1) {
@@ -980,6 +1210,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -1117,6 +1348,7 @@ export default function Game() {
           killStreakRef.current = 0;
           comboCountRef.current = 0;
           comboMultiplierRef.current = 1;
+          handleLifeLost();
           setGameState(prev => {
             const newLives = prev.lives - 1;
             if (newLives <= 0) {
@@ -1140,6 +1372,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -1229,6 +1462,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
           if (newLives <= 0) {
@@ -1246,7 +1480,7 @@ export default function Game() {
       ...prev,
       gameTime: Math.floor(gameTimeRef.current / 1000),
     }));
-  }, [gameState.isPaused, gameState.isPlaying, shoot, spawnEnemy, spawnHazard, spawnBudAngel, spawnSkull, startMeteorShower, endGame, createExplosion, spawnPowerUp]);
+  }, [gameState.isPaused, gameState.isPlaying, gameState.lives, shoot, spawnEnemy, spawnHazard, spawnBudAngel, spawnSkull, startMeteorShower, endGame, createExplosion, spawnPowerUp, handleLifeLost]);
 
   const drawPixelRect = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) => {
     ctx.fillStyle = color;
@@ -2613,9 +2847,9 @@ export default function Game() {
         <div className="flex flex-col gap-4 w-full max-w-xs mb-6 mt-2">
           <Button
             onClick={() => {
-              initStars();
-              resetGame();
-              setScreen("game");
+              // Reset loadout and go to loadout screen
+              setLoadout({ side_guns: 0, machine_gun: 0, skip_storm: 0 });
+              setScreen("loadout");
             }}
             className="w-full py-8 text-lg font-bold animate-bounce"
             style={{ 
@@ -2666,6 +2900,17 @@ export default function Game() {
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             HOW TO PLAY
+          </Button>
+
+          <Button
+            onClick={() => setScreen("shop")}
+            variant="outline"
+            className="w-full py-4 text-sm border-2"
+            style={{ borderColor: "#ff00ff", color: "#ff00ff" }}
+            data-testid="button-boost-shop"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            BOOST SHOP ⭐
           </Button>
         </div>
 
@@ -3072,65 +3317,231 @@ export default function Game() {
   if (screen === "leaderboard") {
     const sortedScores = [...scores].sort((a, b) => b.score - a.score);
     
+    const tabConfig = {
+      daily: { title: "TODAY", color: "#00ffff", icon: "📅" },
+      blazed: { title: "BLAZED LEGENDS", color: "#ff6600", icon: "🔥💨" },
+      natural: { title: "MR NATURAL", color: "#00ff00", icon: "💎" },
+    };
+    
+    const currentTab = tabConfig[leaderboardTab];
+    
     return (
       <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
         <h1 
-          className="text-xl mb-4"
+          className="text-lg mb-3"
           style={{ 
-            color: "#ffff00",
-            textShadow: "0 0 10px #ffff00"
+            color: currentTab.color,
+            textShadow: `0 0 10px ${currentTab.color}`
           }}
           data-testid="text-leaderboard-title"
         >
-          LEADERBOARD
+          {currentTab.icon} {currentTab.title}
         </h1>
 
-        {allTimeScores.length > 0 && (
-          <Card 
-            className="w-full max-w-md p-3 border-2 bg-card/80 mb-4"
-            style={{ borderColor: "#ffd700", boxShadow: "0 0 15px rgba(255, 215, 0, 0.3)" }}
+        {/* Tab Buttons */}
+        <div className="flex gap-1 mb-3 w-full max-w-md">
+          <Button
+            size="sm"
+            onClick={() => setLeaderboardTab("daily")}
+            className="flex-1 text-[9px] py-1"
+            style={{ 
+              background: leaderboardTab === "daily" ? "#00ffff" : "transparent",
+              color: leaderboardTab === "daily" ? "#000" : "#00ffff",
+              border: "1px solid #00ffff"
+            }}
+            data-testid="button-tab-daily"
           >
-            <h2 
-              className="text-center text-[10px] mb-2"
-              style={{ color: "#ffd700", textShadow: "0 0 8px #ffd700" }}
-              data-testid="text-alltime-title"
+            📅 TODAY
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setLeaderboardTab("blazed")}
+            className="flex-1 text-[9px] py-1"
+            style={{ 
+              background: leaderboardTab === "blazed" ? "#ff6600" : "transparent",
+              color: leaderboardTab === "blazed" ? "#000" : "#ff6600",
+              border: "1px solid #ff6600"
+            }}
+            data-testid="button-tab-blazed"
+          >
+            🔥 BLAZED
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setLeaderboardTab("natural")}
+            className="flex-1 text-[9px] py-1"
+            style={{ 
+              background: leaderboardTab === "natural" ? "#00ff00" : "transparent",
+              color: leaderboardTab === "natural" ? "#000" : "#00ff00",
+              border: "1px solid #00ff00"
+            }}
+            data-testid="button-tab-natural"
+          >
+            💎 PURE
+          </Button>
+        </div>
+
+        <Card 
+          className="w-full max-w-md p-3 border-2 bg-card/80 mb-3"
+          style={{ borderColor: currentTab.color }}
+        >
+          <div className="space-y-1">
+            <div 
+              className="flex items-center justify-between px-2 py-1 text-[8px]"
+              style={{ color: "#666", borderBottom: "1px solid #333" }}
             >
-              ALL-TIME LEGENDS
-            </h2>
+              <span className="w-6">RK</span>
+              <span className="w-8 text-center">TYPE</span>
+              <span className="flex-1 text-center">PLAYER</span>
+              <span className="w-16 text-right">SCORE</span>
+              <span className="w-8 text-right">WV</span>
+            </div>
+            
+            {/* Daily Leaderboard */}
+            {leaderboardTab === "daily" && (
+              dailyScores.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-[10px]" style={{ color: "#666" }}>NO SCORES TODAY</p>
+                  <p className="text-[8px] mt-1" style={{ color: "#444" }}>Play to be first!</p>
+                </div>
+              ) : (
+                dailyScores.slice(0, 20).map((score, index) => {
+                  const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+                  const rankColor = rankColors[index] || "#00ffff";
+                  return (
+                    <div 
+                      key={score.id}
+                      className="flex items-center justify-between px-2 py-1 rounded-sm"
+                      style={{ 
+                        background: index < 3 ? "rgba(255,255,255,0.05)" : "transparent",
+                        borderLeft: `3px solid ${rankColor}`
+                      }}
+                      data-testid={`row-daily-${index}`}
+                    >
+                      <span className="w-6 text-[10px] font-bold" style={{ color: rankColor }}>
+                        {index + 1}
+                      </span>
+                      <span className="w-8 text-center text-[10px]">
+                        {score.usedBoosts ? "🔥💨" : "💎"}
+                      </span>
+                      <span className="flex-1 text-center text-[9px]" style={{ color: "#00ffff" }}>
+                        {score.playerName}
+                      </span>
+                      <span className="w-16 text-right text-[10px]" style={{ color: "#00ff00" }}>
+                        {score.score.toString().padStart(5, "0")}
+                      </span>
+                      <span className="w-8 text-right text-[9px]" style={{ color: "#ff00ff" }}>
+                        {score.wave}
+                      </span>
+                    </div>
+                  );
+                })
+              )
+            )}
+            
+            {/* Blazed Legends (Boosted All-Time) */}
+            {leaderboardTab === "blazed" && (
+              boostedScores.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-[10px]" style={{ color: "#666" }}>NO BLAZED LEGENDS YET</p>
+                  <p className="text-[8px] mt-1" style={{ color: "#ff6600" }}>Use boosts to enter!</p>
+                </div>
+              ) : (
+                boostedScores.slice(0, 10).map((score, index) => {
+                  const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+                  const rankColor = rankColors[index] || "#ff6600";
+                  return (
+                    <div 
+                      key={score.id}
+                      className="flex items-center justify-between px-2 py-1 rounded-sm"
+                      style={{ 
+                        background: "rgba(255,102,0,0.1)",
+                        borderLeft: `3px solid ${rankColor}`
+                      }}
+                      data-testid={`row-blazed-${index}`}
+                    >
+                      <span className="w-6 text-[10px] font-bold" style={{ color: rankColor }}>
+                        {index + 1}
+                      </span>
+                      <span className="w-8 text-center text-[10px]">🔥💨</span>
+                      <span className="flex-1 text-center text-[9px]" style={{ color: "#ff6600" }}>
+                        {score.playerName}
+                      </span>
+                      <span className="w-16 text-right text-[10px]" style={{ color: "#ffff00" }}>
+                        {score.score.toString().padStart(5, "0")}
+                      </span>
+                      <span className="w-8 text-right text-[9px]" style={{ color: "#ff00ff" }}>
+                        {score.wave}
+                      </span>
+                    </div>
+                  );
+                })
+              )
+            )}
+            
+            {/* MR NATURAL (Pure All-Time) */}
+            {leaderboardTab === "natural" && (
+              pureScores.length === 0 ? (
+                <div className="py-6 text-center">
+                  <p className="text-[10px]" style={{ color: "#666" }}>NO PURE LEGENDS YET</p>
+                  <p className="text-[8px] mt-1" style={{ color: "#00ff00" }}>Play without boosts!</p>
+                </div>
+              ) : (
+                pureScores.slice(0, 10).map((score, index) => {
+                  const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+                  const rankColor = rankColors[index] || "#00ff00";
+                  return (
+                    <div 
+                      key={score.id}
+                      className="flex items-center justify-between px-2 py-1 rounded-sm"
+                      style={{ 
+                        background: "rgba(0,255,0,0.1)",
+                        borderLeft: `3px solid ${rankColor}`
+                      }}
+                      data-testid={`row-natural-${index}`}
+                    >
+                      <span className="w-6 text-[10px] font-bold" style={{ color: rankColor }}>
+                        {index + 1}
+                      </span>
+                      <span className="w-8 text-center text-[10px]">💎</span>
+                      <span className="flex-1 text-center text-[9px]" style={{ color: "#00ff00" }}>
+                        {score.playerName}
+                      </span>
+                      <span className="w-16 text-right text-[10px]" style={{ color: "#00ffff" }}>
+                        {score.score.toString().padStart(5, "0")}
+                      </span>
+                      <span className="w-8 text-right text-[9px]" style={{ color: "#ff00ff" }}>
+                        {score.wave}
+                      </span>
+                    </div>
+                  );
+                })
+              )
+            )}
+          </div>
+        </Card>
+
+        {/* Legacy Scores (Fallback for non-Telegram) */}
+        {scores.length > 0 && leaderboardTab === "daily" && dailyScores.length === 0 && (
+          <Card 
+            className="w-full max-w-md p-3 border-2 bg-card/80 mb-3"
+            style={{ borderColor: "#ff00ff" }}
+          >
+            <h3 className="text-[9px] mb-2 text-center" style={{ color: "#888" }}>CLASSIC SCORES</h3>
             <div className="space-y-1">
-              {allTimeScores.map((score, index) => {
-                const trophyColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
-                const trophyColor = trophyColors[index] || "#ffd700";
-                const trophyEmojis = ["1ST", "2ND", "3RD"];
-                
+              {sortedScores.slice(0, 10).map((score, index) => {
+                const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+                const rankColor = rankColors[index] || "#00ffff";
                 return (
                   <div 
                     key={score.id}
                     className="flex items-center justify-between px-2 py-1 rounded-sm"
-                    style={{ 
-                      background: "rgba(255, 215, 0, 0.1)",
-                      borderLeft: `3px solid ${trophyColor}`
-                    }}
-                    data-testid={`row-alltime-${index}`}
+                    style={{ borderLeft: `3px solid ${rankColor}` }}
+                    data-testid={`row-classic-${index}`}
                   >
-                    <span 
-                      className="w-10 text-[9px] font-bold"
-                      style={{ color: trophyColor }}
-                    >
-                      {trophyEmojis[index]}
-                    </span>
-                    <span 
-                      className="flex-1 text-center text-[9px]"
-                      style={{ color: "#ffd700" }}
-                    >
-                      {score.playerName}
-                    </span>
-                    <span 
-                      className="w-16 text-right text-[9px] font-bold"
-                      style={{ color: "#00ff00" }}
-                    >
-                      {score.score.toString().padStart(6, "0")}
-                    </span>
+                    <span className="w-6 text-[10px] font-bold" style={{ color: rankColor }}>{index + 1}</span>
+                    <span className="flex-1 text-center text-[9px]" style={{ color: "#00ffff" }}>{score.playerName}</span>
+                    <span className="w-16 text-right text-[10px]" style={{ color: "#00ff00" }}>{score.score}</span>
                   </div>
                 );
               })}
@@ -3138,84 +3549,10 @@ export default function Game() {
           </Card>
         )}
 
-        <Card 
-          className="w-full max-w-md p-4 border-2 bg-card/80 mb-4"
-          style={{ borderColor: "#ff00ff" }}
-        >
-          <div className="space-y-2">
-            <div 
-              className="flex items-center justify-between px-2 py-1 text-[8px]"
-              style={{ color: "#666", borderBottom: "1px solid #333" }}
-            >
-              <span className="w-8">RANK</span>
-              <span className="flex-1 text-center">PLAYER</span>
-              <span className="w-20 text-right">SCORE</span>
-              <span className="w-12 text-right">WAVE</span>
-            </div>
-            
-            {sortedScores.length === 0 ? (
-              <div className="py-8 text-center">
-                <p className="text-[10px]" style={{ color: "#666" }}>
-                  NO SCORES YET
-                </p>
-                <p className="text-[8px] mt-2" style={{ color: "#444" }}>
-                  BE THE FIRST TO PLAY!
-                </p>
-              </div>
-            ) : (
-              sortedScores.slice(0, 10).map((score, index) => {
-                const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
-                const rankColor = rankColors[index] || "#00ffff";
-                
-                return (
-                  <div 
-                    key={score.id}
-                    className="flex items-center justify-between px-2 py-2 rounded-sm"
-                    style={{ 
-                      background: index < 3 ? "rgba(255,255,255,0.05)" : "transparent",
-                      borderLeft: `3px solid ${rankColor}`
-                    }}
-                    data-testid={`row-score-${index}`}
-                  >
-                    <span 
-                      className="w-8 text-xs font-bold"
-                      style={{ color: rankColor }}
-                    >
-                      {index + 1}
-                    </span>
-                    <span 
-                      className="flex-1 text-center text-[10px]"
-                      style={{ color: "#00ffff" }}
-                    >
-                      {score.playerName}
-                    </span>
-                    <span 
-                      className="w-20 text-right text-xs"
-                      style={{ color: "#00ff00" }}
-                    >
-                      {score.score.toString().padStart(6, "0")}
-                    </span>
-                    <span 
-                      className="w-12 text-right text-[10px]"
-                      style={{ color: "#ff00ff" }}
-                    >
-                      W{score.wave}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Card>
-
-        <div className="flex flex-col gap-4 w-full max-w-xs">
+        <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button
-            onClick={() => {
-              initStars();
-              resetGame();
-              setScreen("game");
-            }}
-            className="w-full py-6 text-sm"
+            onClick={() => setScreen("loadout")}
+            className="w-full py-5 text-sm"
             style={{ 
               background: "linear-gradient(135deg, #00ff00, #22c55e)",
               color: "#000",
@@ -3230,7 +3567,7 @@ export default function Game() {
           <Button
             onClick={() => setScreen("title")}
             variant="outline"
-            className="w-full py-6 text-sm border-2"
+            className="w-full py-4 text-sm border-2"
             style={{ borderColor: "#00ffff", color: "#00ffff" }}
             data-testid="button-back-to-menu"
           >
@@ -3426,6 +3763,49 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffd700" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffd700" }}>
+              <Zap className="w-4 h-4" />
+              TELEGRAM STARS BOOSTS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffd700" }}>Buy boosts</span> with Telegram Stars - stored in inventory!</p>
+              <p><span style={{ color: "#00ffff" }}>Side Guns (100 Stars):</span> Start with both side guns</p>
+              <p><span style={{ color: "#ff00ff" }}>Machine Gun (500 Stars):</span> Unlock at 90 sec (not 4 min)</p>
+              <p><span style={{ color: "#ff6600" }}>Skip Storm (100 Stars):</span> No meteor showers that life</p>
+              <p className="mt-1">Boosts are <span style={{ color: "#ffff00" }}>per-life</span> - select before each game!</p>
+              <p>Unused boosts stay in inventory for next time.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff6600" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff6600" }}>
+              <Trophy className="w-4 h-4" />
+              DAILY PRIZE POOL
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ff6600" }}>Stars spent</span> go into daily prize pool!</p>
+              <p><span style={{ color: "#ffd700" }}>Top 3 winners:</span> 25% / 10% / 5%</p>
+              <p><span style={{ color: "#00ff00" }}>Random 10 players:</span> 1% each</p>
+              <p><span style={{ color: "#ff0000" }}>Minimum:</span> 101 Stars spent daily to activate prizes</p>
+              <p>Win Stars just by playing!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ffff" }}>
+              <Trophy className="w-4 h-4" />
+              LEADERBOARDS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#00ffff" }}>TODAY:</span> Daily scores with boost indicators</p>
+              <p>- <span>🔥💨</span> = Used boost (BLAZED)</p>
+              <p>- <span>💎</span> = No boost (PURE skill)</p>
+              <p><span style={{ color: "#ff6600" }}>BLAZED LEGENDS:</span> All-time boosted scores</p>
+              <p><span style={{ color: "#00ff00" }}>MR NATURAL:</span> All-time pure (no boost) scores</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
               <Heart className="w-4 h-4" />
@@ -3595,6 +3975,315 @@ export default function Game() {
           className="w-full max-w-xs py-6 text-sm border-2"
           style={{ borderColor: "#00ffff", color: "#00ffff" }}
           data-testid="button-back-from-help"
+        >
+          BACK TO MENU
+        </Button>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // BOOST SHOP SCREEN
+  // ==========================================
+  if (screen === "shop") {
+    const boostItems = [
+      { 
+        id: "side_guns" as const, 
+        name: "SIDE GUNS", 
+        price: BOOST_PRICES.side_guns,
+        description: "Start with left+right guns",
+        icon: "🔫"
+      },
+      { 
+        id: "machine_gun" as const, 
+        name: "MACHINE GUN", 
+        price: BOOST_PRICES.machine_gun,
+        description: "Unlock at 90 sec (not 4 min)",
+        icon: "💥"
+      },
+      { 
+        id: "skip_storm" as const, 
+        name: "SKIP STORMS", 
+        price: BOOST_PRICES.skip_storm,
+        description: "No meteor showers",
+        icon: "🌀"
+      },
+    ];
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
+        <h1 
+          className="text-xl md:text-2xl text-center mb-4 mt-2"
+          style={{ 
+            color: "#ff00ff", 
+            textShadow: "0 0 10px #ff00ff, 0 0 20px #ff00ff" 
+          }}
+          data-testid="text-shop-title"
+        >
+          ⭐ BOOST SHOP ⭐
+        </h1>
+
+        <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
+          Buy with Telegram Stars • Use per life
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs mb-4">
+          {boostItems.map(item => (
+            <Card 
+              key={item.id}
+              className="p-3 border-2"
+              style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm font-bold" style={{ color: "#00ffff" }}>
+                    {item.icon} {item.name}
+                  </p>
+                  <p className="text-[9px]" style={{ color: "#888" }}>{item.description}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#ffff00" }}>
+                    Owned: {inventory[item.id]}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs font-bold" style={{ color: "#ffff00" }}>
+                    {item.price}⭐
+                  </span>
+                  <Button
+                    size="sm"
+                    className="text-[10px] px-3 py-1"
+                    style={{ background: "#ff00ff", color: "#fff" }}
+                    onClick={() => handlePurchaseBoost(item.id)}
+                    data-testid={`button-buy-${item.id}`}
+                  >
+                    BUY
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div className="w-full max-w-xs mb-4">
+          <Card 
+            className="p-3 border-2"
+            style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.1)" }}
+          >
+            <p className="text-[10px] font-bold mb-2" style={{ color: "#00ffff" }}>
+              💰 DAILY PRIZES
+            </p>
+            <p className="text-[9px]" style={{ color: "#888" }}>
+              50% of Stars → Prize Pool
+            </p>
+            <p className="text-[9px]" style={{ color: "#888" }}>
+              Top 3: 25% / 10% / 5%
+            </p>
+            <p className="text-[9px]" style={{ color: "#888" }}>
+              Random 10 players: 1% each
+            </p>
+            <p className="text-[8px] mt-1" style={{ color: "#ffff00" }}>
+              Min 101⭐ daily to activate prizes
+            </p>
+          </Card>
+        </div>
+
+        <Button
+          onClick={() => setScreen("title")}
+          variant="outline"
+          className="w-full max-w-xs py-4 text-sm border-2"
+          style={{ borderColor: "#00ffff", color: "#00ffff" }}
+          data-testid="button-back-from-shop"
+        >
+          BACK TO MENU
+        </Button>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // LOADOUT SCREEN (Pre-Game Boost Selection)
+  // ==========================================
+  if (screen === "loadout") {
+    const hasAnyBoosts = inventory.side_guns > 0 || inventory.machine_gun > 0 || inventory.skip_storm > 0;
+    const totalBoostsSelected = loadout.side_guns + loadout.machine_gun + loadout.skip_storm;
+
+    const handleStartGame = () => {
+      // Set up active boosts for the game
+      activeBoostsRef.current = {
+        sideGunsLives: loadout.side_guns,
+        machineGunLives: loadout.machine_gun,
+        machineGunCarryOver: false,
+        skipStormLives: loadout.skip_storm,
+      };
+      
+      // Track if using boosts
+      setUsedBoostsThisGame(totalBoostsSelected > 0);
+      
+      // TODO: Deduct from inventory via API when Telegram integration is complete
+      
+      initStars();
+      resetGame();
+      setScreen("game");
+    };
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
+        <h1 
+          className="text-xl md:text-2xl text-center mb-4 mt-2"
+          style={{ 
+            color: "#00ff00", 
+            textShadow: "0 0 10px #00ff00, 0 0 20px #00ff00" 
+          }}
+          data-testid="text-loadout-title"
+        >
+          🎮 SELECT BOOSTS
+        </h1>
+
+        <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
+          Choose boosts for each life (3 lives total)
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs mb-4">
+          {/* Side Guns */}
+          <Card 
+            className="p-3 border-2"
+            style={{ borderColor: inventory.side_guns > 0 ? "#00ff00" : "#333" }}
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-bold" style={{ color: inventory.side_guns > 0 ? "#00ffff" : "#555" }}>
+                  🔫 SIDE GUNS
+                </p>
+                <p className="text-[10px]" style={{ color: "#888" }}>
+                  You have: {inventory.side_guns}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={loadout.side_guns === 0}
+                  onClick={() => setLoadout(l => ({ ...l, side_guns: Math.max(0, l.side_guns - 1) }))}
+                  style={{ background: "#ff0000" }}
+                  data-testid="button-minus-side-guns"
+                >-</Button>
+                <span className="text-lg font-bold w-6 text-center" style={{ color: "#ffff00" }}>
+                  {loadout.side_guns}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={loadout.side_guns >= inventory.side_guns || loadout.side_guns >= 3}
+                  onClick={() => setLoadout(l => ({ ...l, side_guns: Math.min(l.side_guns + 1, inventory.side_guns, 3) }))}
+                  style={{ background: "#00ff00", color: "#000" }}
+                  data-testid="button-plus-side-guns"
+                >+</Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Machine Gun */}
+          <Card 
+            className="p-3 border-2"
+            style={{ borderColor: inventory.machine_gun > 0 ? "#00ff00" : "#333" }}
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-bold" style={{ color: inventory.machine_gun > 0 ? "#00ffff" : "#555" }}>
+                  💥 MACHINE GUN
+                </p>
+                <p className="text-[10px]" style={{ color: "#888" }}>
+                  You have: {inventory.machine_gun}
+                </p>
+                <p className="text-[8px]" style={{ color: "#ff00ff" }}>
+                  Carries over if die before 90s
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={loadout.machine_gun === 0}
+                  onClick={() => setLoadout(l => ({ ...l, machine_gun: Math.max(0, l.machine_gun - 1) }))}
+                  style={{ background: "#ff0000" }}
+                  data-testid="button-minus-machine-gun"
+                >-</Button>
+                <span className="text-lg font-bold w-6 text-center" style={{ color: "#ffff00" }}>
+                  {loadout.machine_gun}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={loadout.machine_gun >= inventory.machine_gun || loadout.machine_gun >= 3}
+                  onClick={() => setLoadout(l => ({ ...l, machine_gun: Math.min(l.machine_gun + 1, inventory.machine_gun, 3) }))}
+                  style={{ background: "#00ff00", color: "#000" }}
+                  data-testid="button-plus-machine-gun"
+                >+</Button>
+              </div>
+            </div>
+          </Card>
+
+          {/* Skip Storm */}
+          <Card 
+            className="p-3 border-2"
+            style={{ borderColor: inventory.skip_storm > 0 ? "#00ff00" : "#333" }}
+          >
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm font-bold" style={{ color: inventory.skip_storm > 0 ? "#00ffff" : "#555" }}>
+                  🌀 SKIP STORMS
+                </p>
+                <p className="text-[10px]" style={{ color: "#888" }}>
+                  You have: {inventory.skip_storm}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  disabled={loadout.skip_storm === 0}
+                  onClick={() => setLoadout(l => ({ ...l, skip_storm: Math.max(0, l.skip_storm - 1) }))}
+                  style={{ background: "#ff0000" }}
+                  data-testid="button-minus-skip-storm"
+                >-</Button>
+                <span className="text-lg font-bold w-6 text-center" style={{ color: "#ffff00" }}>
+                  {loadout.skip_storm}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={loadout.skip_storm >= inventory.skip_storm || loadout.skip_storm >= 3}
+                  onClick={() => setLoadout(l => ({ ...l, skip_storm: Math.min(l.skip_storm + 1, inventory.skip_storm, 3) }))}
+                  style={{ background: "#00ff00", color: "#000" }}
+                  data-testid="button-plus-skip-storm"
+                >+</Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {totalBoostsSelected > 0 && (
+          <p className="text-[10px] mb-4" style={{ color: "#ff00ff" }}>
+            🔥💨 Your score will show BOOSTED icon
+          </p>
+        )}
+
+        <Button
+          onClick={handleStartGame}
+          className="w-full max-w-xs py-8 text-lg font-bold mb-3"
+          style={{ 
+            background: "linear-gradient(135deg, #00ff00, #22c55e)",
+            color: "#000",
+            boxShadow: "0 0 30px #00ff00, 0 0 60px #00ff00"
+          }}
+          data-testid="button-start-game"
+        >
+          <Play className="w-6 h-6 mr-2" />
+          {totalBoostsSelected > 0 ? `START (${totalBoostsSelected} BOOSTS)` : "START PURE 💎"}
+        </Button>
+
+        <Button
+          onClick={() => {
+            setLoadout({ side_guns: 0, machine_gun: 0, skip_storm: 0 });
+            setScreen("title");
+          }}
+          variant="outline"
+          className="w-full max-w-xs py-4 text-sm border-2"
+          style={{ borderColor: "#888", color: "#888" }}
+          data-testid="button-back-from-loadout"
         >
           BACK TO MENU
         </Button>

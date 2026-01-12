@@ -6,6 +6,14 @@ import {
   weeklyPools,
   allTimeScores,
   adClicks,
+  telegramPlayers,
+  playerInventory,
+  starPurchases,
+  dailyPrizePools,
+  boostUsageLog,
+  dailyScores,
+  allTimeBoostedScores,
+  allTimePureScores,
   type Score,
   type InsertScore,
   type PlayerAccount,
@@ -17,10 +25,24 @@ import {
   type AllTimeScore,
   type InsertAllTimeScore,
   type AdClick,
-  type InsertAdClick
+  type InsertAdClick,
+  type TelegramPlayer,
+  type InsertTelegramPlayer,
+  type PlayerInventory,
+  type InsertPlayerInventory,
+  type StarPurchase,
+  type InsertStarPurchase,
+  type DailyPrizePool,
+  type DailyScore,
+  type InsertDailyScore,
+  type AllTimeBoostedScore,
+  type AllTimePureScore,
+  type BoostType,
+  BOOST_PRICES,
+  PRIZE_CONFIG,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, gte, lte, sql, count } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, count, ne } from "drizzle-orm";
 
 export interface IStorage {
   getScores(): Promise<Score[]>;
@@ -51,6 +73,32 @@ export interface IStorage {
   
   trackAdClick(placement: string): Promise<AdClick>;
   getAdStats(): Promise<{ titleScreen: number; gameOver: number }>;
+  
+  // Telegram Stars Methods
+  getTelegramPlayer(telegramId: string): Promise<TelegramPlayer | undefined>;
+  createOrUpdateTelegramPlayer(player: InsertTelegramPlayer): Promise<TelegramPlayer>;
+  getAllTelegramPlayers(): Promise<TelegramPlayer[]>;
+  incrementPlayerGames(telegramId: string): Promise<void>;
+  
+  getPlayerInventory(telegramId: string): Promise<PlayerInventory[]>;
+  addToInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<void>;
+  useFromInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<boolean>;
+  
+  recordStarPurchase(purchase: InsertStarPurchase): Promise<StarPurchase>;
+  getPlayerPurchases(telegramId: string): Promise<StarPurchase[]>;
+  
+  getTodayPrizePool(): Promise<DailyPrizePool>;
+  addToDailyPool(starsAmount: number): Promise<void>;
+  distributeDailyPrizes(date: string): Promise<void>;
+  
+  createDailyScore(score: InsertDailyScore): Promise<DailyScore>;
+  getDailyScoresByDate(date: string): Promise<DailyScore[]>;
+  getPlayersWhoPlayedToday(date: string): Promise<string[]>;
+  
+  updateAllTimeBoostedScores(telegramId: string, playerName: string, score: number, wave: number, playTime: number): Promise<void>;
+  updateAllTimePureScores(telegramId: string, playerName: string, score: number, wave: number, playTime: number): Promise<void>;
+  getAllTimeBoostedScores(): Promise<AllTimeBoostedScore[]>;
+  getAllTimePureScores(): Promise<AllTimePureScore[]>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -243,6 +291,251 @@ export class DatabaseStorage implements IStorage {
       if (row.placement === 'gameOver') stats.gameOver = Number(row.clickCount);
     }
     return stats;
+  }
+
+  // Telegram Stars Methods
+
+  async getTelegramPlayer(telegramId: string): Promise<TelegramPlayer | undefined> {
+    const [player] = await db.select().from(telegramPlayers).where(eq(telegramPlayers.telegramId, telegramId));
+    return player || undefined;
+  }
+
+  async createOrUpdateTelegramPlayer(player: InsertTelegramPlayer): Promise<TelegramPlayer> {
+    const existing = await this.getTelegramPlayer(player.telegramId);
+    if (existing) {
+      await db.update(telegramPlayers)
+        .set({ 
+          username: player.username || existing.username,
+          firstName: player.firstName || existing.firstName,
+          lastName: player.lastName || existing.lastName,
+          lastPlayedAt: new Date()
+        })
+        .where(eq(telegramPlayers.telegramId, player.telegramId));
+      return (await this.getTelegramPlayer(player.telegramId))!;
+    }
+    const [newPlayer] = await db.insert(telegramPlayers).values({
+      telegramId: player.telegramId,
+      username: player.username || null,
+      firstName: player.firstName || null,
+      lastName: player.lastName || null,
+    }).returning();
+    return newPlayer;
+  }
+
+  async getAllTelegramPlayers(): Promise<TelegramPlayer[]> {
+    return await db.select().from(telegramPlayers).orderBy(desc(telegramPlayers.lastPlayedAt));
+  }
+
+  async incrementPlayerGames(telegramId: string): Promise<void> {
+    const player = await this.getTelegramPlayer(telegramId);
+    if (player) {
+      await db.update(telegramPlayers)
+        .set({ 
+          totalGamesPlayed: player.totalGamesPlayed + 1,
+          lastPlayedAt: new Date()
+        })
+        .where(eq(telegramPlayers.telegramId, telegramId));
+    }
+  }
+
+  async getPlayerInventory(telegramId: string): Promise<PlayerInventory[]> {
+    return await db.select().from(playerInventory).where(eq(playerInventory.telegramId, telegramId));
+  }
+
+  async addToInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<void> {
+    const [existing] = await db.select().from(playerInventory)
+      .where(and(eq(playerInventory.telegramId, telegramId), eq(playerInventory.boostType, boostType)));
+    
+    if (existing) {
+      await db.update(playerInventory)
+        .set({ quantity: existing.quantity + quantity })
+        .where(eq(playerInventory.id, existing.id));
+    } else {
+      await db.insert(playerInventory).values({ telegramId, boostType, quantity });
+    }
+  }
+
+  async useFromInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<boolean> {
+    const [existing] = await db.select().from(playerInventory)
+      .where(and(eq(playerInventory.telegramId, telegramId), eq(playerInventory.boostType, boostType)));
+    
+    if (!existing || existing.quantity < quantity) {
+      return false;
+    }
+    
+    await db.update(playerInventory)
+      .set({ quantity: existing.quantity - quantity })
+      .where(eq(playerInventory.id, existing.id));
+    return true;
+  }
+
+  async recordStarPurchase(purchase: InsertStarPurchase): Promise<StarPurchase> {
+    const [record] = await db.insert(starPurchases).values(purchase).returning();
+    
+    // Update player stats
+    const player = await this.getTelegramPlayer(purchase.telegramId);
+    if (player) {
+      await db.update(telegramPlayers)
+        .set({ totalStarsSpent: player.totalStarsSpent + purchase.starsAmount })
+        .where(eq(telegramPlayers.telegramId, purchase.telegramId));
+    }
+    
+    return record;
+  }
+
+  async getPlayerPurchases(telegramId: string): Promise<StarPurchase[]> {
+    return await db.select().from(starPurchases)
+      .where(eq(starPurchases.telegramId, telegramId))
+      .orderBy(desc(starPurchases.purchasedAt));
+  }
+
+  async getTodayPrizePool(): Promise<DailyPrizePool> {
+    const today = new Date().toISOString().split('T')[0];
+    const [existing] = await db.select().from(dailyPrizePools).where(eq(dailyPrizePools.date, today));
+    
+    if (existing) return existing;
+    
+    const [pool] = await db.insert(dailyPrizePools).values({ date: today }).returning();
+    return pool;
+  }
+
+  async addToDailyPool(starsAmount: number): Promise<void> {
+    const pool = await this.getTodayPrizePool();
+    const ownerShare = Math.floor(starsAmount * (PRIZE_CONFIG.OWNER_PERCENT / 100));
+    const prizeAmount = starsAmount - ownerShare;
+    
+    await db.update(dailyPrizePools)
+      .set({ 
+        totalStars: pool.totalStars + starsAmount,
+        ownerShare: pool.ownerShare + ownerShare,
+        prizePool: pool.prizePool + prizeAmount
+      })
+      .where(eq(dailyPrizePools.id, pool.id));
+  }
+
+  async distributeDailyPrizes(date: string): Promise<void> {
+    const [pool] = await db.select().from(dailyPrizePools).where(eq(dailyPrizePools.date, date));
+    if (!pool || pool.distributed) return;
+    
+    // Check minimum threshold
+    if (pool.totalStars < PRIZE_CONFIG.MIN_THRESHOLD) {
+      // All goes to owner - mark as distributed
+      await db.update(dailyPrizePools)
+        .set({ distributed: true })
+        .where(eq(dailyPrizePools.id, pool.id));
+      return;
+    }
+    
+    // Get top 3 scores for this day
+    const topScores = await db.select().from(dailyScores)
+      .where(eq(dailyScores.date, date))
+      .orderBy(desc(dailyScores.score))
+      .limit(3);
+    
+    const totalPrize = pool.prizePool;
+    const firstPrize = Math.floor(totalPrize * (PRIZE_CONFIG.FIRST_PLACE_PERCENT / 50));
+    const secondPrize = Math.floor(totalPrize * (PRIZE_CONFIG.SECOND_PLACE_PERCENT / 50));
+    const thirdPrize = Math.floor(totalPrize * (PRIZE_CONFIG.THIRD_PLACE_PERCENT / 50));
+    
+    // Get random players
+    const allPlayers = await this.getPlayersWhoPlayedToday(date);
+    const topPlayerIds = topScores.map(s => s.telegramId);
+    const eligibleForRandom = allPlayers.filter(id => !topPlayerIds.includes(id));
+    const randomWinners = eligibleForRandom.sort(() => Math.random() - 0.5).slice(0, PRIZE_CONFIG.MAX_RANDOM_WINNERS);
+    const randomPrizeEach = randomWinners.length > 0 ? Math.floor(totalPrize * (PRIZE_CONFIG.RANDOM_PERCENT_EACH / 50)) : 0;
+    
+    await db.update(dailyPrizePools)
+      .set({
+        distributed: true,
+        firstPlaceTelegramId: topScores[0]?.telegramId || null,
+        secondPlaceTelegramId: topScores[1]?.telegramId || null,
+        thirdPlaceTelegramId: topScores[2]?.telegramId || null,
+        firstPrize: topScores[0] ? firstPrize : 0,
+        secondPrize: topScores[1] ? secondPrize : 0,
+        thirdPrize: topScores[2] ? thirdPrize : 0,
+        randomWinners: JSON.stringify(randomWinners),
+        randomPrizeEach,
+      })
+      .where(eq(dailyPrizePools.id, pool.id));
+    
+    // Update player earnings
+    if (topScores[0]) {
+      await this.addPlayerEarnings(topScores[0].telegramId, firstPrize);
+    }
+    if (topScores[1]) {
+      await this.addPlayerEarnings(topScores[1].telegramId, secondPrize);
+    }
+    if (topScores[2]) {
+      await this.addPlayerEarnings(topScores[2].telegramId, thirdPrize);
+    }
+    for (const winnerId of randomWinners) {
+      await this.addPlayerEarnings(winnerId, randomPrizeEach);
+    }
+  }
+
+  private async addPlayerEarnings(telegramId: string, amount: number): Promise<void> {
+    const player = await this.getTelegramPlayer(telegramId);
+    if (player) {
+      await db.update(telegramPlayers)
+        .set({ totalStarsWon: player.totalStarsWon + amount })
+        .where(eq(telegramPlayers.telegramId, telegramId));
+    }
+  }
+
+  async createDailyScore(score: InsertDailyScore): Promise<DailyScore> {
+    const [newScore] = await db.insert(dailyScores).values(score).returning();
+    return newScore;
+  }
+
+  async getDailyScoresByDate(date: string): Promise<DailyScore[]> {
+    return await db.select().from(dailyScores)
+      .where(eq(dailyScores.date, date))
+      .orderBy(desc(dailyScores.score));
+  }
+
+  async getPlayersWhoPlayedToday(date: string): Promise<string[]> {
+    const scores = await db.select({ telegramId: dailyScores.telegramId })
+      .from(dailyScores)
+      .where(eq(dailyScores.date, date));
+    return Array.from(new Set(scores.map(s => s.telegramId)));
+  }
+
+  async updateAllTimeBoostedScores(telegramId: string, playerName: string, score: number, wave: number, playTime: number): Promise<void> {
+    const currentTop3 = await this.getAllTimeBoostedScores();
+    
+    if (currentTop3.length < 3 || score > currentTop3[currentTop3.length - 1].score) {
+      await db.insert(allTimeBoostedScores).values({ telegramId, playerName, score, wave, playTime });
+      
+      const updatedTop = await db.select().from(allTimeBoostedScores).orderBy(desc(allTimeBoostedScores.score));
+      if (updatedTop.length > 3) {
+        for (let i = 3; i < updatedTop.length; i++) {
+          await db.delete(allTimeBoostedScores).where(eq(allTimeBoostedScores.id, updatedTop[i].id));
+        }
+      }
+    }
+  }
+
+  async updateAllTimePureScores(telegramId: string, playerName: string, score: number, wave: number, playTime: number): Promise<void> {
+    const currentTop3 = await this.getAllTimePureScores();
+    
+    if (currentTop3.length < 3 || score > currentTop3[currentTop3.length - 1].score) {
+      await db.insert(allTimePureScores).values({ telegramId, playerName, score, wave, playTime });
+      
+      const updatedTop = await db.select().from(allTimePureScores).orderBy(desc(allTimePureScores.score));
+      if (updatedTop.length > 3) {
+        for (let i = 3; i < updatedTop.length; i++) {
+          await db.delete(allTimePureScores).where(eq(allTimePureScores.id, updatedTop[i].id));
+        }
+      }
+    }
+  }
+
+  async getAllTimeBoostedScores(): Promise<AllTimeBoostedScore[]> {
+    return await db.select().from(allTimeBoostedScores).orderBy(desc(allTimeBoostedScores.score)).limit(3);
+  }
+
+  async getAllTimePureScores(): Promise<AllTimePureScore[]> {
+    return await db.select().from(allTimePureScores).orderBy(desc(allTimePureScores.score)).limit(3);
   }
 }
 
