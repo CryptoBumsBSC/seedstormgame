@@ -783,12 +783,89 @@ export default function Game() {
     const baseSpawnRate = Math.max(500, 2000 - difficultyRef.current * 150);
     const spawnRateVariation = baseSpawnRate * (0.5 + Math.random()); // 50% to 150%
     if (spawnCooldownRef.current <= 0) {
-      spawnEnemy();
-      // Sometimes spawn 2 enemies at once (10% chance after 30 sec)
-      if (gameTimeSec >= 30 && Math.random() < 0.1) {
+      // Formation spawning (15% chance after 45 sec)
+      if (gameTimeSec >= 45 && Math.random() < 0.15) {
+        const formationType = Math.floor(Math.random() * 3);
+        const centerX = 50 + Math.random() * (CANVAS_WIDTH - 100);
+        if (formationType === 0) {
+          // V-formation (5 enemies)
+          for (let i = 0; i < 5; i++) {
+            const offsetX = (i - 2) * 35;
+            const offsetY = Math.abs(i - 2) * 25;
+            setTimeout(() => {
+              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
+              const strain = strains[Math.floor(Math.random() * strains.length)];
+              const enemy: Enemy = {
+                id: generateId(),
+                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + offsetX)),
+                y: -ENEMY_SIZE - offsetY,
+                width: ENEMY_SIZE,
+                height: ENEMY_SIZE,
+                health: difficultyRef.current,
+                maxHealth: difficultyRef.current,
+                strain,
+                speed: 1.5 + difficultyRef.current * 0.15,
+                shootCooldown: 1000 + Math.random() * 1000,
+                points: difficultyRef.current,
+              };
+              enemiesRef.current.push(enemy);
+            }, i * 100);
+          }
+        } else if (formationType === 1) {
+          // Diagonal line (4 enemies)
+          for (let i = 0; i < 4; i++) {
+            setTimeout(() => {
+              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
+              const strain = strains[Math.floor(Math.random() * strains.length)];
+              const enemy: Enemy = {
+                id: generateId(),
+                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + i * 30)),
+                y: -ENEMY_SIZE - i * 20,
+                width: ENEMY_SIZE,
+                height: ENEMY_SIZE,
+                health: difficultyRef.current,
+                maxHealth: difficultyRef.current,
+                strain,
+                speed: 1.8 + difficultyRef.current * 0.1,
+                shootCooldown: 800 + Math.random() * 800,
+                points: difficultyRef.current,
+              };
+              enemiesRef.current.push(enemy);
+            }, i * 150);
+          }
+        } else {
+          // Horizontal line (3 enemies)
+          for (let i = 0; i < 3; i++) {
+            const offsetX = (i - 1) * 50;
+            setTimeout(() => {
+              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
+              const strain = strains[Math.floor(Math.random() * strains.length)];
+              const enemy: Enemy = {
+                id: generateId(),
+                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + offsetX)),
+                y: -ENEMY_SIZE,
+                width: ENEMY_SIZE,
+                height: ENEMY_SIZE,
+                health: difficultyRef.current,
+                maxHealth: difficultyRef.current,
+                strain,
+                speed: 1.2 + difficultyRef.current * 0.2,
+                shootCooldown: 1200 + Math.random() * 600,
+                points: difficultyRef.current,
+              };
+              enemiesRef.current.push(enemy);
+            }, i * 80);
+          }
+        }
+        spawnCooldownRef.current = spawnRateVariation * 2; // Longer cooldown after formation
+      } else {
         spawnEnemy();
+        // Sometimes spawn 2 enemies at once (10% chance after 30 sec)
+        if (gameTimeSec >= 30 && Math.random() < 0.1) {
+          spawnEnemy();
+        }
+        spawnCooldownRef.current = spawnRateVariation;
       }
-      spawnCooldownRef.current = spawnRateVariation;
     }
 
     // Hazard spawning - starts after 20 seconds, highly randomized timing
