@@ -177,6 +177,9 @@ Password-protected admin panel with tabs:
 - **Prize Pool**: Today's pool info, threshold status, distribute prizes button
 
 ## Recent Changes
+- 2026-01-12: Fixed How To Play boost documentation
+  - Corrected all 6 boost star prices in the help screen
+  - Updated boost descriptions to match actual functionality
 - 2026-01-12: Expanded Boost System (6 Boosts)
   - **New Boosts**: Extra Life (3★), Shield Boost (3★), Rapid Fire (3★), Side Guns (5★), Machine Gun (10★), Skip Storm (20★)
   - **Max 3 Boosts Per Life**: Loadout screen enforces limit with "Selected: X/3" counter
