@@ -283,6 +283,8 @@ export default function Game() {
   const damageFlashRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
   const waveRef = useRef<number>(1);
   const waveTimerRef = useRef<number>(0);
+  const formationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const gameSessionRef = useRef<number>(0); // Increments on each game start to invalidate old timeouts
   const starSpeedMultiplierRef = useRef<number>(1);
 
   const { data: scores = [] } = useQuery<Score[]>({
@@ -649,6 +651,10 @@ export default function Game() {
     damageFlashRef.current = { active: false, endTime: 0 };
     waveRef.current = 1;
     waveTimerRef.current = 0;
+    // Clear any pending formation timeouts
+    formationTimeoutsRef.current.forEach(t => clearTimeout(t));
+    formationTimeoutsRef.current = [];
+    gameSessionRef.current++; // Invalidate any pending timeouts from previous session
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
@@ -787,74 +793,49 @@ export default function Game() {
       if (gameTimeSec >= 45 && Math.random() < 0.15) {
         const formationType = Math.floor(Math.random() * 3);
         const centerX = 50 + Math.random() * (CANVAS_WIDTH - 100);
+        // Helper to spawn formation enemy with timeout tracking
+        const currentSession = gameSessionRef.current;
+        const spawnFormationEnemy = (delay: number, x: number, yOffset: number, speed: number, shootCooldown: number) => {
+          const timeoutId = setTimeout(() => {
+            // Check if game session is still the same (prevents spawning after reset)
+            if (gameSessionRef.current !== currentSession) return;
+            const strains: StrainType[] = ["indica", "sativa", "hybrid"];
+            const strain = strains[Math.floor(Math.random() * strains.length)];
+            const enemy: Enemy = {
+              id: generateId(),
+              x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, x)),
+              y: -ENEMY_SIZE - yOffset,
+              width: ENEMY_SIZE,
+              height: ENEMY_SIZE,
+              health: difficultyRef.current,
+              maxHealth: difficultyRef.current,
+              strain,
+              speed,
+              shootCooldown,
+              points: difficultyRef.current,
+            };
+            enemiesRef.current.push(enemy);
+          }, delay);
+          formationTimeoutsRef.current.push(timeoutId);
+        };
+        
         if (formationType === 0) {
           // V-formation (5 enemies)
           for (let i = 0; i < 5; i++) {
             const offsetX = (i - 2) * 35;
             const offsetY = Math.abs(i - 2) * 25;
-            setTimeout(() => {
-              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
-              const strain = strains[Math.floor(Math.random() * strains.length)];
-              const enemy: Enemy = {
-                id: generateId(),
-                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + offsetX)),
-                y: -ENEMY_SIZE - offsetY,
-                width: ENEMY_SIZE,
-                height: ENEMY_SIZE,
-                health: difficultyRef.current,
-                maxHealth: difficultyRef.current,
-                strain,
-                speed: 1.5 + difficultyRef.current * 0.15,
-                shootCooldown: 1000 + Math.random() * 1000,
-                points: difficultyRef.current,
-              };
-              enemiesRef.current.push(enemy);
-            }, i * 100);
+            spawnFormationEnemy(i * 100, centerX + offsetX, offsetY, 1.5 + difficultyRef.current * 0.15, 1000 + Math.random() * 1000);
           }
         } else if (formationType === 1) {
           // Diagonal line (4 enemies)
           for (let i = 0; i < 4; i++) {
-            setTimeout(() => {
-              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
-              const strain = strains[Math.floor(Math.random() * strains.length)];
-              const enemy: Enemy = {
-                id: generateId(),
-                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + i * 30)),
-                y: -ENEMY_SIZE - i * 20,
-                width: ENEMY_SIZE,
-                height: ENEMY_SIZE,
-                health: difficultyRef.current,
-                maxHealth: difficultyRef.current,
-                strain,
-                speed: 1.8 + difficultyRef.current * 0.1,
-                shootCooldown: 800 + Math.random() * 800,
-                points: difficultyRef.current,
-              };
-              enemiesRef.current.push(enemy);
-            }, i * 150);
+            spawnFormationEnemy(i * 150, centerX + i * 30, i * 20, 1.8 + difficultyRef.current * 0.1, 800 + Math.random() * 800);
           }
         } else {
           // Horizontal line (3 enemies)
           for (let i = 0; i < 3; i++) {
             const offsetX = (i - 1) * 50;
-            setTimeout(() => {
-              const strains: StrainType[] = ["indica", "sativa", "hybrid"];
-              const strain = strains[Math.floor(Math.random() * strains.length)];
-              const enemy: Enemy = {
-                id: generateId(),
-                x: Math.max(0, Math.min(CANVAS_WIDTH - ENEMY_SIZE, centerX + offsetX)),
-                y: -ENEMY_SIZE,
-                width: ENEMY_SIZE,
-                height: ENEMY_SIZE,
-                health: difficultyRef.current,
-                maxHealth: difficultyRef.current,
-                strain,
-                speed: 1.2 + difficultyRef.current * 0.2,
-                shootCooldown: 1200 + Math.random() * 600,
-                points: difficultyRef.current,
-              };
-              enemiesRef.current.push(enemy);
-            }, i * 80);
+            spawnFormationEnemy(i * 80, centerX + offsetX, 0, 1.2 + difficultyRef.current * 0.2, 1200 + Math.random() * 600);
           }
         }
         spawnCooldownRef.current = spawnRateVariation * 2; // Longer cooldown after formation
