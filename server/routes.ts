@@ -867,14 +867,14 @@ export async function registerRoutes(
     }
   });
 
-  // Webhook handler for Telegram payment confirmations
+  // Webhook handler for Telegram payment confirmations and bot commands
   app.post("/api/telegram/webhook", async (req, res) => {
     try {
       const update = req.body;
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
       
       // Handle pre-checkout query (must be answered within 10 seconds)
       if (update.pre_checkout_query) {
-        const botToken = process.env.TELEGRAM_BOT_TOKEN;
         if (!botToken) {
           return res.status(500).json({ error: "Bot not configured" });
         }
@@ -916,6 +916,109 @@ export async function registerRoutes(
         console.log(`Payment success: ${quantity}x ${boostType} for user ${telegramId}, ${payment.total_amount} Stars`);
         
         return res.json({ ok: true, purchase });
+      }
+      
+      // Handle bot commands
+      if (update.message?.text && botToken) {
+        const chatId = update.message.chat.id;
+        const text = update.message.text;
+        const gameUrl = "https://t.me/SeedStormBot/seedstorm";
+        
+        let replyText = "";
+        let replyMarkup = null;
+        
+        if (text === "/start" || text.startsWith("/start ")) {
+          replyText = `🌿 *SEED STORM* 🌿
+
+Welcome to the ultimate cannabis arcade shooter!
+
+Play as Dudley Bud and blast through waves of enemy buds. Collect power-ups, avoid hazards, and compete for the daily prize pool!
+
+🎮 Tap the button below to play!`;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "🎮 PLAY NOW", url: gameUrl }]]
+          };
+        } else if (text === "/play") {
+          replyText = `🎮 Ready to play SEED STORM?
+
+Tap below to launch the game!`;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "🎮 LAUNCH GAME", url: gameUrl }]]
+          };
+        } else if (text === "/shop") {
+          replyText = `🛒 *BOOST SHOP*
+
+Buy boosts with Telegram Stars:
+
+❤️ Extra Life - 3⭐
+🛡️ Shield (5s) - 3⭐
+⚡ Rapid Fire (5s) - 3⭐
+🔫 Side Guns (5s) - 5⭐
+💥 Machine Gun (5s) - 10⭐
+🌀 Skip Storm - 20⭐
+
+Open the game and tap SHOP to purchase!`;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "🛒 OPEN SHOP", url: gameUrl }]]
+          };
+        } else if (text === "/leaderboard") {
+          // Fetch top 5 from daily leaderboard
+          const dailyScores = await storage.getDailyScores();
+          const top5 = dailyScores.slice(0, 5);
+          
+          let lbText = "🏆 *TODAY'S TOP 5*\n\n";
+          if (top5.length === 0) {
+            lbText += "No scores yet today. Be the first!";
+          } else {
+            top5.forEach((score, i) => {
+              const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+              lbText += `${medal} ${score.playerName} - ${score.score} pts\n`;
+            });
+          }
+          replyText = lbText;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "📊 FULL LEADERBOARD", url: gameUrl }]]
+          };
+        } else if (text === "/help") {
+          replyText = `📖 *HOW TO PLAY*
+
+🎯 *Objective*
+Survive waves of enemy buds and get the highest score!
+
+🕹️ *Controls*
+• Arrow keys or touch buttons to move
+• Space or fire button to shoot
+
+👾 *Enemies*
+• Purple (Indica) - 1 hit = 1 pt
+• Green (Sativa) - 2 hits = 2 pts  
+• Orange (Hybrid) - 3 hits = 3 pts
+
+⚡ *Power-Ups*
+Collect dropped items for speed, damage, rapid fire, or extra lives!
+
+🏆 *Daily Prizes*
+Top 3 players share 40% of daily Stars spent!
+
+Tap below to start playing!`;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "🎮 PLAY NOW", url: gameUrl }]]
+          };
+        }
+        
+        // Send reply if we have one
+        if (replyText) {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chatId,
+              text: replyText,
+              parse_mode: "Markdown",
+              reply_markup: replyMarkup
+            })
+          });
+        }
       }
       
       res.json({ ok: true });
