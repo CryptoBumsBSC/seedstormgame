@@ -48,12 +48,13 @@ const BOOST_PRICES = {
   skip_storm: 20,
 } as const;
 
+// Boost durations in milliseconds (gameTimeRef is in ms)
 const BOOST_DURATIONS = {
   extra_life: 0,
-  shield_boost: 5,
-  rapid_fire: 5,
-  side_guns: 5,
-  machine_gun: 5,
+  shield_boost: 5000,  // 5 seconds
+  rapid_fire: 5000,    // 5 seconds
+  side_guns: 5000,     // 5 seconds
+  machine_gun: 5000,   // 5 seconds
   skip_storm: 0,
 } as const;
 
@@ -299,6 +300,8 @@ export default function Game() {
   const particlesRef = useRef<Particle[]>([]);
   const rapidFireEndRef = useRef<number>(0);
   const speedBoostEndRef = useRef<number>(0);
+  const sideGunsBoostEndRef = useRef<number>(0);
+  const machineGunBoostEndRef = useRef<number>(0);
   const shieldEndRef = useRef<number>(0);
   const specialObjectsRef = useRef<SpecialObject[]>([]);
   const lastSkullSpawnRef = useRef<number>(0);
@@ -855,6 +858,8 @@ export default function Game() {
     invincibilityRef.current = 0;
     rapidFireEndRef.current = 0;
     speedBoostEndRef.current = 0;
+    sideGunsBoostEndRef.current = 0;
+    machineGunBoostEndRef.current = 0;
     shieldEndRef.current = 0;
     lastSkullSpawnRef.current = 0;
     lastBudAngelSpawnRef.current = 0;
@@ -886,25 +891,24 @@ export default function Game() {
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
-    // Apply starting boosts
+    // Apply starting boosts (timed boosts set relative to gameTimeRef.current which is 0 at start)
     const boosts = activeBoostsRef.current;
-    const BOOST_DURATION_MS = 5000; // 5 seconds for timed boosts
     
-    // Extra life boost: start with 4 lives instead of 3
-    const startingLives = 3 + boosts.extraLife;
+    // Extra life boost: start with 4 lives instead of 3 (capped at 4 max)
+    const startingLives = Math.min(3 + boosts.extraLife, 4);
     
-    // Timed boosts: apply at game start
+    // Timed boosts: apply relative to current game time (0 at start)
     if (boosts.shieldBoost > 0) {
-      shieldEndRef.current = BOOST_DURATION_MS;
+      shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
     }
     if (boosts.rapidFire > 0) {
-      rapidFireEndRef.current = BOOST_DURATION_MS;
+      rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
     }
     if (boosts.sideGuns > 0) {
-      weaponLevelRef.current = 2; // Both side guns
+      sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
     }
     if (boosts.machineGun > 0) {
-      weaponLevelRef.current = 3; // Machine gun
+      machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
     }
     
     setGameState({
@@ -970,26 +974,29 @@ export default function Game() {
     const gameTimeSec = gameTimeRef.current / 1000;
     
     // Weapon upgrades based on time (with boost support)
-    const boosts = activeBoostsRef.current;
-    const hasSideGunsBoost = boosts.sideGuns > 0;
-    const hasMachineGunBoost = boosts.machineGun > 0;
+    // Timed boosts are set at game start and expire after their duration
+    const hasSideGunsBoost = sideGunsBoostEndRef.current > gameTimeRef.current;
+    const hasMachineGunBoost = machineGunBoostEndRef.current > gameTimeRef.current;
     
-    // Machine gun: normally at 240s, with boost gives 5 sec at start
-    // Side guns: normally at 60-90s, with boost gives 5 sec at start
-    // These timed boosts are consumed at life start and last 5 seconds
+    // Determine weapon level based on natural progression + active boosts
+    // Priority: Machine gun boost > Natural 4min > Side guns boost > Natural 90s > Natural 60s
+    // Calculate natural weapon level first, then apply boosts on top
+    let naturalWeaponLevel = 0;
+    if (gameTimeSec >= 240) {
+      naturalWeaponLevel = 3; // Natural machine gun at 4 min
+    } else if (gameTimeSec >= 90) {
+      naturalWeaponLevel = 2; // Both side guns at 90s
+    } else if (gameTimeSec >= 60) {
+      naturalWeaponLevel = 1; // Left gun at 60s
+    }
     
-    if (gameTimeSec >= 240 && weaponLevelRef.current < 3) {
-      weaponLevelRef.current = 3; // Double barrel machine gun (natural unlock)
-    } else if (hasSideGunsBoost && weaponLevelRef.current < 2) {
-      // Side guns boost: start with both side guns immediately
-      weaponLevelRef.current = 2;
-    } else if (hasMachineGunBoost && weaponLevelRef.current < 3) {
-      // Machine gun boost: 5 sec machine gun at start
-      weaponLevelRef.current = 3;
-    } else if (gameTimeSec >= 90 && weaponLevelRef.current < 2) {
-      weaponLevelRef.current = 2; // Right gun
-    } else if (gameTimeSec >= 60 && weaponLevelRef.current < 1) {
-      weaponLevelRef.current = 1; // Left gun
+    // Apply boosts: take the higher of boost level or natural level
+    if (hasMachineGunBoost) {
+      weaponLevelRef.current = Math.max(3, naturalWeaponLevel);
+    } else if (hasSideGunsBoost) {
+      weaponLevelRef.current = Math.max(2, naturalWeaponLevel);
+    } else {
+      weaponLevelRef.current = naturalWeaponLevel;
     }
     
     const newDifficulty = Math.floor(gameTimeRef.current / DIFFICULTY_INTERVAL) + 1;
