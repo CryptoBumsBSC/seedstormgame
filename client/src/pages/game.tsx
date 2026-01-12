@@ -283,7 +283,7 @@ export default function Game() {
   const damageFlashRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
   const waveRef = useRef<number>(1);
   const waveTimerRef = useRef<number>(0);
-  const formationTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  const formationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const gameSessionRef = useRef<number>(0); // Increments on each game start to invalidate old timeouts
   const starSpeedMultiplierRef = useRef<number>(1);
 
@@ -2586,7 +2586,7 @@ export default function Game() {
         playerName: playerName.trim().toUpperCase(),
         score: gameState.score,
         wave: gameState.wave,
-        playTime: gameState.gameTime,
+        playTime: gameState.gameTime * 1000, // Convert seconds to milliseconds for server validation
       });
     }
   };
