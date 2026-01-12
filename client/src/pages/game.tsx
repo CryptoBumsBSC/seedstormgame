@@ -946,12 +946,26 @@ export default function Game() {
     }));
   }, []);
   
-  // Handle boost depletion when player loses a life
+  // Handle boost depletion when player loses a life and apply boosts for new life
   const handleLifeLost = useCallback(() => {
     const boosts = activeBoostsRef.current;
     
-    // Decrement per-life boosts (all boosts are per-life now)
-    // These boosts give timed effects at start of each life
+    // First, apply timed boosts for the NEW life (before decrementing)
+    // These boosts were selected in loadout and give effects at start of each life
+    if (boosts.shieldBoost > 0) {
+      shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
+    }
+    if (boosts.rapidFire > 0) {
+      rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
+    }
+    if (boosts.sideGuns > 0) {
+      sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
+    }
+    if (boosts.machineGun > 0) {
+      machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
+    }
+    
+    // Then decrement per-life boosts (all boosts are per-life now)
     if (boosts.extraLife > 0) boosts.extraLife--;
     if (boosts.shieldBoost > 0) boosts.shieldBoost--;
     if (boosts.rapidFire > 0) boosts.rapidFire--;
