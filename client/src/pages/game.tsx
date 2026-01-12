@@ -4220,7 +4220,7 @@ export default function Game() {
       skip_storm: { icon: "🌀", label: "NO STORM", color: "#8800ff" },
     };
 
-    const handleStartGame = () => {
+    const handleStartGame = async () => {
       // Set up active boosts for the game - copy the loadout to activeBoostsRef
       activeBoostsRef.current = {
         slots: [...loadout] as BoostLoadout,
@@ -4231,7 +4231,43 @@ export default function Game() {
       // Track if using boosts
       setUsedBoostsThisGame(totalBoostsSelected > 0);
       
-      // TODO: Deduct from inventory via API when Telegram integration is complete
+      // Deduct boosts from inventory via API
+      if (telegramId && totalBoostsSelected > 0) {
+        // Count how many of each boost type are in the loadout
+        const boostsToUse: Record<string, number> = {};
+        loadout.forEach(slot => {
+          if (slot) {
+            boostsToUse[slot] = (boostsToUse[slot] || 0) + 1;
+          }
+        });
+        
+        try {
+          const response = await fetch("/api/telegram/use-boosts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              telegramId,
+              boosts: boostsToUse,
+            }),
+          });
+          
+          if (response.ok) {
+            // Update local inventory state
+            setInventory(prev => {
+              const newInv = { ...prev };
+              Object.entries(boostsToUse).forEach(([type, count]) => {
+                newInv[type as BoostType] = Math.max(0, newInv[type as BoostType] - count);
+              });
+              return newInv;
+            });
+          }
+        } catch (error) {
+          console.error("Failed to deduct boosts:", error);
+        }
+      }
+      
+      // Clear loadout for next game
+      setLoadout([null, null, null]);
       
       initStars();
       resetGame();
