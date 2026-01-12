@@ -30,6 +30,12 @@ export async function registerRoutes(
     res.sendFile(filePath);
   });
 
+  // Complete game guide page
+  app.get("/game-guide", (req, res) => {
+    const filePath = path.resolve(process.cwd(), "client/public/game-guide.html");
+    res.sendFile(filePath);
+  });
+
   // Download page for banner (640x360 for Telegram)
   app.get("/download", (req, res) => {
     const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/seed_storm_telegram_640x360.png");
