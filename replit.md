@@ -177,6 +177,10 @@ Password-protected admin panel with tabs:
 - **Prize Pool**: Today's pool info, threshold status, distribute prizes button
 
 ## Recent Changes
+- 2026-01-12: Fixed Telegram Stars payment webhook
+  - Added /api/telegram/setup-webhook endpoint to register payment webhook
+  - Webhook URL: https://galaga-clone--oscarjameshardi.replit.app/api/telegram/webhook
+  - Resolves "bot didn't respond in time" error during Star purchases
 - 2026-01-12: Fixed How To Play boost documentation
   - Corrected all 6 boost star prices in the help screen
   - Updated boost descriptions to match actual functionality
