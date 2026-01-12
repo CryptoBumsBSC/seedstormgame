@@ -3834,10 +3834,13 @@ export default function Game() {
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
               <p><span style={{ color: "#ffd700" }}>Buy boosts</span> with Telegram Stars - stored in inventory!</p>
-              <p><span style={{ color: "#00ffff" }}>Side Guns (100 Stars):</span> Start with both side guns</p>
-              <p><span style={{ color: "#ff00ff" }}>Machine Gun (500 Stars):</span> Unlock at 90 sec (not 4 min)</p>
-              <p><span style={{ color: "#ff6600" }}>Skip Storm (100 Stars):</span> No meteor showers that life</p>
-              <p className="mt-1">Boosts are <span style={{ color: "#ffff00" }}>per-life</span> - select before each game!</p>
+              <p><span style={{ color: "#00ff00" }}>Extra Life (3★):</span> Start with +1 life</p>
+              <p><span style={{ color: "#00ffff" }}>Shield (3★):</span> 5 sec protection at life start</p>
+              <p><span style={{ color: "#ff6600" }}>Rapid Fire (3★):</span> 5 sec fast shots at life start</p>
+              <p><span style={{ color: "#ff00ff" }}>Side Guns (5★):</span> 5 sec side guns at life start</p>
+              <p><span style={{ color: "#ff0000" }}>Machine Gun (10★):</span> 5 sec dual barrels at life start</p>
+              <p><span style={{ color: "#8800ff" }}>Skip Storm (20★):</span> No meteor showers that life</p>
+              <p className="mt-1">Assign <span style={{ color: "#ffff00" }}>1 boost per life</span> before each game!</p>
               <p>Unused boosts stay in inventory for next time.</p>
             </div>
           </Card>
