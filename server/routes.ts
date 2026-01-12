@@ -36,6 +36,14 @@ export async function registerRoutes(
     res.sendFile(filePath);
   });
 
+  // Download all guide images as ZIP
+  app.get("/download-guide", (req, res) => {
+    const filePath = path.resolve(process.cwd(), "client/public/seed_storm_guide.zip");
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=seed_storm_guide.zip');
+    res.sendFile(filePath);
+  });
+
   // Game guide images download page
   app.get("/guide-images", (req, res) => {
     const images = [
