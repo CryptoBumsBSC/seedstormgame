@@ -195,7 +195,7 @@ export type Referral = typeof referrals.$inferSelect;
 export type WeeklyPrizePool = typeof weeklyPools.$inferSelect;
 
 // Telegram Stars Types
-export const boostTypes = ["side_guns", "machine_gun", "skip_storm"] as const;
+export const boostTypes = ["extra_life", "shield_boost", "rapid_fire", "side_guns", "machine_gun", "skip_storm"] as const;
 export type BoostType = typeof boostTypes[number];
 
 export const insertTelegramPlayerSchema = z.object({
@@ -243,12 +243,26 @@ export type DailyScore = typeof dailyScores.$inferSelect;
 export type AllTimeBoostedScore = typeof allTimeBoostedScores.$inferSelect;
 export type AllTimePureScore = typeof allTimePureScores.$inferSelect;
 
-// Boost pricing constants
+// Boost pricing and metadata
 export const BOOST_PRICES = {
-  side_guns: 100,
-  machine_gun: 500,
-  skip_storm: 100,
+  extra_life: 3,      // +1 life instantly
+  shield_boost: 3,    // 5 sec shield
+  rapid_fire: 3,      // 5 sec rapid fire
+  side_guns: 5,       // 5 sec side guns
+  machine_gun: 10,    // 5 sec machine gun
+  skip_storm: 20,     // Skip meteor storms for life
 } as const;
+
+export const BOOST_DURATIONS = {
+  extra_life: 0,      // Instant effect
+  shield_boost: 5,    // 5 seconds
+  rapid_fire: 5,      // 5 seconds
+  side_guns: 5,       // 5 seconds
+  machine_gun: 5,     // 5 seconds
+  skip_storm: 0,      // Lasts entire life
+} as const;
+
+export const MAX_BOOSTS_PER_LIFE = 3;
 
 // Prize distribution constants
 export const PRIZE_CONFIG = {
