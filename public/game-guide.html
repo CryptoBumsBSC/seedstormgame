@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEED STORM - Complete Game Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Press Start 2P', monospace;
+      background: linear-gradient(180deg, #0a0a0f 0%, #1a0a2e 50%, #0a0a0f 100%);
+      color: #00ffff;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.8;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      color: #00ffff;
+      text-shadow: 0 0 10px #00ffff, 0 0 20px #ff00ff, 0 0 30px #ff00ff;
+      margin-bottom: 30px;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    
+    h2 {
+      font-size: 14px;
+      color: #ffff00;
+      text-shadow: 0 0 8px #ffff00;
+      margin: 30px 0 15px 0;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #ff00ff;
+    }
+    
+    h3 {
+      font-size: 11px;
+      color: #00ff00;
+      margin: 20px 0 10px 0;
+    }
+    
+    p, li {
+      font-size: 9px;
+      color: #aaaaaa;
+      margin-bottom: 10px;
+    }
+    
+    ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    
+    li {
+      padding-left: 20px;
+      position: relative;
+      margin-bottom: 8px;
+    }
+    
+    li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: #ff00ff;
+    }
+    
+    .card {
+      background: rgba(20, 20, 40, 0.9);
+      border: 2px solid #00ffff;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    }
+    
+    .visual-guide {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    
+    .visual-item {
+      text-align: center;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    
+    .visual-item .icon {
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+    
+    .visual-item .label {
+      font-size: 8px;
+      color: #fff;
+    }
+    
+    .visual-item .desc {
+      font-size: 7px;
+      color: #888;
+      margin-top: 4px;
+    }
+    
+    /* Enemy Colors */
+    .indica { background: radial-gradient(circle, #a855f7 30%, #7c3aed 70%, #5b21b6 100%); box-shadow: 0 0 10px #a855f7; }
+    .sativa { background: radial-gradient(circle, #22c55e 30%, #16a34a 70%, #15803d 100%); box-shadow: 0 0 10px #22c55e; }
+    .hybrid { background: radial-gradient(circle, #f97316 30%, #ea580c 70%, #c2410c 100%); box-shadow: 0 0 10px #f97316; }
+    
+    /* Hazard Colors */
+    .bong { background: linear-gradient(180deg, #0088cc, #00ccff); box-shadow: 0 0 10px #00ccff; }
+    .joint { background: linear-gradient(90deg, #f5deb3, #ff6600); box-shadow: 0 0 10px #ff6600; }
+    .matches { background: linear-gradient(180deg, #8b4513, #ff4500); box-shadow: 0 0 10px #ff4500; }
+    .skull { background: radial-gradient(circle, #1a3a1a, #0d2a0d); box-shadow: 0 0 15px #ff0000; border: 2px solid #ff0000; }
+    
+    /* Special Objects */
+    .bud-angel { background: radial-gradient(circle, #88ffff, #00ffff); box-shadow: 0 0 20px #ffff00, 0 0 30px #88ffff; }
+    .meteor { background: radial-gradient(circle, #ff6600, #cc3300); box-shadow: 0 0 15px #ff6600; }
+    .white-hot { background: radial-gradient(circle, #ffffff, #ffffcc); box-shadow: 0 0 20px #ffffff; }
+    
+    /* Power-ups */
+    .speed { background: #00ff00; box-shadow: 0 0 10px #00ff00; color: #000; font-weight: bold; }
+    .damage { background: #ff0000; box-shadow: 0 0 10px #ff0000; color: #fff; font-weight: bold; }
+    .rapid { background: #ffff00; box-shadow: 0 0 10px #ffff00; color: #000; font-weight: bold; }
+    .life { background: #ff00ff; box-shadow: 0 0 10px #ff00ff; color: #fff; font-weight: bold; }
+    
+    /* Player */
+    .player { background: radial-gradient(circle, #22c55e 20%, #15803d 60%, #0d5c28 100%); box-shadow: 0 0 15px #00ff00; }
+    
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .control-section h4 {
+      font-size: 10px;
+      color: #ff00ff;
+      margin-bottom: 10px;
+    }
+    
+    .key {
+      display: inline-block;
+      background: #333;
+      border: 1px solid #666;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 8px;
+      color: #fff;
+      margin: 2px;
+    }
+    
+    .timeline {
+      border-left: 3px solid #ff00ff;
+      padding-left: 20px;
+      margin: 15px 0;
+    }
+    
+    .timeline-item {
+      margin-bottom: 15px;
+      position: relative;
+    }
+    
+    .timeline-item::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      background: #ff00ff;
+      border-radius: 50%;
+      position: absolute;
+      left: -26px;
+      top: 0;
+    }
+    
+    .timeline-time {
+      font-size: 10px;
+      color: #00ff00;
+    }
+    
+    .timeline-desc {
+      font-size: 8px;
+      color: #aaa;
+    }
+    
+    .tip-box {
+      background: rgba(255, 255, 0, 0.1);
+      border: 1px solid #ffff00;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .tip-box h4 {
+      font-size: 10px;
+      color: #ffff00;
+      margin-bottom: 10px;
+    }
+    
+    .warning-box {
+      background: rgba(255, 0, 0, 0.1);
+      border: 1px solid #ff0000;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    
+    .warning-box h4 {
+      font-size: 10px;
+      color: #ff0000;
+      margin-bottom: 10px;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 2px solid #ff00ff;
+    }
+    
+    .footer p {
+      font-size: 8px;
+      color: #666;
+    }
+    
+    @media (max-width: 600px) {
+      h1 { font-size: 18px; }
+      h2 { font-size: 12px; }
+      .controls-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌿 SEED STORM 🌿</h1>
+    <p style="text-align: center; font-size: 10px; color: #ff00ff; margin-bottom: 30px;">COMPLETE GAME GUIDE</p>
+    
+    <!-- OBJECTIVE -->
+    <div class="card">
+      <h2>🎯 OBJECTIVE</h2>
+      <p>Survive as long as possible while shooting down enemy buds. You play as "Dudley Bud" - a heroic cannabis leaf firing seeds at incoming enemies. Get the highest score to make the leaderboard!</p>
+    </div>
+    
+    <!-- YOUR CHARACTER -->
+    <div class="card">
+      <h2>🌿 YOUR CHARACTER: DUDLEY BUD</h2>
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon player">🌿</div>
+          <div class="label">Dudley Bud</div>
+          <div class="desc">That's you!</div>
+        </div>
+      </div>
+      <p>You control Dudley Bud, an iconic 5-point cannabis leaf with cool sunglasses. Move left and right to dodge enemies and hazards while firing seeds upward to destroy incoming threats.</p>
+    </div>
+    
+    <!-- CONTROLS -->
+    <div class="card">
+      <h2>🎮 CONTROLS</h2>
+      <div class="controls-grid">
+        <div class="control-section">
+          <h4>Desktop</h4>
+          <ul>
+            <li><span class="key">←</span> <span class="key">→</span> or <span class="key">A</span> <span class="key">D</span> - Move</li>
+            <li><span class="key">SPACE</span> - Fire seeds</li>
+            <li><span class="key">ESC</span> - Pause game</li>
+          </ul>
+        </div>
+        <div class="control-section">
+          <h4>Mobile/Touch</h4>
+          <ul>
+            <li>Left button - Move left</li>
+            <li>Right button - Move right</li>
+            <li>Fire button - Shoot seeds</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- LIVES & DAMAGE -->
+    <div class="card">
+      <h2>❤️ LIVES & DAMAGE</h2>
+      <ul>
+        <li>You start with <strong style="color: #ff0000;">3 LIVES</strong></li>
+        <li>When hit, the screen flashes red and you become invincible for 1.5 seconds</li>
+        <li>During invincibility, you flash and cannot take damage</li>
+        <li>Maximum lives is capped at 3</li>
+        <li><strong style="color: #ff0000;">GAME OVER</strong> when all lives are lost</li>
+      </ul>
+    </div>
+    
+    <!-- ENEMIES -->
+    <div class="card">
+      <h2>👾 ENEMIES (Shoot Them!)</h2>
+      <p>Three types of enemy buds descend from the top. Each type has different health and rewards:</p>
+      
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon indica"></div>
+          <div class="label" style="color: #a855f7;">INDICA</div>
+          <div class="desc">1 hit = 1 point</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon sativa"></div>
+          <div class="label" style="color: #22c55e;">SATIVA</div>
+          <div class="desc">2 hits = 2 points</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon hybrid"></div>
+          <div class="label" style="color: #f97316;">HYBRID</div>
+          <div class="desc">3 hits = 3 points</div>
+        </div>
+      </div>
+      
+      <ul>
+        <li>Enemies shoot back at you - dodge their projectiles!</li>
+        <li>Difficulty increases every 15 seconds</li>
+        <li>After 45 seconds, enemies may spawn in formations (V-shape, diagonal, horizontal)</li>
+      </ul>
+    </div>
+    
+    <!-- BOSS ENEMY -->
+    <div class="card">
+      <h2>👹 BOSS ENEMY</h2>
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon" style="background: linear-gradient(180deg, #ff0000 0%, #8b0000 100%); box-shadow: 0 0 20px #ff0000; width: 70px; height: 70px;">👹</div>
+          <div class="label" style="color: #ff0000;">MEGA BUD BOSS</div>
+          <div class="desc">10 hits to defeat</div>
+        </div>
+      </div>
+      <ul>
+        <li>Spawns every <strong style="color: #ffff00;">2 MINUTES</strong></li>
+        <li>Moves side to side across the screen</li>
+        <li>Fires spread shot attacks (3 projectiles)</li>
+        <li>Has a health bar displayed above it</li>
+        <li><strong style="color: #00ff00;">Defeating the boss grants BUD RAGE!</strong></li>
+      </ul>
+    </div>
+    
+    <!-- BUD RAGE -->
+    <div class="card" style="border-color: #ff6600;">
+      <h2 style="color: #ff6600;">🔥 BUD RAGE (Boss Reward)</h2>
+      <p>When you defeat a boss, you gain <strong style="color: #ff6600;">BUD RAGE</strong> - a permanent power-up!</p>
+      <ul>
+        <li><strong style="color: #ff6600;">PERMANENT 25% FASTER FIRE RATE</strong> for the rest of the game</li>
+        <li><strong style="color: #00ffff;">10-SECOND SHIELD</strong> protection</li>
+        <li>Stacks with other power-ups</li>
+        <li>Displayed in the HUD when active</li>
+      </ul>
+    </div>
+    
+    <!-- HAZARDS -->
+    <div class="card">
+      <h2>⚠️ HAZARDS (Avoid These!)</h2>
+      <p>Hazards appear after 20 seconds of play. They cannot be destroyed - you must dodge them!</p>
+      
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon bong">💧</div>
+          <div class="label" style="color: #00ccff;">BONG</div>
+          <div class="desc">Damages on contact</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon joint">🔥</div>
+          <div class="label" style="color: #ff6600;">LIT JOINT</div>
+          <div class="desc">Damages on contact</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon matches">🔥</div>
+          <div class="label" style="color: #ff4500;">MATCHES</div>
+          <div class="desc">Damages on contact</div>
+        </div>
+      </div>
+      
+      <p>Hazard spawn rate increases as you survive longer!</p>
+    </div>
+    
+    <!-- SKULL & CROSSBONES -->
+    <div class="card" style="border-color: #ff0000;">
+      <h2 style="color: #ff0000;">💀 SKULL & CROSSBONES (DEADLY!)</h2>
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon skull">💀</div>
+          <div class="label" style="color: #ff0000;">SKULL</div>
+          <div class="desc">INSTANT DEATH!</div>
+        </div>
+      </div>
+      
+      <div class="warning-box">
+        <h4>⚠️ DANGER!</h4>
+        <ul>
+          <li>Dark green skull with glowing red eyes</li>
+          <li>Spawns max once every 30 seconds (3% chance)</li>
+          <li><strong style="color: #ff0000;">INSTANT GAME OVER</strong> if touched without a shield!</li>
+          <li>Shield protects you from this hazard</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- SEED STORM EVENT -->
+    <div class="card" style="border-color: #ff6600;">
+      <h2 style="color: #ff6600;">🌠 SEED STORM EVENT</h2>
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon meteor">🌰</div>
+          <div class="label" style="color: #ff6600;">METEOR SEED</div>
+          <div class="desc">Dodge or lose a life</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon white-hot">⚪</div>
+          <div class="label" style="color: #ffffff;">WHITE-HOT SEED</div>
+          <div class="desc">SHOOT IT for bonus!</div>
+        </div>
+      </div>
+      
+      <ul>
+        <li>Triggers after 90 seconds (3% chance, 15s cooldown)</li>
+        <li>"SEED STORM!" warning appears on screen</li>
+        <li>5-15 glowing seeds rain diagonally across the screen</li>
+        <li>Regular meteor seeds cause 1 life loss on contact</li>
+        <li><strong style="color: #ffffff;">WHITE-HOT SEED (10% chance, max 1 per storm):</strong></li>
+        <li style="padding-left: 40px;">Glowing bright white with white flame trail</li>
+        <li style="padding-left: 40px;"><strong style="color: #00ff00;">SHOOT IT</strong> to get 5 sec shield + 5 sec rapid fire!</li>
+      </ul>
+    </div>
+    
+    <!-- BUD ANGEL -->
+    <div class="card" style="border-color: #88ffff;">
+      <h2 style="color: #88ffff;">👼 BUD ANGEL (Helper)</h2>
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon bud-angel">👼</div>
+          <div class="label" style="color: #88ffff;">BUD ANGEL</div>
+          <div class="desc">Touch for 15s shield!</div>
+        </div>
+      </div>
+      
+      <ul>
+        <li>Glowing angelic bud with animated wings and golden halo</li>
+        <li>Appears after 90 seconds of continuous play</li>
+        <li>4.5% spawn chance, minimum 20 seconds between spawns</li>
+        <li><strong style="color: #00ffff;">Collect it: Grants 15 SECONDS of shield protection!</strong></li>
+        <li>Shield stacks - collecting while shielded extends duration!</li>
+      </ul>
+    </div>
+    
+    <!-- POWER-UPS -->
+    <div class="card">
+      <h2>⭐ POWER-UPS</h2>
+      <p>Destroyed enemies sometimes drop power-ups. Collect them for temporary boosts!</p>
+      
+      <div class="visual-guide">
+        <div class="visual-item">
+          <div class="icon speed">S</div>
+          <div class="label" style="color: #00ff00;">SPEED</div>
+          <div class="desc">Faster movement</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon damage">D</div>
+          <div class="label" style="color: #ff0000;">DAMAGE</div>
+          <div class="desc">2x damage per shot</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon rapid">R</div>
+          <div class="label" style="color: #ffff00;">RAPID FIRE</div>
+          <div class="desc">Faster shooting</div>
+        </div>
+        <div class="visual-item">
+          <div class="icon life">+</div>
+          <div class="label" style="color: #ff00ff;">EXTRA LIFE</div>
+          <div class="desc">+1 life (max 3)</div>
+        </div>
+      </div>
+      
+      <ul>
+        <li>Power-ups spin and pulse to attract attention</li>
+        <li>Brief slow-mo effect when collecting power-ups</li>
+        <li>Shield, Rapid Fire, and Speed all stack/extend when already active</li>
+      </ul>
+    </div>
+    
+    <!-- WEAPON UPGRADES -->
+    <div class="card">
+      <h2>🔫 WEAPON UPGRADES (Automatic)</h2>
+      <p>Your weapons upgrade automatically as you survive longer:</p>
+      
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-time">START</div>
+          <div class="timeline-desc">Single center cannon</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">60 SECONDS</div>
+          <div class="timeline-desc">Left side gun added (+1 gun)</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">90 SECONDS</div>
+          <div class="timeline-desc">Right side gun added (+1 gun)</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">3:30 (PREVIEW)</div>
+          <div class="timeline-desc">5-second preview of machine guns!</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">4 MINUTES</div>
+          <div class="timeline-desc">DOUBLE BARREL MACHINE GUNS (permanent)</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- COMBO SYSTEM -->
+    <div class="card" style="border-color: #ff00ff;">
+      <h2 style="color: #ff00ff;">🔥 COMBO SYSTEM</h2>
+      <p>Chain kills quickly for bonus points!</p>
+      
+      <ul>
+        <li>Kill enemies within 1.5 seconds of each other to build combos</li>
+        <li><strong style="color: #ffff00;">2x MULTIPLIER</strong> at 3+ combo</li>
+        <li><strong style="color: #ff6600;">3x MULTIPLIER</strong> at 5+ combo</li>
+        <li>Combo counter displayed during streaks</li>
+        <li>Screen shakes at 3+ combo kills!</li>
+        <li>Kill streak displayed at 5+ consecutive kills</li>
+      </ul>
+    </div>
+    
+    <!-- SCORING -->
+    <div class="card">
+      <h2>🏆 SCORING</h2>
+      <ul>
+        <li><strong style="color: #a855f7;">Indica:</strong> 1 point (× combo multiplier)</li>
+        <li><strong style="color: #22c55e;">Sativa:</strong> 2 points (× combo multiplier)</li>
+        <li><strong style="color: #f97316;">Hybrid:</strong> 3 points (× combo multiplier)</li>
+        <li><strong style="color: #ff0000;">Boss:</strong> 10 points + Bud Rage</li>
+        <li>Higher waves = tougher enemies = more points</li>
+      </ul>
+    </div>
+    
+    <!-- TIPS -->
+    <div class="card">
+      <h2>💡 PRO TIPS</h2>
+      <div class="tip-box">
+        <h4>Survival Tips</h4>
+        <ul>
+          <li>Keep moving - standing still makes you an easy target</li>
+          <li>Clear enemies before they reach the bottom of the screen</li>
+          <li>Watch for hazards starting at 20 seconds</li>
+          <li>Prioritize dodging over shooting when overwhelmed</li>
+        </ul>
+      </div>
+      
+      <div class="tip-box">
+        <h4>Scoring Tips</h4>
+        <ul>
+          <li>Chain kills quickly for combo multipliers</li>
+          <li>Target Hybrid enemies (orange) for maximum points</li>
+          <li>Survive to 4 minutes for maximum firepower</li>
+          <li>Don't miss the boss - it appears every 2 minutes!</li>
+        </ul>
+      </div>
+      
+      <div class="tip-box">
+        <h4>Special Object Tips</h4>
+        <ul>
+          <li>Always grab the Bud Angel for shield protection</li>
+          <li>During Seed Storm, focus on dodging but SHOOT the white-hot seed!</li>
+          <li>If you have a shield, you can safely touch the Skull</li>
+          <li>Shields stack - grab multiple for extended protection</li>
+        </ul>
+      </div>
+    </div>
+    
+    <!-- DIFFICULTY PROGRESSION -->
+    <div class="card">
+      <h2>📈 DIFFICULTY PROGRESSION</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-time">0-20 SEC</div>
+          <div class="timeline-desc">Basic enemies only</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">20 SEC</div>
+          <div class="timeline-desc">Hazards start spawning</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">45 SEC</div>
+          <div class="timeline-desc">Enemy formations begin</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">90 SEC</div>
+          <div class="timeline-desc">Bud Angel & Seed Storm events possible</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">2 MIN</div>
+          <div class="timeline-desc">First boss appears!</div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">4 MIN</div>
+          <div class="timeline-desc">Machine guns unlocked - you're fully powered!</div>
+        </div>
+      </div>
+      <p style="margin-top: 15px;">Difficulty increases every 15 seconds: enemies get more health, spawn faster, and shoot more frequently!</p>
+    </div>
+    
+    <!-- LEADERBOARD -->
+    <div class="card">
+      <h2>🏅 LEADERBOARD</h2>
+      <ul>
+        <li>Enter your name (up to 10 characters) after game over</li>
+        <li>Top 10 scores displayed on leaderboard</li>
+        <li>Top 3 all-time scores are permanently saved</li>
+        <li>Your high score is shown on the title screen</li>
+      </ul>
+    </div>
+    
+    <div class="footer">
+      <p>SEED STORM © 2026</p>
+      <p style="margin-top: 10px;">Play at: galaga-clone--oscarjameshardi.replit.app</p>
+      <p style="margin-top: 10px;">Telegram: @seedstormbot</p>
+    </div>
+  </div>
+</body>
+</html>
