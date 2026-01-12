@@ -925,6 +925,58 @@ export async function registerRoutes(
     }
   });
 
+  // Setup Telegram webhook (call once after deploying)
+  app.post("/api/telegram/setup-webhook", async (req, res) => {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
+      }
+      
+      // Get the host from the request or use the production URL
+      const host = req.headers.host || "galaga-clone--oscarjameshardi.replit.app";
+      const webhookUrl = `https://${host}/api/telegram/webhook`;
+      
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: webhookUrl,
+          allowed_updates: ["message", "pre_checkout_query"]
+        })
+      });
+      
+      const data = await response.json();
+      console.log("Webhook setup result:", data);
+      
+      if (data.ok) {
+        res.json({ success: true, webhookUrl, message: "Webhook registered successfully" });
+      } else {
+        res.status(500).json({ error: "Failed to set webhook", details: data });
+      }
+    } catch (error) {
+      console.error("Webhook setup error:", error);
+      res.status(500).json({ error: "Failed to setup webhook" });
+    }
+  });
+
+  // Check current webhook status
+  app.get("/api/telegram/webhook-info", async (req, res) => {
+    try {
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
+      }
+      
+      const response = await fetch(`https://api.telegram.org/bot${botToken}/getWebhookInfo`);
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Webhook info error:", error);
+      res.status(500).json({ error: "Failed to get webhook info" });
+    }
+  });
+
   // Sync inventory after WebApp.openInvoice returns 'paid'
   // NOTE: This endpoint is READ-ONLY - actual inventory updates happen in webhook
   // This just returns the current inventory so client can sync after payment
