@@ -131,6 +131,8 @@ shared/
 - **Shadows**: Magenta glow effects
 
 ## Recent Changes
+- 2026-01-12: Visual polish (Phase 3)
+  - **Damage Flash**: Red screen flash when player takes damage
 - 2026-01-12: Major gameplay enhancements (Phase 2)
   - **Boss Enemy**: Spawns every 2 min, 10 hits to kill, side-to-side movement, spread shot attack
   - **Bud Rage Power-up**: Permanent 25% faster fire + 10 sec shield when boss killed
