@@ -280,6 +280,9 @@ export default function Game() {
   const machineGunPreviewRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
   const screenShakeRef = useRef<{ intensity: number; duration: number }>({ intensity: 0, duration: 0 });
   const slowMoRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  const damageFlashRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  const waveRef = useRef<number>(1);
+  const waveTimerRef = useRef<number>(0);
   const starSpeedMultiplierRef = useRef<number>(1);
 
   const { data: scores = [] } = useQuery<Score[]>({
@@ -643,6 +646,9 @@ export default function Game() {
     machineGunPreviewRef.current = { active: false, endTime: 0 };
     screenShakeRef.current = { intensity: 0, duration: 0 };
     slowMoRef.current = { active: false, endTime: 0 };
+    damageFlashRef.current = { active: false, endTime: 0 };
+    waveRef.current = 1;
+    waveTimerRef.current = 0;
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
@@ -885,6 +891,7 @@ export default function Game() {
           // Skull causes instant game over (unless shielded)
           if (shieldEndRef.current <= gameTimeRef.current) {
             soundSystem.damage();
+            damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
             createExplosion(obj.x + obj.width / 2, obj.y + obj.height / 2, "#006400");
             setGameState(prev => ({ ...prev, lives: 0 }));
             endGame();
@@ -909,6 +916,7 @@ export default function Game() {
       if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(hazard, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
+        damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         // Reset kill streak and combo on damage
         killStreakRef.current = 0;
@@ -1045,6 +1053,7 @@ export default function Game() {
         if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(proj, player)) {
           tookDamageThisFrame = true;
           soundSystem.damage();
+          damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
           invincibilityRef.current = 1500; // 1.5 seconds of invincibility
           // Reset kill streak and combo on damage
           killStreakRef.current = 0;
@@ -1067,6 +1076,7 @@ export default function Game() {
       if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(enemy, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
+        damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
         invincibilityRef.current = 1500; // 1.5 seconds of invincibility
         // Reset kill streak and combo on damage
         killStreakRef.current = 0;
@@ -1155,6 +1165,7 @@ export default function Game() {
       if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(seed, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
+        damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
         invincibilityRef.current = 1500;
         // Reset kill streak and combo on damage
         killStreakRef.current = 0;
@@ -2428,6 +2439,15 @@ export default function Game() {
         ctx.globalAlpha = 0.3;
         ctx.strokeRect(5, 5, CANVAS_WIDTH - 10, CANVAS_HEIGHT - 10);
         ctx.globalAlpha = 1;
+      }
+      
+      // Damage flash effect (red overlay)
+      if (damageFlashRef.current.active && gameTimeRef.current < damageFlashRef.current.endTime) {
+        const flashProgress = (damageFlashRef.current.endTime - gameTimeRef.current) / 150;
+        ctx.fillStyle = `rgba(255, 0, 0, ${flashProgress * 0.4})`;
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      } else if (damageFlashRef.current.active) {
+        damageFlashRef.current.active = false;
       }
     }
     
