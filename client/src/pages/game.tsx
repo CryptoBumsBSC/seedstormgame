@@ -398,12 +398,25 @@ export default function Game() {
   
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
-      const response = await apiRequest("POST", "/api/scores", data);
-      return response;
+      // Use Telegram endpoint if running in Telegram, otherwise use classic endpoint
+      if (telegramId) {
+        const response = await apiRequest("POST", "/api/telegram/score", {
+          ...data,
+          telegramId,
+          usedBoosts: usedBoostsThisGame,
+        });
+        return response;
+      } else {
+        const response = await apiRequest("POST", "/api/scores", data);
+        return response;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scores"] });
       queryClient.invalidateQueries({ queryKey: ["/api/scores/all-time"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telegram/leaderboard/daily"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telegram/leaderboard/boosted"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/telegram/leaderboard/pure"] });
       setSubmitError(null);
       setShowNameInput(false);
       setScreen("leaderboard");
@@ -1292,6 +1305,23 @@ export default function Game() {
 
     enemiesRef.current.forEach(enemy => {
       enemy.y += enemy.speed;
+      
+      // Unpredictability scaling: 0% until 90sec, then 15% + 2% every 30sec after
+      const gameTimeSec = gameTimeRef.current / 1000;
+      let unpredictability = 0;
+      if (gameTimeSec >= 90) {
+        unpredictability = 15 + Math.floor((gameTimeSec - 90) / 30) * 2;
+        unpredictability = Math.min(unpredictability, 50); // Cap at 50%
+      }
+      
+      // Apply horizontal drift based on unpredictability
+      if (unpredictability > 0 && Math.random() * 100 < unpredictability) {
+        const drift = (Math.random() - 0.5) * 4; // -2 to +2 pixels
+        enemy.x += drift;
+        // Keep enemies within bounds
+        enemy.x = Math.max(0, Math.min(CANVAS_WIDTH - enemy.width, enemy.x));
+      }
+      
       enemy.shootCooldown -= deltaTime;
       
       if (enemy.shootCooldown <= 0) {
@@ -3021,6 +3051,19 @@ export default function Game() {
           <p className="text-[8px]" style={{ color: "#888" }}>ad enquiry @dudley420</p>
         </div>
 
+        <div className="mt-2 text-center">
+          <a 
+            href="https://t.me/SeedStormBot?start=affiliate" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-[10px] underline hover:no-underline"
+            style={{ color: "#ffff00", textShadow: "0 0 8px #ffff00" }}
+            data-testid="link-affiliate"
+          >
+            AFFILIATE PROGRAM - Earn 10% on referrals
+          </a>
+        </div>
+
         {scores.length > 0 && (
           <div className="mt-2 text-center">
             <p className="text-[8px]" style={{ color: "#ff00ff" }}>HIGH SCORE</p>
@@ -3044,6 +3087,13 @@ export default function Game() {
             <span className="text-[8px]" style={{ color: "#00ffff" }}>SCORE</span>
             <span className="text-sm" style={{ color: "#00ff00" }} data-testid="text-score">
               {gameState.score.toString().padStart(6, "0")}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <span className="text-[8px]" style={{ color: "#ffff00" }}>TIME</span>
+            <span className="text-xs" style={{ color: "#ffff00" }} data-testid="text-time">
+              {formatTime(Math.floor(gameState.gameTime))}
             </span>
           </div>
           
@@ -3731,6 +3781,20 @@ export default function Game() {
               <p><span style={{ color: "#ffff00" }}>60 sec:</span> Left side gun added</p>
               <p><span style={{ color: "#ffff00" }}>90 sec:</span> Right side gun added</p>
               <p><span style={{ color: "#ffff00" }}>4 min:</span> Double barrel machine guns!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff8800" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff8800" }}>
+              <AlertTriangle className="w-4 h-4" />
+              UNPREDICTABILITY
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>Enemies become more <span style={{ color: "#ff8800" }}>unpredictable</span> over time!</p>
+              <p><span style={{ color: "#ffff00" }}>90 sec:</span> 15% chance of horizontal drift</p>
+              <p><span style={{ color: "#ffff00" }}>Every 30 sec after:</span> +2% more unpredictable</p>
+              <p><span style={{ color: "#ff0000" }}>Max:</span> 50% unpredictability</p>
+              <p>Stay alert - enemies won't move in straight lines!</p>
             </div>
           </Card>
 

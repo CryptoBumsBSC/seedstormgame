@@ -873,14 +873,19 @@ export async function registerRoutes(
       const update = req.body;
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       
+      // Debug logging - log all incoming webhook updates
+      console.log("[WEBHOOK] Received update:", JSON.stringify(update, null, 2));
+      
       // Handle pre-checkout query (must be answered within 10 seconds)
       if (update.pre_checkout_query) {
+        console.log("[WEBHOOK] Pre-checkout query received:", update.pre_checkout_query.id);
         if (!botToken) {
+          console.error("[WEBHOOK] Bot token not configured!");
           return res.status(500).json({ error: "Bot not configured" });
         }
         
         // Accept the pre-checkout
-        await fetch(`https://api.telegram.org/bot${botToken}/answerPreCheckoutQuery`, {
+        const preCheckoutResult = await fetch(`https://api.telegram.org/bot${botToken}/answerPreCheckoutQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -888,34 +893,55 @@ export async function registerRoutes(
             ok: true
           })
         });
+        console.log("[WEBHOOK] Pre-checkout answer result:", await preCheckoutResult.json());
         
         return res.json({ ok: true });
       }
       
       // Handle successful payment
       if (update.message?.successful_payment) {
+        console.log("[WEBHOOK] Successful payment received!");
         const payment = update.message.successful_payment;
-        const payload = JSON.parse(payment.invoice_payload);
+        console.log("[WEBHOOK] Payment details:", JSON.stringify(payment, null, 2));
+        
+        let payload;
+        try {
+          payload = JSON.parse(payment.invoice_payload);
+          console.log("[WEBHOOK] Parsed payload:", payload);
+        } catch (parseError) {
+          console.error("[WEBHOOK] Failed to parse payload:", payment.invoice_payload, parseError);
+          return res.status(400).json({ error: "Invalid payload" });
+        }
+        
         const { telegramId, boostType, quantity } = payload;
+        console.log(`[WEBHOOK] Processing: ${quantity}x ${boostType} for user ${telegramId}`);
         
         // Record the purchase in database
-        const purchase = await storage.recordStarPurchase({
-          telegramId,
-          boostType,
-          quantity,
-          starsAmount: payment.total_amount,
-          telegramPaymentId: payment.telegram_payment_charge_id,
-        });
-        
-        // Add boosts to player inventory
-        await storage.addToInventory(telegramId, boostType, quantity);
-        
-        // Add stars to today's prize pool
-        await storage.addToDailyPool(payment.total_amount);
-        
-        console.log(`Payment success: ${quantity}x ${boostType} for user ${telegramId}, ${payment.total_amount} Stars`);
-        
-        return res.json({ ok: true, purchase });
+        try {
+          const purchase = await storage.recordStarPurchase({
+            telegramId,
+            boostType,
+            quantity,
+            starsAmount: payment.total_amount,
+            telegramPaymentId: payment.telegram_payment_charge_id,
+          });
+          console.log("[WEBHOOK] Purchase recorded:", purchase);
+          
+          // Add boosts to player inventory
+          await storage.addToInventory(telegramId, boostType, quantity);
+          console.log("[WEBHOOK] Inventory updated");
+          
+          // Add stars to today's prize pool
+          await storage.addToDailyPool(payment.total_amount);
+          console.log("[WEBHOOK] Prize pool updated");
+          
+          console.log(`[WEBHOOK] Payment success: ${quantity}x ${boostType} for user ${telegramId}, ${payment.total_amount} Stars`);
+          
+          return res.json({ ok: true, purchase });
+        } catch (storageError) {
+          console.error("[WEBHOOK] Storage error:", storageError);
+          return res.status(500).json({ error: "Storage failed" });
+        }
       }
       
       // Handle bot commands
@@ -1004,6 +1030,25 @@ Tap below to start playing!`;
           replyMarkup = {
             inline_keyboard: [[{ text: "🎮 PLAY NOW", url: gameUrl }]]
           };
+        } else if (text === "/affiliate") {
+          replyText = `💰 *AFFILIATE PROGRAM*
+
+Earn 10% commission on every Telegram Stars purchase made by players you refer!
+
+*How to become an affiliate:*
+
+1️⃣ Open Telegram *Settings*
+2️⃣ Go to *My Stars* → *Earn Stars*
+3️⃣ Find *@SeedStormBot* in the list
+4️⃣ Tap *Join* to get your unique link
+5️⃣ Share your link with friends!
+
+When someone clicks your link and buys Stars boosts, you automatically receive 10% of their purchase.
+
+*Example:*
+Player buys 10⭐ of boosts → You earn 1⭐
+
+No limits on earnings! The more you share, the more you earn.`;
         }
         
         // Send reply if we have one
@@ -1105,5 +1150,85 @@ Tap below to start playing!`;
     }
   });
 
+  // Admin: Manual payout to specific player
+  app.post("/api/admin/manual-payout", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const { telegramId, starsAmount } = req.body;
+      
+      if (!telegramId || typeof starsAmount !== 'number' || starsAmount <= 0) {
+        return res.status(400).json({ error: "Invalid telegramId or starsAmount" });
+      }
+      
+      await storage.sendManualPayout(telegramId, starsAmount);
+      
+      res.json({ 
+        success: true, 
+        message: `Sent ${starsAmount} Stars to ${telegramId}` 
+      });
+    } catch (error) {
+      console.error("Manual payout error:", error);
+      res.status(500).json({ error: "Failed to send payout" });
+    }
+  });
+
+  // Admin: Trigger prize distribution manually
+  app.post("/api/admin/distribute-prizes", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const today = new Date().toISOString().split('T')[0];
+      await storage.distributeDailyPrizes(today);
+      
+      res.json({ 
+        success: true, 
+        message: `Prizes distributed for ${today}, classic leaderboard cleared` 
+      });
+    } catch (error) {
+      console.error("Prize distribution error:", error);
+      res.status(500).json({ error: "Failed to distribute prizes" });
+    }
+  });
+
+  // Setup midnight cron job for automatic prize distribution
+  setupMidnightCron();
+
   return httpServer;
+}
+
+// Midnight cron job - runs at 00:00 UTC daily
+function setupMidnightCron() {
+  const checkAndDistribute = async () => {
+    const now = new Date();
+    const hours = now.getUTCHours();
+    const minutes = now.getUTCMinutes();
+    
+    // Run at midnight UTC (00:00)
+    if (hours === 0 && minutes === 0) {
+      console.log("[CRON] Midnight - triggering automatic prize distribution");
+      
+      // Distribute yesterday's prizes (since it's now a new day)
+      const yesterday = new Date(now);
+      yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      
+      try {
+        await storage.distributeDailyPrizes(yesterdayStr);
+        console.log(`[CRON] Prizes distributed for ${yesterdayStr}`);
+      } catch (error) {
+        console.error("[CRON] Prize distribution failed:", error);
+      }
+    }
+  };
+  
+  // Check every minute
+  setInterval(checkAndDistribute, 60000);
+  console.log("[CRON] Midnight prize distribution cron job started");
 }

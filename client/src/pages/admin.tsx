@@ -4,7 +4,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Trash2, AlertTriangle, Shield, RefreshCw, Users, DollarSign, Trophy, Gift } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Trash2, AlertTriangle, Shield, RefreshCw, Users, DollarSign, Trophy, Gift, Send } from "lucide-react";
 
 interface ScoreWithStats {
   id: number;
@@ -57,6 +58,8 @@ export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"scores" | "players" | "revenue" | "prizes">("scores");
+  const [manualPayoutPlayer, setManualPayoutPlayer] = useState("");
+  const [manualPayoutAmount, setManualPayoutAmount] = useState("");
 
   const { data: scores = [], isLoading, refetch } = useQuery<ScoreWithStats[]>({
     queryKey: ["/api/admin/scores"],
@@ -123,7 +126,7 @@ export default function Admin() {
 
   const distributePrizesMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch("/api/admin/telegram/distribute-prizes", {
+      const res = await fetch("/api/admin/distribute-prizes", {
         method: "POST",
         headers: { 
           "x-admin-password": password,
@@ -136,6 +139,27 @@ export default function Admin() {
     onSuccess: () => {
       refetchPrize();
       refetchPlayers();
+    }
+  });
+
+  const manualPayoutMutation = useMutation({
+    mutationFn: async ({ telegramId, starsAmount }: { telegramId: string; starsAmount: number }) => {
+      const res = await fetch("/api/admin/manual-payout", {
+        method: "POST",
+        headers: { 
+          "x-admin-password": password,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ telegramId, starsAmount })
+      });
+      if (!res.ok) throw new Error("Failed to send payout");
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchPlayers();
+      setManualPayoutPlayer("");
+      setManualPayoutAmount("");
+      alert("Payout sent successfully!");
     }
   });
 
@@ -162,8 +186,19 @@ export default function Admin() {
   };
 
   const handleDistribute = () => {
-    if (confirm("Distribute today's prize pool to winners?")) {
+    if (confirm("Distribute today's prize pool to winners? This will also clear the classic leaderboard.")) {
       distributePrizesMutation.mutate();
+    }
+  };
+
+  const handleManualPayout = () => {
+    const amount = parseInt(manualPayoutAmount);
+    if (!manualPayoutPlayer || !amount || amount <= 0) {
+      alert("Please select a player and enter a valid Stars amount");
+      return;
+    }
+    if (confirm(`Send ${amount} Stars to ${manualPayoutPlayer}?`)) {
+      manualPayoutMutation.mutate({ telegramId: manualPayoutPlayer, starsAmount: amount });
     }
   };
 
@@ -499,6 +534,7 @@ export default function Admin() {
                     <p>Top 3 Winners: 25% / 10% / 5%</p>
                     <p>Random 10 Players: 1% each</p>
                     <p>Unclaimed: Goes to owner</p>
+                    <p className="text-[10px]" style={{ color: "#ff6600" }}>Clears classic leaderboard after distribution</p>
                   </div>
                   <Button
                     onClick={handleDistribute}
@@ -512,6 +548,45 @@ export default function Admin() {
                     <Gift className="w-4 h-4 mr-2" />
                     {prizePool.distributed ? "ALREADY DISTRIBUTED" : "DISTRIBUTE PRIZES"}
                   </Button>
+                </Card>
+
+                <Card className="p-4 border" style={{ borderColor: "#00ff00" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#00ff00" }}>MANUAL PAYOUT</h3>
+                  <div className="space-y-2 text-xs mb-4" style={{ color: "#aaa" }}>
+                    <p>Send Stars directly to a player (separate from prize pool)</p>
+                  </div>
+                  <div className="space-y-3">
+                    <Select value={manualPayoutPlayer} onValueChange={setManualPayoutPlayer}>
+                      <SelectTrigger className="w-full" data-testid="select-payout-player">
+                        <SelectValue placeholder="Select a player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {players.map((player) => (
+                          <SelectItem key={player.telegramId} value={player.telegramId}>
+                            {player.username ? `@${player.username}` : player.firstName || player.telegramId} - {player.totalStarsWon}★ won
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Stars amount"
+                      value={manualPayoutAmount}
+                      onChange={(e) => setManualPayoutAmount(e.target.value)}
+                      min="1"
+                      data-testid="input-payout-amount"
+                    />
+                    <Button
+                      onClick={handleManualPayout}
+                      disabled={!manualPayoutPlayer || !manualPayoutAmount || manualPayoutMutation.isPending}
+                      style={{ background: "#00ff00", color: "#000" }}
+                      className="w-full"
+                      data-testid="button-send-payout"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      {manualPayoutMutation.isPending ? "SENDING..." : "SEND PAYOUT"}
+                    </Button>
+                  </div>
                 </Card>
               </>
             )}

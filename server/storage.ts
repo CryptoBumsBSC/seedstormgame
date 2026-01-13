@@ -118,6 +118,12 @@ export interface IStorage {
     thresholdMet: boolean;
     distributed: boolean;
   }>;
+  
+  // Classic leaderboard management
+  clearClassicLeaderboard(): Promise<void>;
+  
+  // Manual payout
+  sendManualPayout(telegramId: string, starsAmount: number): Promise<void>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -490,6 +496,10 @@ export class DatabaseStorage implements IStorage {
     for (const winnerId of randomWinners) {
       await this.addPlayerEarnings(winnerId, randomPrizeEach);
     }
+    
+    // Clear classic leaderboard after distribution
+    await this.clearClassicLeaderboard();
+    console.log(`[STORAGE] Daily prizes distributed for ${date}, classic leaderboard cleared`);
   }
 
   private async addPlayerEarnings(telegramId: string, amount: number): Promise<void> {
@@ -635,6 +645,16 @@ export class DatabaseStorage implements IStorage {
       thresholdMet: totalSpent >= 101,
       distributed: poolData.distributed,
     };
+  }
+
+  async clearClassicLeaderboard(): Promise<void> {
+    await db.delete(scores);
+    console.log("[STORAGE] Classic leaderboard cleared");
+  }
+
+  async sendManualPayout(telegramId: string, starsAmount: number): Promise<void> {
+    await this.addPlayerEarnings(telegramId, starsAmount);
+    console.log(`[STORAGE] Manual payout of ${starsAmount} Stars to ${telegramId}`);
   }
 }
 

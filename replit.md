@@ -178,6 +178,16 @@ Password-protected admin panel with tabs:
 - **Prize Pool**: Today's pool info, threshold status, distribute prizes button
 
 ## Recent Changes
+- 2026-01-13: Major Update - Score Fix, Payouts, Unpredictability
+  - **Score Submission Fix**: Telegram scores now go to correct endpoint (/api/telegram/score)
+  - **BLAZED/PURE Leaderboards**: Now properly populate with usedBoosts tracking
+  - **Debug Webhook Logging**: Comprehensive logging for payment webhook troubleshooting
+  - **Affiliate Program**: /affiliate bot command + link on title screen (10% commission)
+  - **Manual Payout**: Admin panel now has player selector + Stars amount for direct payouts
+  - **Midnight Cron Job**: Auto-distributes prizes at 00:00 UTC, clears classic leaderboard
+  - **Timer in HUD**: Shows elapsed time between SCORE and LIVES displays
+  - **Unpredictability Scaling**: Enemies drift horizontally after 90sec (15% + 2% per 30sec)
+  - **How To Play**: Added UNPREDICTABILITY section explaining enemy behavior scaling
 - 2026-01-12: Quantity selector and inventory consumption
   - Buy 1-20 boosts at once with quantity +/- buttons in shop
   - Boosts consumed from inventory when game starts
