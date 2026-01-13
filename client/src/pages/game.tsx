@@ -3730,7 +3730,7 @@ export default function Game() {
               OBJECTIVE
             </h2>
             <p className="text-[10px]" style={{ color: "#aaa" }}>
-              Survive as long as possible while shooting down enemy buds. Get the highest score!
+              Survive as long as possible while shooting down enemy buds. Get the highest score! The timer is a guide - it's not perfect.
             </p>
           </Card>
 
