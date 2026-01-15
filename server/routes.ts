@@ -1365,23 +1365,63 @@ No limits on earnings! The more you share, the more you earn.`;
   // This just returns the current inventory so client can sync after payment
   app.post("/api/telegram/confirm-payment", async (req, res) => {
     try {
-      const { telegramId } = req.body;
+      const { telegramId, boostType, quantity, totalStars } = req.body;
       
       if (!telegramId) {
         return res.status(400).json({ error: "Missing telegramId" });
       }
       
-      // Only return current inventory - all modifications happen via webhook
+      // If boostType and quantity provided, this is a fallback for when webhook fails
+      // The client calls this after WebApp.openInvoice returns "paid"
+      if (boostType && quantity && totalStars) {
+        console.log(`[CONFIRM] Fallback payment processing: ${quantity}x ${boostType} for ${telegramId}`);
+        
+        // Generate a unique payment ID based on timestamp to prevent exact duplicates
+        const fallbackPaymentId = `fallback_${telegramId}_${boostType}_${Date.now()}`;
+        
+        // Check if this exact purchase was already recorded by webhook recently (within last 5 mins)
+        const recentPurchases = await storage.getPlayerPurchases(telegramId);
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const recentSamePurchase = recentPurchases.find(p => 
+          p.boostType === boostType && 
+          p.quantity === quantity &&
+          p.starsAmount === totalStars &&
+          new Date(p.purchasedAt) > fiveMinutesAgo
+        );
+        
+        if (!recentSamePurchase) {
+          // Record the purchase (webhook didn't process it)
+          await storage.recordStarPurchase({
+            telegramId,
+            boostType: boostType as BoostType,
+            quantity,
+            starsAmount: totalStars,
+            telegramPaymentId: fallbackPaymentId,
+          });
+          
+          // Add boosts to inventory
+          await storage.addToInventory(telegramId, boostType as BoostType, quantity);
+          
+          // Add to daily prize pool
+          await storage.addToDailyPool(totalStars);
+          
+          console.log(`[CONFIRM] Fallback purchase recorded: ${quantity}x ${boostType} for ${telegramId}`);
+        } else {
+          console.log(`[CONFIRM] Purchase already recorded by webhook, skipping duplicate`);
+        }
+      }
+      
+      // Return current inventory
       const inventory = await storage.getPlayerInventory(telegramId);
       
       res.json({ 
         success: true, 
         inventory,
-        message: "Inventory synced - purchases are processed via Telegram webhook"
+        message: "Inventory updated"
       });
     } catch (error) {
-      console.error("Payment sync error:", error);
-      res.status(500).json({ error: "Failed to sync inventory" });
+      console.error("Payment confirmation error:", error);
+      res.status(500).json({ error: "Failed to confirm payment" });
     }
   });
 
