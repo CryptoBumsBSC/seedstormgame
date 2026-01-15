@@ -920,6 +920,7 @@ export async function registerRoutes(
   app.post("/api/telegram/create-invoice", async (req, res) => {
     try {
       const { telegramId, boostType, quantity } = req.body;
+      const MAX_INVENTORY = 99;
       
       if (!telegramId || !boostType || !quantity || quantity < 1) {
         return res.status(400).json({ error: "Invalid request data" });
@@ -933,6 +934,22 @@ export async function registerRoutes(
       const price = BOOST_PRICES[boostType as BoostType];
       if (!price) {
         return res.status(400).json({ error: "Invalid boost type" });
+      }
+
+      // Check current inventory and enforce max 99 limit
+      const inventory = await storage.getPlayerInventory(telegramId);
+      const currentItem = inventory.find(i => i.boostType === boostType);
+      const currentQty = currentItem?.quantity || 0;
+      
+      if (currentQty >= MAX_INVENTORY) {
+        return res.status(400).json({ error: `Max ${MAX_INVENTORY} reached for this boost type` });
+      }
+      
+      if (currentQty + quantity > MAX_INVENTORY) {
+        return res.status(400).json({ 
+          error: `Can only purchase ${MAX_INVENTORY - currentQty} more (max ${MAX_INVENTORY})`,
+          maxCanBuy: MAX_INVENTORY - currentQty
+        });
       }
 
       const totalStars = price * quantity;

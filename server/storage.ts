@@ -381,15 +381,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async addToInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<void> {
+    const MAX_INVENTORY = 99;
     const [existing] = await db.select().from(playerInventory)
       .where(and(eq(playerInventory.telegramId, telegramId), eq(playerInventory.boostType, boostType)));
     
     if (existing) {
+      // Cap at 99 max
+      const newQuantity = Math.min(existing.quantity + quantity, MAX_INVENTORY);
       await db.update(playerInventory)
-        .set({ quantity: existing.quantity + quantity })
+        .set({ quantity: newQuantity })
         .where(eq(playerInventory.id, existing.id));
     } else {
-      await db.insert(playerInventory).values({ telegramId, boostType, quantity });
+      // Cap initial quantity at 99
+      const cappedQuantity = Math.min(quantity, MAX_INVENTORY);
+      await db.insert(playerInventory).values({ telegramId, boostType, quantity: cappedQuantity });
     }
   }
 

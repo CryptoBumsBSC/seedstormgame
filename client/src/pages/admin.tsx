@@ -637,6 +637,7 @@ export default function Admin() {
                   <div className="space-y-2 text-xs mb-4" style={{ color: "#aaa" }}>
                     <p>Add boosts to a player's inventory without charging Stars</p>
                     <p style={{ color: "#ff6600" }}>Use for refunds or compensation</p>
+                    <p style={{ color: "#00ffff" }}>Max 99 per boost type in inventory</p>
                   </div>
                   <div className="space-y-3">
                     <Input
