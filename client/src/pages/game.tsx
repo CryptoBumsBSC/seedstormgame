@@ -370,11 +370,27 @@ export default function Game() {
     const icons: Record<string, JSX.Element> = {
       leaf: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="7" y="2" width="2" height="12" fill="#00aa00"/>
-          <rect x="5" y="3" width="2" height="10" fill="#00ff00"/>
-          <rect x="9" y="3" width="2" height="10" fill="#22ff22"/>
-          <rect x="3" y="5" width="2" height="6" fill="#00ff00"/>
-          <rect x="11" y="5" width="2" height="6" fill="#22ff22"/>
+          {/* Cannabis leaf - 5 leaflets with stepped heights */}
+          {/* Center leaflet - tallest, pointed tip */}
+          <rect x="7" y="0" width="2" height="1" fill="#00aa00"/>
+          <rect x="6" y="1" width="4" height="2" fill="#00ff00"/>
+          <rect x="7" y="3" width="2" height="5" fill="#00dd00"/>
+          {/* Upper left leaflet - 2nd tallest */}
+          <rect x="3" y="2" width="1" height="1" fill="#00aa00"/>
+          <rect x="3" y="3" width="2" height="4" fill="#00ff00"/>
+          <rect x="4" y="7" width="1" height="1" fill="#00dd00"/>
+          {/* Upper right leaflet - 2nd tallest */}
+          <rect x="12" y="2" width="1" height="1" fill="#00aa00"/>
+          <rect x="11" y="3" width="2" height="4" fill="#00ff00"/>
+          <rect x="11" y="7" width="1" height="1" fill="#00dd00"/>
+          {/* Lower left leaflet - shortest */}
+          <rect x="1" y="5" width="1" height="1" fill="#00aa00"/>
+          <rect x="1" y="6" width="2" height="2" fill="#00ff00"/>
+          {/* Lower right leaflet - shortest */}
+          <rect x="14" y="5" width="1" height="1" fill="#00aa00"/>
+          <rect x="13" y="6" width="2" height="2" fill="#00ff00"/>
+          {/* Stem */}
+          <rect x="7" y="8" width="2" height="6" fill="#885522"/>
         </svg>
       ),
       bud: (
