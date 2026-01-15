@@ -433,8 +433,21 @@ export default function Game() {
       WebApp.ready();
       const user = WebApp.initDataUnsafe?.user;
       if (user) {
-        setTelegramId(user.id.toString());
+        const id = user.id.toString();
+        setTelegramId(id);
         setTelegramUsername(user.username || user.first_name || "Player");
+        
+        // Register/update player in database
+        fetch("/api/telegram/player", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            telegramId: id,
+            username: user.username || null,
+            firstName: user.first_name || null,
+            lastName: user.last_name || null,
+          }),
+        }).catch(console.error);
       }
     } catch (e) {
       console.log("Not running in Telegram Mini App context");
