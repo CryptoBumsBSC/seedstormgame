@@ -173,6 +173,18 @@ export async function registerRoutes(
       // Also update all-time leaderboard if this qualifies
       await storage.updateAllTimeScores(scoreData);
       
+      // Also add to daily scores so web players appear on same leaderboard
+      const today = new Date().toISOString().split('T')[0];
+      await storage.createDailyScore({
+        telegramId: "WEB_" + Date.now().toString(),
+        playerName: scoreData.playerName,
+        score,
+        wave,
+        playTime: playTime || 0,
+        usedBoosts: false,
+        date: today,
+      });
+      
       res.status(201).json(newScore);
     } catch (error) {
       console.error("Score submission error:", error);

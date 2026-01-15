@@ -454,21 +454,25 @@ export class DatabaseStorage implements IStorage {
       return;
     }
     
-    // Get top 3 scores for this day
-    const topScores = await db.select().from(dailyScores)
+    // Get top 3 scores for this day (exclude web players from prize eligibility)
+    const allDayScores = await db.select().from(dailyScores)
       .where(eq(dailyScores.date, date))
-      .orderBy(desc(dailyScores.score))
-      .limit(3);
+      .orderBy(desc(dailyScores.score));
+    
+    // Filter out web players (WEB_ prefix) - they appear on leaderboard but can't win prizes
+    const telegramOnlyScores = allDayScores.filter(s => !s.telegramId.startsWith("WEB_"));
+    const topScores = telegramOnlyScores.slice(0, 3);
     
     const totalPrize = pool.prizePool;
     const firstPrize = Math.floor(totalPrize * (PRIZE_CONFIG.FIRST_PLACE_PERCENT / 50));
     const secondPrize = Math.floor(totalPrize * (PRIZE_CONFIG.SECOND_PLACE_PERCENT / 50));
     const thirdPrize = Math.floor(totalPrize * (PRIZE_CONFIG.THIRD_PLACE_PERCENT / 50));
     
-    // Get random players
+    // Get random players (exclude web players)
     const allPlayers = await this.getPlayersWhoPlayedToday(date);
+    const telegramOnlyPlayers = allPlayers.filter(id => !id.startsWith("WEB_"));
     const topPlayerIds = topScores.map(s => s.telegramId);
-    const eligibleForRandom = allPlayers.filter(id => !topPlayerIds.includes(id));
+    const eligibleForRandom = telegramOnlyPlayers.filter(id => !topPlayerIds.includes(id));
     const randomWinners = eligibleForRandom.sort(() => Math.random() - 0.5).slice(0, PRIZE_CONFIG.MAX_RANDOM_WINNERS);
     const randomPrizeEach = randomWinners.length > 0 ? Math.floor(totalPrize * (PRIZE_CONFIG.RANDOM_PERCENT_EACH / 50)) : 0;
     
