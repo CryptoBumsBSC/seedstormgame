@@ -579,6 +579,81 @@ export async function registerRoutes(
     res.json(BOOST_PRICES);
   });
 
+  // Avatar Routes
+  
+  // Get player's owned avatars
+  app.get("/api/telegram/avatars/:telegramId", async (req, res) => {
+    try {
+      const avatars = await storage.getPlayerAvatars(req.params.telegramId);
+      const selectedAvatar = await storage.getPlayerSelectedAvatar(req.params.telegramId);
+      res.json({ avatars: avatars.map(a => a.avatarType), selectedAvatar });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch avatars" });
+    }
+  });
+
+  // Purchase an avatar
+  app.post("/api/telegram/avatar/purchase", async (req, res) => {
+    try {
+      const { telegramId, avatarType, telegramPaymentId } = req.body;
+      
+      if (!telegramId || !avatarType || !telegramPaymentId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      const { avatarTypes, AVATAR_PRICE } = await import("@shared/schema");
+      
+      if (!avatarTypes.includes(avatarType)) {
+        return res.status(400).json({ error: "Invalid avatar type" });
+      }
+      
+      // Record purchase as a star purchase
+      await storage.recordStarPurchase({
+        telegramId,
+        boostType: `avatar_${avatarType}` as any,
+        starsAmount: AVATAR_PRICE,
+        quantity: 1,
+        telegramPaymentId,
+      });
+      
+      // Add avatar to player's collection
+      const result = await storage.purchaseAvatar(telegramId, avatarType);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+      
+      // Add to daily prize pool
+      await storage.addToDailyPool(AVATAR_PRICE);
+      
+      res.json({ success: true, message: result.message });
+    } catch (error) {
+      console.error("Avatar purchase error:", error);
+      res.status(500).json({ error: "Failed to purchase avatar" });
+    }
+  });
+
+  // Set selected avatar
+  app.post("/api/telegram/avatar/select", async (req, res) => {
+    try {
+      const { telegramId, avatarType } = req.body;
+      
+      if (!telegramId) {
+        return res.status(400).json({ error: "Missing telegramId" });
+      }
+      
+      const success = await storage.setSelectedAvatar(telegramId, avatarType || null);
+      
+      if (!success) {
+        return res.status(400).json({ error: "You don't own this avatar" });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to set avatar" });
+    }
+  });
+
   // Record Star purchase and add to inventory
   app.post("/api/telegram/purchase", async (req, res) => {
     try {
@@ -680,12 +755,21 @@ export async function registerRoutes(
     }
   });
 
-  // Get daily leaderboard (with boost icons)
+  // Get daily leaderboard (with boost icons and avatars)
   app.get("/api/telegram/leaderboard/daily", async (req, res) => {
     try {
       const today = new Date().toISOString().split('T')[0];
       const scores = await storage.getDailyScoresByDate(today);
-      res.json(scores.slice(0, 50)); // Top 50
+      
+      // Add avatar data to each score
+      const scoresWithAvatars = await Promise.all(
+        scores.slice(0, 50).map(async (score) => {
+          const avatar = await storage.getPlayerSelectedAvatar(score.telegramId);
+          return { ...score, avatar };
+        })
+      );
+      
+      res.json(scoresWithAvatars);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch daily leaderboard" });
     }
@@ -695,7 +779,16 @@ export async function registerRoutes(
   app.get("/api/telegram/leaderboard/boosted", async (req, res) => {
     try {
       const scores = await storage.getAllTimeBoostedScores();
-      res.json(scores);
+      
+      // Add avatar data to each score
+      const scoresWithAvatars = await Promise.all(
+        scores.map(async (score) => {
+          const avatar = await storage.getPlayerSelectedAvatar(score.telegramId);
+          return { ...score, avatar };
+        })
+      );
+      
+      res.json(scoresWithAvatars);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch boosted leaderboard" });
     }
@@ -705,7 +798,16 @@ export async function registerRoutes(
   app.get("/api/telegram/leaderboard/pure", async (req, res) => {
     try {
       const scores = await storage.getAllTimePureScores();
-      res.json(scores);
+      
+      // Add avatar data to each score
+      const scoresWithAvatars = await Promise.all(
+        scores.map(async (score) => {
+          const avatar = await storage.getPlayerSelectedAvatar(score.telegramId);
+          return { ...score, avatar };
+        })
+      );
+      
+      res.json(scoresWithAvatars);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch pure leaderboard" });
     }
@@ -885,6 +987,74 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error("Invoice creation error:", error);
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+
+  // Create invoice for avatar purchase with Telegram Stars
+  app.post("/api/telegram/create-avatar-invoice", async (req, res) => {
+    try {
+      const { telegramId, avatarType } = req.body;
+      const { avatarTypes, AVATAR_PRICE } = await import("@shared/schema");
+      
+      if (!telegramId || !avatarType) {
+        return res.status(400).json({ error: "Invalid request data" });
+      }
+
+      if (!avatarTypes.includes(avatarType)) {
+        return res.status(400).json({ error: "Invalid avatar type" });
+      }
+
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!botToken) {
+        return res.status(500).json({ error: "Payment system not configured" });
+      }
+
+      const avatarNames: Record<string, string> = {
+        leaf: "Cannabis Leaf",
+        bud: "Purple Bud",
+        joint: "Lit Joint",
+        bong: "Blue Bong",
+        flame: "Fire Flame",
+        smoke: "Smoke Cloud",
+        seed: "Cannabis Seed",
+        crown: "Golden Crown",
+      };
+
+      const url = `https://api.telegram.org/bot${botToken}/createInvoiceLink`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${avatarNames[avatarType] || avatarType} Avatar`,
+          description: "Show off your style on the leaderboard!",
+          payload: JSON.stringify({ 
+            telegramId, 
+            avatarType,
+            type: 'avatar',
+            timestamp: Date.now()
+          }),
+          provider_token: '',
+          currency: 'XTR',
+          prices: [{ amount: AVATAR_PRICE, label: avatarNames[avatarType] || avatarType }]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!data.ok) {
+        console.error("Telegram avatar invoice error:", data);
+        return res.status(500).json({ error: "Failed to create invoice" });
+      }
+
+      res.json({ 
+        invoiceUrl: data.result,
+        totalStars: AVATAR_PRICE,
+        avatarType
+      });
+    } catch (error) {
+      console.error("Avatar invoice creation error:", error);
       res.status(500).json({ error: "Failed to create invoice" });
     }
   });

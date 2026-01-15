@@ -14,6 +14,7 @@ import {
   dailyScores,
   allTimeBoostedScores,
   allTimePureScores,
+  playerAvatars,
   type Score,
   type InsertScore,
   type PlayerAccount,
@@ -38,8 +39,11 @@ import {
   type AllTimeBoostedScore,
   type AllTimePureScore,
   type BoostType,
+  type AvatarType,
+  type PlayerAvatar,
   BOOST_PRICES,
   PRIZE_CONFIG,
+  AVATAR_PRICE,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql, count, ne } from "drizzle-orm";
@@ -127,6 +131,12 @@ export interface IStorage {
   
   // Manual payout
   sendManualPayout(telegramId: string, starsAmount: number): Promise<void>;
+  
+  // Avatar methods
+  getPlayerAvatars(telegramId: string): Promise<PlayerAvatar[]>;
+  purchaseAvatar(telegramId: string, avatarType: AvatarType): Promise<{ success: boolean; message: string }>;
+  setSelectedAvatar(telegramId: string, avatarType: AvatarType | null): Promise<boolean>;
+  getPlayerSelectedAvatar(telegramId: string): Promise<string | null>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -709,6 +719,55 @@ export class DatabaseStorage implements IStorage {
   async isPlayerBanned(telegramId: string): Promise<boolean> {
     const player = await this.getTelegramPlayer(telegramId);
     return player?.banned ?? false;
+  }
+
+  // Avatar methods
+  async getPlayerAvatars(telegramId: string): Promise<PlayerAvatar[]> {
+    return await db.select().from(playerAvatars).where(eq(playerAvatars.telegramId, telegramId));
+  }
+
+  async purchaseAvatar(telegramId: string, avatarType: AvatarType): Promise<{ success: boolean; message: string }> {
+    // Check if player already owns this avatar
+    const owned = await db.select().from(playerAvatars)
+      .where(and(eq(playerAvatars.telegramId, telegramId), eq(playerAvatars.avatarType, avatarType)));
+    
+    if (owned.length > 0) {
+      return { success: false, message: "You already own this avatar" };
+    }
+    
+    // Add avatar to player's collection
+    await db.insert(playerAvatars).values({ telegramId, avatarType });
+    
+    // Auto-equip if first avatar
+    const allOwned = await this.getPlayerAvatars(telegramId);
+    if (allOwned.length === 1) {
+      await this.setSelectedAvatar(telegramId, avatarType);
+    }
+    
+    return { success: true, message: `Avatar "${avatarType}" purchased!` };
+  }
+
+  async setSelectedAvatar(telegramId: string, avatarType: AvatarType | null): Promise<boolean> {
+    if (avatarType !== null) {
+      // Verify player owns this avatar
+      const owned = await db.select().from(playerAvatars)
+        .where(and(eq(playerAvatars.telegramId, telegramId), eq(playerAvatars.avatarType, avatarType)));
+      
+      if (owned.length === 0) {
+        return false;
+      }
+    }
+    
+    await db.update(telegramPlayers)
+      .set({ selectedAvatar: avatarType })
+      .where(eq(telegramPlayers.telegramId, telegramId));
+    
+    return true;
+  }
+
+  async getPlayerSelectedAvatar(telegramId: string): Promise<string | null> {
+    const player = await this.getTelegramPlayer(telegramId);
+    return player?.selectedAvatar ?? null;
   }
 }
 

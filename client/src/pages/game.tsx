@@ -349,6 +349,7 @@ export default function Game() {
     playTime: number;
     usedBoosts: boolean;
     date: string;
+    avatar?: string | null;
   }
   
   interface AllTimeScoreData {
@@ -359,7 +360,23 @@ export default function Game() {
     wave: number;
     playTime: number;
     createdAt: string;
+    avatar?: string | null;
   }
+
+  // Avatar icon mapping
+  const getAvatarIcon = (avatarType: string | null | undefined): string => {
+    const avatarIcons: Record<string, string> = {
+      leaf: "🍃",
+      bud: "🌸",
+      joint: "🚬",
+      bong: "🫧",
+      flame: "🔥",
+      smoke: "💨",
+      seed: "🌰",
+      crown: "👑",
+    };
+    return avatarType ? (avatarIcons[avatarType] || "") : "";
+  };
 
   const { data: dailyScores = [] } = useQuery<DailyScoreData[]>({
     queryKey: ["/api/telegram/leaderboard/daily"],
@@ -388,6 +405,11 @@ export default function Game() {
   const [shopQuantities, setShopQuantities] = useState<Record<BoostType, number>>({
     extra_life: 1, shield_boost: 1, rapid_fire: 1, side_guns: 1, machine_gun: 1, skip_storm: 1
   });
+  
+  // Avatar state
+  const [ownedAvatars, setOwnedAvatars] = useState<string[]>([]);
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
+  const [playerAvatars, setPlayerAvatars] = useState<Record<string, string | null>>({});
   
   // Per-life boost tracking: stores the loadout slots and current life index
   // Life 1 = index 0, Life 2 = index 1, Life 3 = index 2
@@ -483,6 +505,17 @@ export default function Game() {
           }
         })
         .catch(console.error);
+      
+      // Fetch avatars
+      fetch(`/api/telegram/avatars/${telegramId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error) {
+            setOwnedAvatars(data.avatars || []);
+            setSelectedAvatar(data.selectedAvatar || null);
+          }
+        })
+        .catch(console.error);
     }
   }, [telegramId]);
 
@@ -573,6 +606,114 @@ export default function Game() {
         description: "Failed to process purchase",
         variant: "destructive",
       });
+    }
+  }, [telegramId, toast]);
+
+  // Purchase avatar with Telegram Stars
+  const handlePurchaseAvatar = useCallback(async (avatarType: string) => {
+    if (!telegramId) {
+      toast({
+        title: "Not Connected",
+        description: "Please open this app in Telegram",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (ownedAvatars.includes(avatarType)) {
+      toast({
+        title: "Already Owned",
+        description: "You already have this avatar!",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/telegram/create-avatar-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          telegramId,
+          avatarType,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.invoiceUrl) {
+        toast({
+          title: "Error",
+          description: data.error || "Failed to create invoice",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Open Telegram's native payment UI
+      WebApp.openInvoice(data.invoiceUrl, async (status: string) => {
+        if (status === "paid") {
+          // Confirm the payment
+          const confirmRes = await fetch("/api/telegram/avatar/purchase", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              telegramId,
+              avatarType,
+              telegramPaymentId: `avatar_${Date.now()}`,
+            }),
+          });
+          
+          const confirmData = await confirmRes.json();
+          
+          if (confirmData.success) {
+            setOwnedAvatars(prev => [...prev, avatarType]);
+            if (!selectedAvatar) {
+              setSelectedAvatar(avatarType);
+            }
+            
+            toast({
+              title: "Avatar Purchased!",
+              description: confirmData.message,
+            });
+          }
+        } else if (status === "cancelled") {
+          toast({
+            title: "Payment Cancelled",
+            description: "No Stars were charged",
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Avatar purchase error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process purchase",
+        variant: "destructive",
+      });
+    }
+  }, [telegramId, toast, ownedAvatars, selectedAvatar]);
+
+  // Select avatar
+  const handleSelectAvatar = useCallback(async (avatarType: string | null) => {
+    if (!telegramId) return;
+    
+    try {
+      const response = await fetch("/api/telegram/avatar/select", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegramId, avatarType }),
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setSelectedAvatar(avatarType);
+        toast({
+          title: avatarType ? "Avatar Equipped!" : "Avatar Removed",
+          description: avatarType ? `Now using ${avatarType} avatar` : "No avatar selected",
+        });
+      }
+    } catch (error) {
+      console.error("Avatar select error:", error);
     }
   }, [telegramId, toast]);
 
@@ -3610,7 +3751,8 @@ export default function Game() {
                       <span className="w-8 text-center text-[10px]">
                         {score.usedBoosts ? "🔥💨" : "💎"}
                       </span>
-                      <span className="flex-1 text-center text-[9px]" style={{ color: "#00ffff" }}>
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ffff" }}>
+                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ff00" }}>
@@ -3650,7 +3792,8 @@ export default function Game() {
                         {index + 1}
                       </span>
                       <span className="w-8 text-center text-[10px]">🔥💨</span>
-                      <span className="flex-1 text-center text-[9px]" style={{ color: "#ff6600" }}>
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#ff6600" }}>
+                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#ffff00" }}>
@@ -3690,7 +3833,8 @@ export default function Game() {
                         {index + 1}
                       </span>
                       <span className="w-8 text-center text-[10px]">💎</span>
-                      <span className="flex-1 text-center text-[9px]" style={{ color: "#00ff00" }}>
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ff00" }}>
+                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ffff" }}>
@@ -4308,6 +4452,73 @@ export default function Game() {
               Min 30 Stars daily to activate prizes
             </p>
           </Card>
+        </div>
+
+        {/* AVATAR SHOP */}
+        <div className="w-full max-w-sm mb-4">
+          <h2 
+            className="text-sm text-center mb-3"
+            style={{ color: "#ffd700", textShadow: "0 0 8px #ffd700" }}
+          >
+            AVATAR ICONS - 5⭐ each
+          </h2>
+          <p className="text-[9px] mb-3 text-center" style={{ color: "#888" }}>
+            Show your style on leaderboards!
+          </p>
+          
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { type: "leaf", icon: "🍃", color: "#00ff00" },
+              { type: "bud", icon: "🌸", color: "#a855f7" },
+              { type: "joint", icon: "🚬", color: "#ff6600" },
+              { type: "bong", icon: "🫧", color: "#4488ff" },
+              { type: "flame", icon: "🔥", color: "#ff4400" },
+              { type: "smoke", icon: "💨", color: "#aaaaaa" },
+              { type: "seed", icon: "🌰", color: "#8b4513" },
+              { type: "crown", icon: "👑", color: "#ffd700" },
+            ].map((avatar) => {
+              const isOwned = ownedAvatars.includes(avatar.type);
+              const isSelected = selectedAvatar === avatar.type;
+              
+              return (
+                <Card 
+                  key={avatar.type}
+                  className="p-2 border-2 cursor-pointer transition-all"
+                  style={{ 
+                    borderColor: isSelected ? "#ffd700" : (isOwned ? avatar.color : "#333"),
+                    background: isSelected ? "rgba(255,215,0,0.2)" : (isOwned ? `${avatar.color}20` : "transparent"),
+                    boxShadow: isSelected ? "0 0 10px #ffd700" : "none"
+                  }}
+                  onClick={() => {
+                    if (isOwned) {
+                      handleSelectAvatar(isSelected ? null : avatar.type);
+                    } else {
+                      handlePurchaseAvatar(avatar.type);
+                    }
+                  }}
+                  data-testid={`avatar-${avatar.type}`}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className="text-2xl">{avatar.icon}</span>
+                    <p className="text-[8px] mt-1" style={{ color: avatar.color }}>
+                      {avatar.type.toUpperCase()}
+                    </p>
+                    {isOwned ? (
+                      <p className="text-[7px]" style={{ color: isSelected ? "#ffd700" : "#00ff00" }}>
+                        {isSelected ? "EQUIPPED" : "OWNED"}
+                      </p>
+                    ) : (
+                      <p className="text-[7px]" style={{ color: "#ffff00" }}>5⭐</p>
+                    )}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+          
+          <p className="text-[8px] mt-2 text-center" style={{ color: "#888" }}>
+            Tap to buy • Tap owned to equip
+          </p>
         </div>
 
         <Button

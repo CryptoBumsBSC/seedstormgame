@@ -83,8 +83,16 @@ export const telegramPlayers = pgTable("telegram_players", {
   totalStarsSpent: integer("total_stars_spent").default(0).notNull(),
   totalStarsWon: integer("total_stars_won").default(0).notNull(),
   banned: boolean("banned").default(false).notNull(),
+  selectedAvatar: text("selected_avatar"), // Currently equipped avatar
   firstPlayedAt: timestamp("first_played_at").defaultNow().notNull(),
   lastPlayedAt: timestamp("last_played_at").defaultNow().notNull(),
+});
+
+export const playerAvatars = pgTable("player_avatars", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  avatarType: text("avatar_type").notNull(),
+  purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
 });
 
 export const playerInventory = pgTable("player_inventory", {
@@ -264,6 +272,14 @@ export const BOOST_DURATIONS = {
 } as const;
 
 export const MAX_BOOSTS_PER_LIFE = 3;
+
+// Avatar types and pricing
+export const avatarTypes = ["leaf", "bud", "joint", "bong", "flame", "smoke", "seed", "crown"] as const;
+export type AvatarType = typeof avatarTypes[number];
+
+export const AVATAR_PRICE = 5; // All avatars cost 5 Stars
+
+export type PlayerAvatar = typeof playerAvatars.$inferSelect;
 
 // Prize distribution constants
 export const PRIZE_CONFIG = {
