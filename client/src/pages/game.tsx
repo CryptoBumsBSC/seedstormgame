@@ -370,31 +370,104 @@ export default function Game() {
     const icons: Record<string, JSX.Element> = {
       leaf: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          {/* Cannabis Leaf Character - like a friendly mascot */}
-          {/* Face/body - green bud shape */}
-          <rect x="4" y="4" width="8" height="8" fill="#00dd00"/>
-          <rect x="3" y="5" width="1" height="6" fill="#00bb00"/>
-          <rect x="12" y="5" width="1" height="6" fill="#22ff22"/>
-          <rect x="5" y="3" width="6" height="1" fill="#22ff22"/>
-          <rect x="5" y="12" width="6" height="1" fill="#00bb00"/>
-          {/* Leaf points - like a crown of leaves */}
-          <rect x="7" y="0" width="2" height="3" fill="#00ff00"/>
-          <rect x="3" y="1" width="2" height="3" fill="#00ff00"/>
-          <rect x="11" y="1" width="2" height="3" fill="#00ff00"/>
-          <rect x="0" y="4" width="2" height="3" fill="#00ff00"/>
-          <rect x="14" y="4" width="2" height="3" fill="#00ff00"/>
-          {/* Eyes - expressive */}
-          <rect x="5" y="6" width="2" height="2" fill="#000000"/>
-          <rect x="9" y="6" width="2" height="2" fill="#000000"/>
-          <rect x="5" y="6" width="1" height="1" fill="#ffffff"/>
-          <rect x="9" y="6" width="1" height="1" fill="#ffffff"/>
-          {/* Happy mouth */}
-          <rect x="6" y="9" width="4" height="1" fill="#006600"/>
-          <rect x="5" y="8" width="1" height="1" fill="#006600"/>
-          <rect x="10" y="8" width="1" height="1" fill="#006600"/>
-          {/* Stem feet */}
-          <rect x="6" y="13" width="2" height="2" fill="#885522"/>
-          <rect x="9" y="13" width="2" height="2" fill="#885522"/>
+          {/* Cannabis Leaf - 7-point fan with distinct leaflets */}
+          {/* Center leaflet - tallest (y=0-5) */}
+          <rect x="7" y="0" width="2" height="1" fill="#000000"/>
+          <rect x="6" y="1" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="1" width="2" height="1" fill="#00cc00"/>
+          <rect x="9" y="1" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="2" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="2" width="2" height="1" fill="#22dd22"/>
+          <rect x="9" y="2" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="3" width="2" height="1" fill="#00cc00"/>
+          <rect x="9" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="4" width="2" height="1" fill="#00aa00"/>
+          <rect x="9" y="4" width="1" height="1" fill="#000000"/>
+          {/* Upper left leaflet (y=2-5) */}
+          <rect x="4" y="2" width="1" height="1" fill="#000000"/>
+          <rect x="3" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="3" width="1" height="1" fill="#00cc00"/>
+          <rect x="5" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="2" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="3" y="4" width="2" height="1" fill="#22dd22"/>
+          <rect x="5" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="3" y="5" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="5" width="2" height="1" fill="#00aa00"/>
+          {/* Upper right leaflet (y=2-5) */}
+          <rect x="11" y="2" width="1" height="1" fill="#000000"/>
+          <rect x="10" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="3" width="1" height="1" fill="#00cc00"/>
+          <rect x="12" y="3" width="1" height="1" fill="#000000"/>
+          <rect x="10" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="4" width="2" height="1" fill="#22dd22"/>
+          <rect x="13" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="10" y="5" width="2" height="1" fill="#00aa00"/>
+          <rect x="12" y="5" width="1" height="1" fill="#000000"/>
+          {/* Middle left leaflet - widest (y=5-8) */}
+          <rect x="1" y="5" width="1" height="1" fill="#000000"/>
+          <rect x="0" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="1" y="6" width="1" height="1" fill="#00cc00"/>
+          <rect x="2" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="0" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="1" y="7" width="2" height="1" fill="#22dd22"/>
+          <rect x="3" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="1" y="8" width="1" height="1" fill="#000000"/>
+          <rect x="2" y="8" width="2" height="1" fill="#00aa00"/>
+          {/* Middle right leaflet - widest (y=5-8) */}
+          <rect x="14" y="5" width="1" height="1" fill="#000000"/>
+          <rect x="13" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="14" y="6" width="1" height="1" fill="#00cc00"/>
+          <rect x="15" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="12" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="13" y="7" width="2" height="1" fill="#22dd22"/>
+          <rect x="15" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="12" y="8" width="2" height="1" fill="#00aa00"/>
+          <rect x="14" y="8" width="1" height="1" fill="#000000"/>
+          {/* Center body (y=5-9) */}
+          <rect x="5" y="5" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="5" width="4" height="1" fill="#00aa00"/>
+          <rect x="10" y="5" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="5" y="6" width="6" height="1" fill="#00cc00"/>
+          <rect x="11" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="5" y="7" width="6" height="1" fill="#22dd22"/>
+          <rect x="11" y="7" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="8" width="1" height="1" fill="#000000"/>
+          <rect x="5" y="8" width="6" height="1" fill="#00cc00"/>
+          <rect x="11" y="8" width="1" height="1" fill="#000000"/>
+          <rect x="5" y="9" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="9" width="4" height="1" fill="#00aa00"/>
+          <rect x="10" y="9" width="1" height="1" fill="#000000"/>
+          {/* Lower left leaflet (y=8-10) */}
+          <rect x="2" y="9" width="1" height="1" fill="#000000"/>
+          <rect x="3" y="9" width="2" height="1" fill="#00aa00"/>
+          <rect x="3" y="10" width="1" height="1" fill="#000000"/>
+          <rect x="4" y="10" width="1" height="1" fill="#00cc00"/>
+          <rect x="5" y="10" width="1" height="1" fill="#000000"/>
+          {/* Lower right leaflet (y=8-10) */}
+          <rect x="13" y="9" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="9" width="2" height="1" fill="#00aa00"/>
+          <rect x="10" y="10" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="10" width="1" height="1" fill="#00cc00"/>
+          <rect x="12" y="10" width="1" height="1" fill="#000000"/>
+          {/* Stem with crossbar (y=10-15) */}
+          <rect x="6" y="10" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="10" width="2" height="1" fill="#007700"/>
+          <rect x="9" y="10" width="1" height="1" fill="#000000"/>
+          <rect x="6" y="11" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="11" width="2" height="1" fill="#006600"/>
+          <rect x="9" y="11" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="12" width="1" height="1" fill="#000000"/>
+          <rect x="8" y="12" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="13" width="1" height="1" fill="#006600"/>
+          <rect x="8" y="13" width="1" height="1" fill="#007700"/>
+          <rect x="6" y="14" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="14" width="2" height="1" fill="#006600"/>
+          <rect x="9" y="14" width="1" height="1" fill="#000000"/>
+          <rect x="7" y="15" width="2" height="1" fill="#000000"/>
         </svg>
       ),
       bud: (
