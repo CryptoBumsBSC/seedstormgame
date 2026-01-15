@@ -4009,6 +4009,19 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffd700" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffd700" }}>
+              <AlertTriangle className="w-4 h-4" />
+              PRIZE ELIGIBILITY
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffd700" }}>IMPORTANT:</span> All players appear on leaderboards!</p>
+              <p><span style={{ color: "#ff0000" }}>BUT:</span> Only <span style={{ color: "#00ffff" }}>Telegram players</span> can win prizes.</p>
+              <p>To be eligible for Star payouts, you <span style={{ color: "#00ff00" }}>must play through Telegram</span>.</p>
+              <p>Web browser players see their scores but cannot receive Stars.</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
               <Heart className="w-4 h-4" />
