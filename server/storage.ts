@@ -645,7 +645,7 @@ export class DatabaseStorage implements IStorage {
       totalSpent,
       prizePool,
       ownerShare,
-      thresholdMet: totalSpent >= 23,
+      thresholdMet: totalSpent >= 30,
       distributed: poolData.distributed,
     };
   }
