@@ -267,7 +267,7 @@ export const MAX_BOOSTS_PER_LIFE = 3;
 
 // Prize distribution constants
 export const PRIZE_CONFIG = {
-  MIN_THRESHOLD: 101, // Minimum stars for prizes to activate
+  MIN_THRESHOLD: 23, // Minimum stars for prizes to activate
   OWNER_PERCENT: 50,
   FIRST_PLACE_PERCENT: 25,
   SECOND_PLACE_PERCENT: 10,
