@@ -363,108 +363,211 @@ export default function Game() {
     avatar?: string | null;
   }
 
-  // Sharp SVG Avatar Icons - pixel-perfect crisp rendering
+  // Iconic Pixel Art Avatars - inspired by classic game characters
   const AvatarIcon = ({ type, size = 12 }: { type: string | null | undefined; size?: number }) => {
     if (!type) return null;
     
     const icons: Record<string, JSX.Element> = {
       leaf: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          {/* Cannabis leaf - 5 leaflets with stepped heights */}
-          {/* Center leaflet - tallest, pointed tip */}
-          <rect x="7" y="0" width="2" height="1" fill="#00aa00"/>
-          <rect x="6" y="1" width="4" height="2" fill="#00ff00"/>
-          <rect x="7" y="3" width="2" height="5" fill="#00dd00"/>
-          {/* Upper left leaflet - 2nd tallest */}
-          <rect x="3" y="2" width="1" height="1" fill="#00aa00"/>
-          <rect x="3" y="3" width="2" height="4" fill="#00ff00"/>
-          <rect x="4" y="7" width="1" height="1" fill="#00dd00"/>
-          {/* Upper right leaflet - 2nd tallest */}
-          <rect x="12" y="2" width="1" height="1" fill="#00aa00"/>
-          <rect x="11" y="3" width="2" height="4" fill="#00ff00"/>
-          <rect x="11" y="7" width="1" height="1" fill="#00dd00"/>
-          {/* Lower left leaflet - shortest */}
-          <rect x="1" y="5" width="1" height="1" fill="#00aa00"/>
-          <rect x="1" y="6" width="2" height="2" fill="#00ff00"/>
-          {/* Lower right leaflet - shortest */}
-          <rect x="14" y="5" width="1" height="1" fill="#00aa00"/>
-          <rect x="13" y="6" width="2" height="2" fill="#00ff00"/>
-          {/* Stem */}
-          <rect x="7" y="8" width="2" height="6" fill="#885522"/>
+          {/* Cannabis Leaf Character - like a friendly mascot */}
+          {/* Face/body - green bud shape */}
+          <rect x="4" y="4" width="8" height="8" fill="#00dd00"/>
+          <rect x="3" y="5" width="1" height="6" fill="#00bb00"/>
+          <rect x="12" y="5" width="1" height="6" fill="#22ff22"/>
+          <rect x="5" y="3" width="6" height="1" fill="#22ff22"/>
+          <rect x="5" y="12" width="6" height="1" fill="#00bb00"/>
+          {/* Leaf points - like a crown of leaves */}
+          <rect x="7" y="0" width="2" height="3" fill="#00ff00"/>
+          <rect x="3" y="1" width="2" height="3" fill="#00ff00"/>
+          <rect x="11" y="1" width="2" height="3" fill="#00ff00"/>
+          <rect x="0" y="4" width="2" height="3" fill="#00ff00"/>
+          <rect x="14" y="4" width="2" height="3" fill="#00ff00"/>
+          {/* Eyes - expressive */}
+          <rect x="5" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="5" y="6" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="6" width="1" height="1" fill="#ffffff"/>
+          {/* Happy mouth */}
+          <rect x="6" y="9" width="4" height="1" fill="#006600"/>
+          <rect x="5" y="8" width="1" height="1" fill="#006600"/>
+          <rect x="10" y="8" width="1" height="1" fill="#006600"/>
+          {/* Stem feet */}
+          <rect x="6" y="13" width="2" height="2" fill="#885522"/>
+          <rect x="9" y="13" width="2" height="2" fill="#885522"/>
         </svg>
       ),
       bud: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="4" y="4" width="8" height="6" fill="#88ff88"/>
-          <rect x="3" y="5" width="2" height="4" fill="#66dd66"/>
-          <rect x="11" y="5" width="2" height="4" fill="#aaffaa"/>
-          <rect x="5" y="3" width="6" height="2" fill="#aaffaa"/>
-          <rect x="5" y="9" width="2" height="2" fill="#66dd66"/>
-          <rect x="9" y="9" width="2" height="2" fill="#aaffaa"/>
-          <rect x="7" y="10" width="2" height="4" fill="#885500"/>
+          {/* Cannabis Bud Character - round friendly nug */}
+          {/* Body - fluffy bud shape */}
+          <rect x="4" y="3" width="8" height="10" fill="#88aa66"/>
+          <rect x="3" y="4" width="1" height="8" fill="#779955"/>
+          <rect x="12" y="4" width="1" height="8" fill="#99bb77"/>
+          <rect x="5" y="2" width="6" height="1" fill="#99bb77"/>
+          <rect x="2" y="6" width="1" height="4" fill="#779955"/>
+          <rect x="13" y="6" width="1" height="4" fill="#99bb77"/>
+          {/* Trichome sparkles */}
+          <rect x="5" y="4" width="1" height="1" fill="#ffff88"/>
+          <rect x="10" y="5" width="1" height="1" fill="#ffff88"/>
+          <rect x="7" y="7" width="1" height="1" fill="#ffff88"/>
+          <rect x="9" y="10" width="1" height="1" fill="#ffff88"/>
+          {/* Eyes */}
+          <rect x="5" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="5" y="6" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="6" width="1" height="1" fill="#ffffff"/>
+          {/* Chill smile */}
+          <rect x="6" y="10" width="4" height="1" fill="#556644"/>
+          {/* Orange hairs */}
+          <rect x="3" y="3" width="1" height="2" fill="#ff8844"/>
+          <rect x="12" y="3" width="1" height="2" fill="#ff8844"/>
+          <rect x="7" y="1" width="2" height="1" fill="#ff8844"/>
         </svg>
       ),
       joint: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="2" y="7" width="10" height="3" fill="#ffffff"/>
-          <rect x="2" y="7" width="10" height="1" fill="#eeeeee"/>
-          <rect x="11" y="7" width="3" height="3" fill="#ff6600"/>
-          <rect x="13" y="5" width="2" height="2" fill="#ff9900"/>
-          <rect x="14" y="3" width="1" height="2" fill="#ffcc00"/>
+          {/* Joint Character - cool dude */}
+          {/* Body - white paper */}
+          <rect x="3" y="5" width="10" height="6" fill="#ffffff"/>
+          <rect x="2" y="6" width="1" height="4" fill="#eeeeee"/>
+          <rect x="13" y="6" width="1" height="4" fill="#eeeeee"/>
+          {/* Burning tip */}
+          <rect x="13" y="5" width="2" height="6" fill="#ff6600"/>
+          <rect x="14" y="4" width="1" height="1" fill="#ffaa00"/>
+          <rect x="15" y="3" width="1" height="2" fill="#ffcc00"/>
+          {/* Eyes - cool shades */}
+          <rect x="4" y="7" width="3" height="2" fill="#000000"/>
+          <rect x="8" y="7" width="3" height="2" fill="#000000"/>
+          {/* Cool smile */}
+          <rect x="5" y="10" width="5" height="1" fill="#cccccc"/>
+          {/* Smoke wisps */}
+          <rect x="14" y="1" width="1" height="2" fill="#aaaaaa"/>
+          <rect x="15" y="0" width="1" height="1" fill="#888888"/>
         </svg>
       ),
       bong: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="6" y="3" width="4" height="9" fill="#88ccff"/>
-          <rect x="5" y="4" width="1" height="7" fill="#4488ff"/>
-          <rect x="10" y="4" width="1" height="7" fill="#aaddff"/>
-          <rect x="4" y="11" width="8" height="3" fill="#4488ff"/>
-          <rect x="3" y="7" width="3" height="3" fill="#88ccff"/>
-          <rect x="2" y="8" width="1" height="1" fill="#4488ff"/>
+          {/* Bong Character - bubbly personality */}
+          {/* Body - glass tube */}
+          <rect x="5" y="2" width="6" height="10" fill="#88ccff"/>
+          <rect x="4" y="3" width="1" height="8" fill="#66aadd"/>
+          <rect x="11" y="3" width="1" height="8" fill="#aaddff"/>
+          {/* Base */}
+          <rect x="3" y="12" width="10" height="3" fill="#4488cc"/>
+          <rect x="4" y="11" width="8" height="1" fill="#66aadd"/>
+          {/* Bowl */}
+          <rect x="1" y="5" width="4" height="3" fill="#88ccff"/>
+          <rect x="0" y="6" width="1" height="1" fill="#66aadd"/>
+          <rect x="2" y="4" width="2" height="1" fill="#00dd00"/>
+          {/* Eyes */}
+          <rect x="6" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="6" y="5" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="5" width="1" height="1" fill="#ffffff"/>
+          {/* Bubbles inside */}
+          <rect x="7" y="8" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="9" width="1" height="1" fill="#ffffff"/>
+          <rect x="6" y="10" width="1" height="1" fill="#ffffff"/>
         </svg>
       ),
       flame: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="7" y="2" width="2" height="2" fill="#ff4400"/>
+          {/* Flame Character - fiery spirit */}
+          {/* Body - flame shape */}
+          <rect x="5" y="6" width="6" height="8" fill="#ff6600"/>
+          <rect x="4" y="8" width="1" height="5" fill="#ff4400"/>
+          <rect x="11" y="8" width="1" height="5" fill="#ff8800"/>
           <rect x="6" y="4" width="4" height="2" fill="#ff6600"/>
-          <rect x="5" y="6" width="6" height="2" fill="#ff6600"/>
-          <rect x="4" y="8" width="8" height="3" fill="#ff8800"/>
-          <rect x="5" y="11" width="6" height="2" fill="#ffaa00"/>
-          <rect x="6" y="13" width="4" height="1" fill="#ffcc00"/>
+          <rect x="7" y="2" width="2" height="2" fill="#ff4400"/>
+          <rect x="7" y="0" width="1" height="2" fill="#ff0000"/>
+          {/* Inner glow */}
+          <rect x="6" y="8" width="4" height="4" fill="#ffaa00"/>
+          <rect x="7" y="6" width="2" height="2" fill="#ffaa00"/>
           <rect x="7" y="10" width="2" height="3" fill="#ffff00"/>
+          {/* Eyes - intense */}
+          <rect x="5" y="7" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="7" width="2" height="2" fill="#000000"/>
+          <rect x="6" y="7" width="1" height="1" fill="#ffffff"/>
+          <rect x="10" y="7" width="1" height="1" fill="#ffffff"/>
+          {/* Determined mouth */}
+          <rect x="6" y="11" width="4" height="1" fill="#cc4400"/>
         </svg>
       ),
       smoke: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="3" y="11" width="3" height="3" fill="#cccccc"/>
-          <rect x="5" y="8" width="3" height="3" fill="#aaaaaa"/>
-          <rect x="8" y="5" width="3" height="3" fill="#888888"/>
-          <rect x="10" y="2" width="3" height="3" fill="#666666"/>
-          <rect x="6" y="13" width="3" height="2" fill="#999999"/>
-          <rect x="9" y="10" width="3" height="3" fill="#777777"/>
+          {/* Smoke Character - chill ghost-like */}
+          {/* Body - wispy cloud */}
+          <rect x="4" y="4" width="8" height="8" fill="#cccccc"/>
+          <rect x="3" y="5" width="1" height="6" fill="#aaaaaa"/>
+          <rect x="12" y="5" width="1" height="6" fill="#dddddd"/>
+          <rect x="5" y="3" width="6" height="1" fill="#dddddd"/>
+          <rect x="2" y="7" width="1" height="3" fill="#aaaaaa"/>
+          <rect x="13" y="7" width="1" height="3" fill="#dddddd"/>
+          {/* Wavy top */}
+          <rect x="4" y="1" width="2" height="2" fill="#bbbbbb"/>
+          <rect x="7" y="0" width="2" height="2" fill="#cccccc"/>
+          <rect x="10" y="1" width="2" height="2" fill="#bbbbbb"/>
+          {/* Sleepy eyes - half closed */}
+          <rect x="5" y="6" width="2" height="1" fill="#000000"/>
+          <rect x="9" y="6" width="2" height="1" fill="#000000"/>
+          {/* Relaxed smile */}
+          <rect x="6" y="9" width="4" height="1" fill="#999999"/>
+          {/* Wispy trails */}
+          <rect x="3" y="12" width="2" height="2" fill="#aaaaaa"/>
+          <rect x="11" y="12" width="2" height="2" fill="#aaaaaa"/>
+          <rect x="6" y="13" width="4" height="2" fill="#bbbbbb"/>
         </svg>
       ),
       seed: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="5" y="5" width="6" height="9" fill="#885522"/>
-          <rect x="4" y="7" width="1" height="5" fill="#663311"/>
-          <rect x="11" y="7" width="1" height="5" fill="#aa7744"/>
-          <rect x="6" y="6" width="3" height="6" fill="#aa7744"/>
-          <rect x="7" y="2" width="2" height="3" fill="#00aa00"/>
-          <rect x="5" y="3" width="2" height="1" fill="#00cc00"/>
-          <rect x="9" y="3" width="2" height="1" fill="#00cc00"/>
+          {/* Seed Character - small but mighty */}
+          {/* Body - seed shape */}
+          <rect x="5" y="4" width="6" height="10" fill="#886633"/>
+          <rect x="4" y="5" width="1" height="8" fill="#664422"/>
+          <rect x="11" y="5" width="1" height="8" fill="#aa8855"/>
+          <rect x="6" y="3" width="4" height="1" fill="#aa8855"/>
+          <rect x="6" y="14" width="4" height="1" fill="#664422"/>
+          {/* Stripe pattern */}
+          <rect x="6" y="5" width="1" height="8" fill="#775533"/>
+          <rect x="9" y="5" width="1" height="8" fill="#997755"/>
+          {/* Sprout on top */}
+          <rect x="7" y="0" width="2" height="3" fill="#00dd00"/>
+          <rect x="5" y="1" width="2" height="2" fill="#00ff00"/>
+          <rect x="9" y="1" width="2" height="2" fill="#00ff00"/>
+          {/* Eyes - determined */}
+          <rect x="5" y="7" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="7" width="2" height="2" fill="#000000"/>
+          <rect x="5" y="7" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="7" width="1" height="1" fill="#ffffff"/>
+          {/* Smile */}
+          <rect x="6" y="11" width="4" height="1" fill="#553311"/>
         </svg>
       ),
       crown: (
         <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
-          <rect x="2" y="12" width="12" height="2" fill="#ffd700"/>
-          <rect x="3" y="10" width="10" height="2" fill="#ffd700"/>
-          <rect x="2" y="8" width="3" height="2" fill="#ffd700"/>
-          <rect x="6" y="6" width="4" height="4" fill="#ffd700"/>
-          <rect x="11" y="8" width="3" height="2" fill="#ffd700"/>
-          <rect x="3" y="6" width="2" height="2" fill="#ff0000"/>
-          <rect x="7" y="4" width="2" height="2" fill="#00ff00"/>
-          <rect x="11" y="6" width="2" height="2" fill="#0088ff"/>
+          {/* Crown Character - royal and proud */}
+          {/* Crown points */}
+          <rect x="2" y="4" width="2" height="4" fill="#ffd700"/>
+          <rect x="7" y="2" width="2" height="6" fill="#ffd700"/>
+          <rect x="12" y="4" width="2" height="4" fill="#ffd700"/>
+          {/* Crown base */}
+          <rect x="2" y="8" width="12" height="4" fill="#ffd700"/>
+          <rect x="3" y="12" width="10" height="2" fill="#ccaa00"/>
+          {/* Jewels */}
+          <rect x="3" y="5" width="1" height="1" fill="#ff0000"/>
+          <rect x="7" y="3" width="2" height="2" fill="#00ff00"/>
+          <rect x="12" y="5" width="1" height="1" fill="#0088ff"/>
+          {/* Face on crown */}
+          <rect x="4" y="9" width="2" height="2" fill="#000000"/>
+          <rect x="10" y="9" width="2" height="2" fill="#000000"/>
+          <rect x="4" y="9" width="1" height="1" fill="#ffffff"/>
+          <rect x="10" y="9" width="1" height="1" fill="#ffffff"/>
+          {/* Royal smile */}
+          <rect x="6" y="12" width="4" height="1" fill="#cc9900"/>
+          {/* Sparkle */}
+          <rect x="1" y="3" width="1" height="1" fill="#ffffff"/>
+          <rect x="14" y="3" width="1" height="1" fill="#ffffff"/>
         </svg>
       ),
     };
