@@ -1432,6 +1432,58 @@ No limits on earnings! The more you share, the more you earn.`;
   // Setup midnight cron job for automatic prize distribution
   setupMidnightCron();
 
+  // Demo endpoint - seed test leaderboard data with avatars
+  app.post("/api/demo/seed-avatars", async (req, res) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const demoPlayers = [
+        { telegramId: "demo_1", name: "BLAZER420", score: 15000, wave: 12, avatar: "leaf", boosts: true },
+        { telegramId: "demo_2", name: "BUDMASTER", score: 12500, wave: 10, avatar: "dragon", boosts: true },
+        { telegramId: "demo_3", name: "SEEDKING", score: 10000, wave: 8, avatar: "crown", boosts: false },
+        { telegramId: "demo_4", name: "PURESTORM", score: 8500, wave: 7, avatar: "skull", boosts: false },
+        { telegramId: "demo_5", name: "GREENTHUMB", score: 7000, wave: 6, avatar: "fox", boosts: true },
+        { telegramId: "demo_6", name: "HIGHFLYER", score: 5500, wave: 5, avatar: "eagle", boosts: false },
+      ];
+      
+      for (const player of demoPlayers) {
+        // First create the player record in telegramPlayers table
+        await storage.createOrUpdateTelegramPlayer({
+          telegramId: player.telegramId,
+          username: player.name.toLowerCase(),
+          firstName: player.name,
+          lastName: null,
+        });
+        
+        // Purchase and set avatar for player
+        await storage.purchaseAvatar(player.telegramId, player.avatar as any);
+        await storage.setSelectedAvatar(player.telegramId, player.avatar as any);
+        
+        // Create daily score
+        await storage.createDailyScore({
+          telegramId: player.telegramId,
+          playerName: player.name,
+          score: player.score,
+          wave: player.wave,
+          playTime: 180,
+          usedBoosts: player.boosts,
+          date: today,
+        });
+        
+        // Update all-time scores
+        if (player.boosts) {
+          await storage.updateAllTimeBoostedScores(player.telegramId, player.name, player.score, player.wave, 180);
+        } else {
+          await storage.updateAllTimePureScores(player.telegramId, player.name, player.score, player.wave, 180);
+        }
+      }
+      
+      res.json({ success: true, message: "Demo data seeded with avatars" });
+    } catch (error) {
+      console.error("Demo seed error:", error);
+      res.status(500).json({ error: "Failed to seed demo data" });
+    }
+  });
+
   return httpServer;
 }
 

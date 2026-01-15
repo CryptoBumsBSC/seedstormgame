@@ -4703,8 +4703,12 @@ export default function Game() {
                       <span className="w-8 text-center text-[10px]">
                         {score.usedBoosts ? "🔥💨" : "💎"}
                       </span>
-                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ffff" }}>
-                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-2" style={{ color: "#00ffff" }}>
+                        {score.avatar ? (
+                          <span className="flex-shrink-0"><AvatarIcon type={score.avatar} size={16} /></span>
+                        ) : (
+                          <span className="w-4 h-4 flex-shrink-0" />
+                        )}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ff00" }}>
@@ -4744,8 +4748,12 @@ export default function Game() {
                         {index + 1}
                       </span>
                       <span className="w-8 text-center text-[10px]">🔥💨</span>
-                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#ff6600" }}>
-                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-2" style={{ color: "#ff6600" }}>
+                        {score.avatar ? (
+                          <span className="flex-shrink-0"><AvatarIcon type={score.avatar} size={16} /></span>
+                        ) : (
+                          <span className="w-4 h-4 flex-shrink-0" />
+                        )}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#ffff00" }}>
@@ -4785,8 +4793,12 @@ export default function Game() {
                         {index + 1}
                       </span>
                       <span className="w-8 text-center text-[10px]">💎</span>
-                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ff00" }}>
-                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
+                      <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-2" style={{ color: "#00ff00" }}>
+                        {score.avatar ? (
+                          <span className="flex-shrink-0"><AvatarIcon type={score.avatar} size={16} /></span>
+                        ) : (
+                          <span className="w-4 h-4 flex-shrink-0" />
+                        )}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ffff" }}>
