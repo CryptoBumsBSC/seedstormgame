@@ -4532,13 +4532,70 @@ export default function Game() {
           </Card>
         </div>
 
+        {/* MY AVATARS - Owned avatars for quick switching */}
+        {ownedAvatars.length > 0 && (
+          <div className="w-full max-w-sm mb-4">
+            <h2 
+              className="text-sm text-center mb-2"
+              style={{ color: "#00ffff", textShadow: "0 0 8px #00ffff" }}
+            >
+              MY AVATARS
+            </h2>
+            <p className="text-[9px] mb-3 text-center" style={{ color: "#888" }}>
+              Tap to equip or unequip
+            </p>
+            
+            <div className="flex flex-wrap justify-center gap-3">
+              {[
+                { type: "leaf", color: "#00ff00" },
+                { type: "bud", color: "#88ff88" },
+                { type: "joint", color: "#ff6600" },
+                { type: "bong", color: "#4488ff" },
+                { type: "flame", color: "#ff4400" },
+                { type: "smoke", color: "#aaaaaa" },
+                { type: "seed", color: "#885522" },
+                { type: "crown", color: "#ffd700" },
+              ].filter(avatar => ownedAvatars.includes(avatar.type)).map((avatar) => {
+                const isSelected = selectedAvatar === avatar.type;
+                
+                return (
+                  <Card 
+                    key={`owned-${avatar.type}`}
+                    className="p-3 border-2 cursor-pointer transition-all"
+                    style={{ 
+                      borderColor: isSelected ? "#ffd700" : avatar.color,
+                      background: isSelected ? "rgba(255,215,0,0.3)" : `${avatar.color}30`,
+                      boxShadow: isSelected ? "0 0 12px #ffd700" : "none",
+                      transform: isSelected ? "scale(1.05)" : "scale(1)"
+                    }}
+                    onClick={() => handleSelectAvatar(isSelected ? null : avatar.type)}
+                    data-testid={`my-avatar-${avatar.type}`}
+                  >
+                    <div className="flex flex-col items-center">
+                      <div className="w-10 h-10 flex items-center justify-center">
+                        <AvatarIcon type={avatar.type} size={36} />
+                      </div>
+                      <p className="text-[8px] mt-1 font-bold" style={{ color: isSelected ? "#ffd700" : avatar.color }}>
+                        {avatar.type.toUpperCase()}
+                      </p>
+                      <p className="text-[7px]" style={{ color: isSelected ? "#ffd700" : "#00ff00" }}>
+                        {isSelected ? "EQUIPPED" : "TAP TO USE"}
+                      </p>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* AVATAR SHOP */}
         <div className="w-full max-w-sm mb-4">
           <h2 
             className="text-sm text-center mb-3"
             style={{ color: "#ffd700", textShadow: "0 0 8px #ffd700" }}
           >
-            AVATAR ICONS - 5⭐ each
+            {ownedAvatars.length > 0 ? "BUY MORE AVATARS - 5⭐ each" : "AVATAR ICONS - 5⭐ each"}
           </h2>
           <p className="text-[9px] mb-3 text-center" style={{ color: "#888" }}>
             Show your style on leaderboards!
