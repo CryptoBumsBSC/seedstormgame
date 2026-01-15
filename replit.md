@@ -42,7 +42,7 @@ Revenue from Stars purchases is split:
 - **10%** → Up to 10 random players that day (1% each)
 - **Unclaimed** → Goes to owner
 
-**Minimum Threshold**: 101★ daily spending to activate prizes. Under 100★ = all to owner.
+**Minimum Threshold**: 50★ daily spending to activate prizes. Under 50★ = all to owner.
 
 ### Leaderboards
 - **Daily**: Single board showing all players with icons:

@@ -514,7 +514,7 @@ export default function Admin() {
                       <span style={{ color: "#ff6600" }}>{prizePool.ownerShare} Stars</span>
                     </div>
                     <div className="flex justify-between">
-                      <span style={{ color: "#aaa" }}>Threshold (101 Stars)</span>
+                      <span style={{ color: "#aaa" }}>Threshold (50 Stars)</span>
                       <span style={{ color: prizePool.thresholdMet ? "#00ff00" : "#ff0000" }}>
                         {prizePool.thresholdMet ? "MET" : "NOT MET"}
                       </span>

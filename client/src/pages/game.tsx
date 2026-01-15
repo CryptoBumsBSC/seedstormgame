@@ -3935,7 +3935,7 @@ export default function Game() {
               <p><span style={{ color: "#ff6600" }}>Stars spent</span> go into daily prize pool!</p>
               <p><span style={{ color: "#ffd700" }}>Top 3 winners:</span> 25% / 10% / 5%</p>
               <p><span style={{ color: "#00ff00" }}>Random 10 players:</span> 1% each</p>
-              <p><span style={{ color: "#ff0000" }}>Minimum:</span> 101 Stars spent daily to activate prizes</p>
+              <p><span style={{ color: "#ff0000" }}>Minimum:</span> 50 Stars spent daily to activate prizes</p>
               <p>Win Stars just by playing!</p>
             </div>
           </Card>
@@ -4237,7 +4237,7 @@ export default function Game() {
               Random 10 players: 1% each
             </p>
             <p className="text-[8px] mt-1" style={{ color: "#ffff00" }}>
-              Min 101⭐ daily to activate prizes
+              Min 50⭐ daily to activate prizes
             </p>
           </Card>
         </div>
