@@ -60,6 +60,10 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<"scores" | "players" | "revenue" | "prizes">("scores");
   const [manualPayoutPlayer, setManualPayoutPlayer] = useState("");
   const [manualPayoutAmount, setManualPayoutAmount] = useState("");
+  const [creditTelegramId, setCreditTelegramId] = useState("");
+  const [creditBoostType, setCreditBoostType] = useState("");
+  const [creditQuantity, setCreditQuantity] = useState("");
+  const [creditUsername, setCreditUsername] = useState("");
 
   const { data: scores = [], isLoading, refetch } = useQuery<ScoreWithStats[]>({
     queryKey: ["/api/admin/scores"],
@@ -163,6 +167,29 @@ export default function Admin() {
     }
   });
 
+  const creditBoostsMutation = useMutation({
+    mutationFn: async ({ telegramId, boostType, quantity, username }: { telegramId: string; boostType: string; quantity: number; username?: string }) => {
+      const res = await fetch("/api/admin/credit-boosts", {
+        method: "POST",
+        headers: { 
+          "x-admin-password": password,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ telegramId, boostType, quantity, username })
+      });
+      if (!res.ok) throw new Error("Failed to credit boosts");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      refetchPlayers();
+      setCreditTelegramId("");
+      setCreditBoostType("");
+      setCreditQuantity("");
+      setCreditUsername("");
+      alert(`Successfully credited boosts! Inventory: ${JSON.stringify(data.inventory)}`);
+    }
+  });
+
   const handleLogin = async () => {
     try {
       const res = await fetch("/api/admin/scores", {
@@ -199,6 +226,22 @@ export default function Admin() {
     }
     if (confirm(`Send ${amount} Stars to ${manualPayoutPlayer}?`)) {
       manualPayoutMutation.mutate({ telegramId: manualPayoutPlayer, starsAmount: amount });
+    }
+  };
+
+  const handleCreditBoosts = () => {
+    const quantity = parseInt(creditQuantity);
+    if (!creditTelegramId || !creditBoostType || !quantity || quantity <= 0) {
+      alert("Please enter Telegram ID, boost type, and quantity");
+      return;
+    }
+    if (confirm(`Credit ${quantity}x ${creditBoostType} to ${creditTelegramId}${creditUsername ? ` (@${creditUsername})` : ''}?`)) {
+      creditBoostsMutation.mutate({ 
+        telegramId: creditTelegramId, 
+        boostType: creditBoostType, 
+        quantity,
+        username: creditUsername || undefined
+      });
     }
   };
 
@@ -585,6 +628,61 @@ export default function Admin() {
                     >
                       <Send className="w-4 h-4 mr-2" />
                       {manualPayoutMutation.isPending ? "SENDING..." : "SEND PAYOUT"}
+                    </Button>
+                  </div>
+                </Card>
+
+                <Card className="p-4 border" style={{ borderColor: "#ff00ff" }}>
+                  <h3 className="text-sm mb-3" style={{ color: "#ff00ff" }}>CREDIT BOOSTS (FREE)</h3>
+                  <div className="space-y-2 text-xs mb-4" style={{ color: "#aaa" }}>
+                    <p>Add boosts to a player's inventory without charging Stars</p>
+                    <p style={{ color: "#ff6600" }}>Use for refunds or compensation</p>
+                  </div>
+                  <div className="space-y-3">
+                    <Input
+                      type="text"
+                      placeholder="Telegram User ID (numeric)"
+                      value={creditTelegramId}
+                      onChange={(e) => setCreditTelegramId(e.target.value)}
+                      data-testid="input-credit-telegram-id"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Username (optional, e.g. TheRealityBroker)"
+                      value={creditUsername}
+                      onChange={(e) => setCreditUsername(e.target.value)}
+                      data-testid="input-credit-username"
+                    />
+                    <Select value={creditBoostType} onValueChange={setCreditBoostType}>
+                      <SelectTrigger className="w-full" data-testid="select-credit-boost-type">
+                        <SelectValue placeholder="Select boost type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="extra_life">Extra Life</SelectItem>
+                        <SelectItem value="shield_boost">Shield Boost</SelectItem>
+                        <SelectItem value="rapid_fire">Rapid Fire</SelectItem>
+                        <SelectItem value="side_guns">Side Guns</SelectItem>
+                        <SelectItem value="machine_gun">Machine Gun</SelectItem>
+                        <SelectItem value="skip_storm">Skip Storm</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="number"
+                      placeholder="Quantity"
+                      value={creditQuantity}
+                      onChange={(e) => setCreditQuantity(e.target.value)}
+                      min="1"
+                      data-testid="input-credit-quantity"
+                    />
+                    <Button
+                      onClick={handleCreditBoosts}
+                      disabled={!creditTelegramId || !creditBoostType || !creditQuantity || creditBoostsMutation.isPending}
+                      style={{ background: "#ff00ff", color: "#000" }}
+                      className="w-full"
+                      data-testid="button-credit-boosts"
+                    >
+                      <Gift className="w-4 h-4 mr-2" />
+                      {creditBoostsMutation.isPending ? "CREDITING..." : "CREDIT BOOSTS"}
                     </Button>
                   </div>
                 </Card>
