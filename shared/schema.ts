@@ -82,6 +82,7 @@ export const telegramPlayers = pgTable("telegram_players", {
   totalGamesPlayed: integer("total_games_played").default(0).notNull(),
   totalStarsSpent: integer("total_stars_spent").default(0).notNull(),
   totalStarsWon: integer("total_stars_won").default(0).notNull(),
+  banned: boolean("banned").default(false).notNull(),
   firstPlayedAt: timestamp("first_played_at").defaultNow().notNull(),
   lastPlayedAt: timestamp("last_played_at").defaultNow().notNull(),
 });

@@ -79,6 +79,9 @@ export interface IStorage {
   createOrUpdateTelegramPlayer(player: InsertTelegramPlayer): Promise<TelegramPlayer>;
   getAllTelegramPlayers(): Promise<TelegramPlayer[]>;
   incrementPlayerGames(telegramId: string): Promise<void>;
+  banPlayerByUsername(username: string): Promise<{ success: boolean; message: string }>;
+  unbanPlayerByUsername(username: string): Promise<{ success: boolean; message: string }>;
+  isPlayerBanned(telegramId: string): Promise<boolean>;
   
   getPlayerInventory(telegramId: string): Promise<PlayerInventory[]>;
   addToInventory(telegramId: string, boostType: BoostType, quantity: number): Promise<void>;
@@ -655,6 +658,53 @@ export class DatabaseStorage implements IStorage {
   async sendManualPayout(telegramId: string, starsAmount: number): Promise<void> {
     await this.addPlayerEarnings(telegramId, starsAmount);
     console.log(`[STORAGE] Manual payout of ${starsAmount} Stars to ${telegramId}`);
+  }
+
+  async banPlayerByUsername(username: string): Promise<{ success: boolean; message: string }> {
+    const cleanUsername = username.replace('@', '').toLowerCase();
+    const players = await db.select().from(telegramPlayers);
+    const player = players.find(p => p.username?.toLowerCase() === cleanUsername);
+    
+    if (!player) {
+      return { success: false, message: `Player @${cleanUsername} not found` };
+    }
+    
+    if (player.banned) {
+      return { success: false, message: `Player @${cleanUsername} is already banned` };
+    }
+    
+    await db.update(telegramPlayers)
+      .set({ banned: true })
+      .where(eq(telegramPlayers.telegramId, player.telegramId));
+    
+    console.log(`[STORAGE] Banned player @${cleanUsername} (ID: ${player.telegramId})`);
+    return { success: true, message: `Player @${cleanUsername} has been banned` };
+  }
+
+  async unbanPlayerByUsername(username: string): Promise<{ success: boolean; message: string }> {
+    const cleanUsername = username.replace('@', '').toLowerCase();
+    const players = await db.select().from(telegramPlayers);
+    const player = players.find(p => p.username?.toLowerCase() === cleanUsername);
+    
+    if (!player) {
+      return { success: false, message: `Player @${cleanUsername} not found` };
+    }
+    
+    if (!player.banned) {
+      return { success: false, message: `Player @${cleanUsername} is not banned` };
+    }
+    
+    await db.update(telegramPlayers)
+      .set({ banned: false })
+      .where(eq(telegramPlayers.telegramId, player.telegramId));
+    
+    console.log(`[STORAGE] Unbanned player @${cleanUsername} (ID: ${player.telegramId})`);
+    return { success: true, message: `Player @${cleanUsername} has been unbanned` };
+  }
+
+  async isPlayerBanned(telegramId: string): Promise<boolean> {
+    const player = await this.getTelegramPlayer(telegramId);
+    return player?.banned ?? false;
   }
 }
 
