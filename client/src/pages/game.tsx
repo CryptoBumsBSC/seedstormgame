@@ -363,19 +363,97 @@ export default function Game() {
     avatar?: string | null;
   }
 
-  // Avatar icon mapping
-  const getAvatarIcon = (avatarType: string | null | undefined): string => {
-    const avatarIcons: Record<string, string> = {
-      leaf: "🍃",
-      bud: "🌸",
-      joint: "🚬",
-      bong: "🫧",
-      flame: "🔥",
-      smoke: "💨",
-      seed: "🌰",
-      crown: "👑",
+  // Sharp SVG Avatar Icons - pixel-perfect crisp rendering
+  const AvatarIcon = ({ type, size = 12 }: { type: string | null | undefined; size?: number }) => {
+    if (!type) return null;
+    
+    const icons: Record<string, JSX.Element> = {
+      leaf: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="7" y="2" width="2" height="12" fill="#00aa00"/>
+          <rect x="5" y="3" width="2" height="10" fill="#00ff00"/>
+          <rect x="9" y="3" width="2" height="10" fill="#22ff22"/>
+          <rect x="3" y="5" width="2" height="6" fill="#00ff00"/>
+          <rect x="11" y="5" width="2" height="6" fill="#22ff22"/>
+        </svg>
+      ),
+      bud: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="4" y="4" width="8" height="6" fill="#88ff88"/>
+          <rect x="3" y="5" width="2" height="4" fill="#66dd66"/>
+          <rect x="11" y="5" width="2" height="4" fill="#aaffaa"/>
+          <rect x="5" y="3" width="6" height="2" fill="#aaffaa"/>
+          <rect x="5" y="9" width="2" height="2" fill="#66dd66"/>
+          <rect x="9" y="9" width="2" height="2" fill="#aaffaa"/>
+          <rect x="7" y="10" width="2" height="4" fill="#885500"/>
+        </svg>
+      ),
+      joint: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="2" y="7" width="10" height="3" fill="#ffffff"/>
+          <rect x="2" y="7" width="10" height="1" fill="#eeeeee"/>
+          <rect x="11" y="7" width="3" height="3" fill="#ff6600"/>
+          <rect x="13" y="5" width="2" height="2" fill="#ff9900"/>
+          <rect x="14" y="3" width="1" height="2" fill="#ffcc00"/>
+        </svg>
+      ),
+      bong: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="6" y="3" width="4" height="9" fill="#88ccff"/>
+          <rect x="5" y="4" width="1" height="7" fill="#4488ff"/>
+          <rect x="10" y="4" width="1" height="7" fill="#aaddff"/>
+          <rect x="4" y="11" width="8" height="3" fill="#4488ff"/>
+          <rect x="3" y="7" width="3" height="3" fill="#88ccff"/>
+          <rect x="2" y="8" width="1" height="1" fill="#4488ff"/>
+        </svg>
+      ),
+      flame: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="7" y="2" width="2" height="2" fill="#ff4400"/>
+          <rect x="6" y="4" width="4" height="2" fill="#ff6600"/>
+          <rect x="5" y="6" width="6" height="2" fill="#ff6600"/>
+          <rect x="4" y="8" width="8" height="3" fill="#ff8800"/>
+          <rect x="5" y="11" width="6" height="2" fill="#ffaa00"/>
+          <rect x="6" y="13" width="4" height="1" fill="#ffcc00"/>
+          <rect x="7" y="10" width="2" height="3" fill="#ffff00"/>
+        </svg>
+      ),
+      smoke: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="3" y="11" width="3" height="3" fill="#cccccc"/>
+          <rect x="5" y="8" width="3" height="3" fill="#aaaaaa"/>
+          <rect x="8" y="5" width="3" height="3" fill="#888888"/>
+          <rect x="10" y="2" width="3" height="3" fill="#666666"/>
+          <rect x="6" y="13" width="3" height="2" fill="#999999"/>
+          <rect x="9" y="10" width="3" height="3" fill="#777777"/>
+        </svg>
+      ),
+      seed: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="5" y="5" width="6" height="9" fill="#885522"/>
+          <rect x="4" y="7" width="1" height="5" fill="#663311"/>
+          <rect x="11" y="7" width="1" height="5" fill="#aa7744"/>
+          <rect x="6" y="6" width="3" height="6" fill="#aa7744"/>
+          <rect x="7" y="2" width="2" height="3" fill="#00aa00"/>
+          <rect x="5" y="3" width="2" height="1" fill="#00cc00"/>
+          <rect x="9" y="3" width="2" height="1" fill="#00cc00"/>
+        </svg>
+      ),
+      crown: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          <rect x="2" y="12" width="12" height="2" fill="#ffd700"/>
+          <rect x="3" y="10" width="10" height="2" fill="#ffd700"/>
+          <rect x="2" y="8" width="3" height="2" fill="#ffd700"/>
+          <rect x="6" y="6" width="4" height="4" fill="#ffd700"/>
+          <rect x="11" y="8" width="3" height="2" fill="#ffd700"/>
+          <rect x="3" y="6" width="2" height="2" fill="#ff0000"/>
+          <rect x="7" y="4" width="2" height="2" fill="#00ff00"/>
+          <rect x="11" y="6" width="2" height="2" fill="#0088ff"/>
+        </svg>
+      ),
     };
-    return avatarType ? (avatarIcons[avatarType] || "") : "";
+    
+    return icons[type] || null;
   };
 
   const { data: dailyScores = [] } = useQuery<DailyScoreData[]>({
@@ -3752,7 +3830,7 @@ export default function Game() {
                         {score.usedBoosts ? "🔥💨" : "💎"}
                       </span>
                       <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ffff" }}>
-                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
+                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ff00" }}>
@@ -3793,7 +3871,7 @@ export default function Game() {
                       </span>
                       <span className="w-8 text-center text-[10px]">🔥💨</span>
                       <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#ff6600" }}>
-                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
+                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#ffff00" }}>
@@ -3834,7 +3912,7 @@ export default function Game() {
                       </span>
                       <span className="w-8 text-center text-[10px]">💎</span>
                       <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-1" style={{ color: "#00ff00" }}>
-                        {score.avatar && <span>{getAvatarIcon(score.avatar)}</span>}
+                        {score.avatar && <AvatarIcon type={score.avatar} size={14} />}
                         {score.playerName}
                       </span>
                       <span className="w-16 text-right text-[10px]" style={{ color: "#00ffff" }}>
@@ -4468,14 +4546,14 @@ export default function Game() {
           
           <div className="grid grid-cols-4 gap-2">
             {[
-              { type: "leaf", icon: "🍃", color: "#00ff00" },
-              { type: "bud", icon: "🌸", color: "#a855f7" },
-              { type: "joint", icon: "🚬", color: "#ff6600" },
-              { type: "bong", icon: "🫧", color: "#4488ff" },
-              { type: "flame", icon: "🔥", color: "#ff4400" },
-              { type: "smoke", icon: "💨", color: "#aaaaaa" },
-              { type: "seed", icon: "🌰", color: "#8b4513" },
-              { type: "crown", icon: "👑", color: "#ffd700" },
+              { type: "leaf", color: "#00ff00" },
+              { type: "bud", color: "#88ff88" },
+              { type: "joint", color: "#ff6600" },
+              { type: "bong", color: "#4488ff" },
+              { type: "flame", color: "#ff4400" },
+              { type: "smoke", color: "#aaaaaa" },
+              { type: "seed", color: "#885522" },
+              { type: "crown", color: "#ffd700" },
             ].map((avatar) => {
               const isOwned = ownedAvatars.includes(avatar.type);
               const isSelected = selectedAvatar === avatar.type;
@@ -4499,7 +4577,9 @@ export default function Game() {
                   data-testid={`avatar-${avatar.type}`}
                 >
                   <div className="flex flex-col items-center">
-                    <span className="text-2xl">{avatar.icon}</span>
+                    <div className="w-8 h-8 flex items-center justify-center">
+                      <AvatarIcon type={avatar.type} size={28} />
+                    </div>
                     <p className="text-[8px] mt-1" style={{ color: avatar.color }}>
                       {avatar.type.toUpperCase()}
                     </p>
