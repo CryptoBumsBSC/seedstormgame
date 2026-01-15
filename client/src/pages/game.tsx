@@ -13,7 +13,7 @@ import type {
   StrainType,
   Score 
 } from "@shared/schema";
-import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Gamepad2, HelpCircle, Crosshair, Shield, Zap, AlertTriangle, Eye } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCcw, Gamepad2, HelpCircle, Crosshair, Shield, Zap, AlertTriangle, Eye, Ban } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import WebApp from "@twa-dev/sdk";
 
@@ -383,6 +383,7 @@ export default function Game() {
   const [telegramId, setTelegramId] = useState<string | null>(null);
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
+  const [isBanned, setIsBanned] = useState<boolean>(false);
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
   const [shopQuantities, setShopQuantities] = useState<Record<BoostType, number>>({
     extra_life: 1, shield_boost: 1, rapid_fire: 1, side_guns: 1, machine_gun: 1, skip_storm: 1
@@ -440,9 +441,20 @@ export default function Game() {
     }
   }, []);
 
-  // Fetch player inventory from server when telegramId is available
+  // Check if player is banned and fetch inventory when telegramId is available
   useEffect(() => {
     if (telegramId) {
+      // Check ban status first
+      fetch(`/api/telegram/banned/${telegramId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.banned) {
+            setIsBanned(true);
+          }
+        })
+        .catch(console.error);
+
+      // Fetch inventory
       fetch(`/api/telegram/inventory/${telegramId}`)
         .then(res => res.json())
         .then(data => {
@@ -2927,6 +2939,36 @@ export default function Game() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  // Show banned screen if player is banned
+  if (isBanned) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <Ban 
+          className="w-16 h-16 mb-6"
+          style={{ 
+            color: "#ff0000",
+            filter: "drop-shadow(0 0 20px #ff0000)"
+          }}
+        />
+        <h1 
+          className="text-2xl mb-4 text-center"
+          style={{ 
+            color: "#ff0000", 
+            textShadow: "0 0 10px #ff0000" 
+          }}
+        >
+          ACCOUNT BANNED
+        </h1>
+        <p 
+          className="text-sm text-center max-w-xs"
+          style={{ color: "#888" }}
+        >
+          Your account has been banned from playing SEED STORM. If you believe this is an error, please contact the administrator.
+        </p>
+      </div>
+    );
+  }
 
   if (screen === "title") {
     return (

@@ -533,6 +533,16 @@ export async function registerRoutes(
     }
   });
 
+  // Check if player is banned
+  app.get("/api/telegram/banned/:telegramId", async (req, res) => {
+    try {
+      const banned = await storage.isPlayerBanned(req.params.telegramId);
+      res.json({ banned });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check ban status" });
+    }
+  });
+
   // Get player inventory
   app.get("/api/telegram/inventory/:telegramId", async (req, res) => {
     try {
@@ -1049,6 +1059,46 @@ When someone clicks your link and buys Stars boosts, you automatically receive 1
 Player buys 10⭐ of boosts → You earn 1⭐
 
 No limits on earnings! The more you share, the more you earn.`;
+        } else if (text?.startsWith("/ban ")) {
+          const parts = text.split(" ");
+          if (parts.length < 3) {
+            replyText = "❌ Usage: /ban PASSWORD @username";
+          } else {
+            const password = parts[1];
+            const username = parts[2];
+            const adminPassword = process.env.ADMIN_PASSWORD;
+            
+            if (!adminPassword || password !== adminPassword) {
+              replyText = "❌ Invalid admin password";
+            } else {
+              const result = await storage.banPlayerByUsername(username);
+              if (result.success) {
+                replyText = `🚫 ${result.message}`;
+              } else {
+                replyText = `❌ ${result.message}`;
+              }
+            }
+          }
+        } else if (text?.startsWith("/unban ")) {
+          const parts = text.split(" ");
+          if (parts.length < 3) {
+            replyText = "❌ Usage: /unban PASSWORD @username";
+          } else {
+            const password = parts[1];
+            const username = parts[2];
+            const adminPassword = process.env.ADMIN_PASSWORD;
+            
+            if (!adminPassword || password !== adminPassword) {
+              replyText = "❌ Invalid admin password";
+            } else {
+              const result = await storage.unbanPlayerByUsername(username);
+              if (result.success) {
+                replyText = `✅ ${result.message}`;
+              } else {
+                replyText = `❌ ${result.message}`;
+              }
+            }
+          }
         }
         
         // Send reply if we have one
