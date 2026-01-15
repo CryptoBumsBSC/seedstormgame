@@ -1385,6 +1385,52 @@ No limits on earnings! The more you share, the more you earn.`;
     }
   });
 
+  // Admin: Manually credit boosts to a player's inventory
+  app.post("/api/admin/credit-boosts", async (req, res) => {
+    try {
+      const adminPassword = req.headers['x-admin-password'];
+      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const { telegramId, boostType, quantity, username } = req.body;
+      
+      if (!telegramId || !boostType || typeof quantity !== 'number' || quantity <= 0) {
+        return res.status(400).json({ error: "Invalid telegramId, boostType, or quantity" });
+      }
+      
+      const validBoosts = ['extra_life', 'shield_boost', 'rapid_fire', 'side_guns', 'machine_gun', 'skip_storm'];
+      if (!validBoosts.includes(boostType)) {
+        return res.status(400).json({ error: `Invalid boost type. Valid types: ${validBoosts.join(', ')}` });
+      }
+      
+      // Ensure player exists in the system
+      await storage.createOrUpdateTelegramPlayer({
+        telegramId,
+        username: username || null,
+        firstName: username?.toUpperCase() || "Player",
+        lastName: null,
+      });
+      
+      // Add boosts to inventory
+      await storage.addToInventory(telegramId, boostType as BoostType, quantity);
+      
+      // Get updated inventory
+      const inventory = await storage.getPlayerInventory(telegramId);
+      
+      console.log(`[ADMIN] Credited ${quantity}x ${boostType} to player ${telegramId} (${username || 'unknown'})`);
+      
+      res.json({ 
+        success: true, 
+        message: `Credited ${quantity}x ${boostType} to player ${telegramId}`,
+        inventory
+      });
+    } catch (error) {
+      console.error("Credit boosts error:", error);
+      res.status(500).json({ error: "Failed to credit boosts" });
+    }
+  });
+
   // Admin: Manual payout to specific player
   app.post("/api/admin/manual-payout", async (req, res) => {
     try {
