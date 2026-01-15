@@ -4064,6 +4064,101 @@ export default function Game() {
           </Button>
         </div>
 
+        {/* MY AVATAR - Quick Switch Section */}
+        {ownedAvatars.length > 0 && (
+          <div className="w-full max-w-xs mb-4">
+            <Card 
+              className="p-3 border-2"
+              style={{ 
+                background: "rgba(0,255,255,0.1)", 
+                borderColor: "#00ffff"
+              }}
+            >
+              <h3 
+                className="text-xs text-center mb-2 font-bold"
+                style={{ color: "#00ffff", textShadow: "0 0 6px #00ffff" }}
+              >
+                MY AVATAR {selectedAvatar ? `(${selectedAvatar.toUpperCase()})` : "(NONE)"}
+              </h3>
+              
+              <div className="flex flex-wrap justify-center gap-2">
+                {[
+                  { type: "leaf", color: "#00ff00" },
+                  { type: "bud", color: "#88ff88" },
+                  { type: "joint", color: "#ff6600" },
+                  { type: "bong", color: "#4488ff" },
+                  { type: "flame", color: "#ff4400" },
+                  { type: "smoke", color: "#aaaaaa" },
+                  { type: "seed", color: "#885522" },
+                  { type: "crown", color: "#ffd700" },
+                  { type: "dog", color: "#cc9966" },
+                  { type: "cat", color: "#888888" },
+                  { type: "horse", color: "#a0522d" },
+                  { type: "elephant", color: "#8899aa" },
+                  { type: "lion", color: "#ddaa55" },
+                  { type: "tiger", color: "#ff9933" },
+                  { type: "panda", color: "#ffffff" },
+                  { type: "wolf", color: "#888899" },
+                  { type: "bear", color: "#8b4513" },
+                  { type: "fox", color: "#ff6600" },
+                  { type: "rabbit", color: "#dddddd" },
+                  { type: "owl", color: "#daa520" },
+                  { type: "snake", color: "#22aa22" },
+                  { type: "dolphin", color: "#4488cc" },
+                  { type: "eagle", color: "#553311" },
+                  { type: "shark", color: "#6688aa" },
+                  { type: "frog", color: "#22cc22" },
+                  { type: "penguin", color: "#222222" },
+                  { type: "monkey", color: "#8b4513" },
+                  { type: "dragon", color: "#22aa22" },
+                  { type: "unicorn", color: "#ff88cc" },
+                  { type: "bee", color: "#ffcc00" },
+                  { type: "butterfly", color: "#ff66aa" },
+                  { type: "skull", color: "#eeeeee" },
+                ].filter(avatar => ownedAvatars.includes(avatar.type)).map((avatar) => {
+                  const isSelected = selectedAvatar === avatar.type;
+                  
+                  return (
+                    <button
+                      key={avatar.type}
+                      onClick={async () => {
+                        if (!telegramId) return;
+                        
+                        const newAvatar = isSelected ? null : avatar.type;
+                        setSelectedAvatar(newAvatar);
+                        
+                        try {
+                          await apiRequest("POST", "/api/telegram/avatar/equip", {
+                            telegramId,
+                            avatarType: newAvatar,
+                          });
+                        } catch (error) {
+                          console.error("Failed to update avatar:", error);
+                        }
+                      }}
+                      className="p-1 rounded transition-all"
+                      style={{
+                        background: isSelected 
+                          ? "linear-gradient(135deg, #00ff00, #00cc00)" 
+                          : "rgba(255,255,255,0.1)",
+                        border: isSelected ? "2px solid #00ff00" : "2px solid transparent",
+                        boxShadow: isSelected ? "0 0 10px #00ff00" : "none",
+                      }}
+                      data-testid={`button-avatar-quick-${avatar.type}`}
+                    >
+                      <AvatarIcon type={avatar.type} size={28} />
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <p className="text-[8px] text-center mt-2" style={{ color: "#888" }}>
+                Tap to switch • Get more in BOOST SHOP
+              </p>
+            </Card>
+          </div>
+        )}
+
         {ADS.titleScreen.image ? (
           <a 
             href={ADS.titleScreen.link || "#"} 
