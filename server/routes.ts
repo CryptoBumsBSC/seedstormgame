@@ -559,8 +559,11 @@ export async function registerRoutes(
   app.get("/api/telegram/inventory/:telegramId", async (req, res) => {
     try {
       const inventory = await storage.getPlayerInventory(req.params.telegramId);
-      // Format as object with boost types as keys
+      // Format as object with boost types as keys - include ALL boost types
       const inventoryMap: Record<string, number> = {
+        extra_life: 0,
+        shield_boost: 0,
+        rapid_fire: 0,
         side_guns: 0,
         machine_gun: 0,
         skip_storm: 0,
