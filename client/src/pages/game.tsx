@@ -844,6 +844,392 @@ export default function Game() {
           <rect x="6" y="12" width="4" height="1" fill="#666666"/>
         </svg>
       ),
+      bear: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Bear - big fuzzy friend */}
+          {/* Ears */}
+          <rect x="1" y="1" width="4" height="4" fill="#8b4513"/>
+          <rect x="11" y="1" width="4" height="4" fill="#8b4513"/>
+          <rect x="2" y="2" width="2" height="2" fill="#cd853f"/>
+          <rect x="12" y="2" width="2" height="2" fill="#cd853f"/>
+          {/* Head */}
+          <rect x="2" y="3" width="12" height="11" fill="#8b4513"/>
+          <rect x="3" y="2" width="10" height="1" fill="#8b4513"/>
+          {/* Eyes */}
+          <rect x="4" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="10" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="4" y="6" width="1" height="1" fill="#ffffff"/>
+          <rect x="10" y="6" width="1" height="1" fill="#ffffff"/>
+          {/* Snout */}
+          <rect x="5" y="9" width="6" height="4" fill="#cd853f"/>
+          {/* Nose */}
+          <rect x="7" y="10" width="2" height="2" fill="#000000"/>
+        </svg>
+      ),
+      fox: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Fox - clever and cute */}
+          {/* Ears */}
+          <rect x="1" y="0" width="4" height="5" fill="#ff6600"/>
+          <rect x="11" y="0" width="4" height="5" fill="#ff6600"/>
+          <rect x="2" y="1" width="2" height="3" fill="#ffffff"/>
+          <rect x="12" y="1" width="2" height="3" fill="#ffffff"/>
+          {/* Head */}
+          <rect x="2" y="3" width="12" height="10" fill="#ff6600"/>
+          <rect x="3" y="13" width="10" height="2" fill="#ff6600"/>
+          {/* White face */}
+          <rect x="5" y="8" width="6" height="6" fill="#ffffff"/>
+          {/* Eyes */}
+          <rect x="4" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="10" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="4" y="5" width="1" height="1" fill="#ffffff"/>
+          <rect x="10" y="5" width="1" height="1" fill="#ffffff"/>
+          {/* Nose */}
+          <rect x="7" y="10" width="2" height="2" fill="#000000"/>
+        </svg>
+      ),
+      rabbit: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Rabbit - long ears */}
+          {/* Long ears */}
+          <rect x="3" y="0" width="3" height="7" fill="#dddddd"/>
+          <rect x="10" y="0" width="3" height="7" fill="#dddddd"/>
+          <rect x="4" y="1" width="1" height="5" fill="#ffaaaa"/>
+          <rect x="11" y="1" width="1" height="5" fill="#ffaaaa"/>
+          {/* Head */}
+          <rect x="2" y="5" width="12" height="10" fill="#dddddd"/>
+          <rect x="3" y="4" width="10" height="1" fill="#dddddd"/>
+          {/* Eyes */}
+          <rect x="4" y="8" width="2" height="2" fill="#ff6688"/>
+          <rect x="10" y="8" width="2" height="2" fill="#ff6688"/>
+          <rect x="4" y="8" width="1" height="1" fill="#ffffff"/>
+          <rect x="10" y="8" width="1" height="1" fill="#ffffff"/>
+          {/* Nose */}
+          <rect x="7" y="11" width="2" height="1" fill="#ffaaaa"/>
+          {/* Whiskers */}
+          <rect x="1" y="12" width="3" height="1" fill="#aaaaaa"/>
+          <rect x="12" y="12" width="3" height="1" fill="#aaaaaa"/>
+          {/* Teeth */}
+          <rect x="7" y="13" width="2" height="2" fill="#ffffff"/>
+        </svg>
+      ),
+      owl: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Owl - wise night bird */}
+          {/* Ear tufts */}
+          <rect x="2" y="0" width="3" height="3" fill="#8b6914"/>
+          <rect x="11" y="0" width="3" height="3" fill="#8b6914"/>
+          {/* Head */}
+          <rect x="2" y="2" width="12" height="12" fill="#8b6914"/>
+          <rect x="3" y="1" width="10" height="1" fill="#8b6914"/>
+          {/* Face disk */}
+          <rect x="3" y="3" width="10" height="8" fill="#daa520"/>
+          {/* Big eyes */}
+          <rect x="3" y="4" width="4" height="4" fill="#ffff00"/>
+          <rect x="9" y="4" width="4" height="4" fill="#ffff00"/>
+          <rect x="5" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="10" y="5" width="2" height="2" fill="#000000"/>
+          {/* Beak */}
+          <rect x="7" y="9" width="2" height="3" fill="#ff8800"/>
+          <rect x="6" y="10" width="4" height="1" fill="#ff8800"/>
+        </svg>
+      ),
+      snake: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Snake - slithery friend */}
+          {/* Coiled body */}
+          <rect x="3" y="10" width="10" height="3" fill="#228822"/>
+          <rect x="1" y="7" width="4" height="3" fill="#22aa22"/>
+          <rect x="11" y="7" width="4" height="3" fill="#22aa22"/>
+          <rect x="3" y="4" width="10" height="3" fill="#228822"/>
+          {/* Pattern */}
+          <rect x="5" y="11" width="2" height="1" fill="#115511"/>
+          <rect x="9" y="11" width="2" height="1" fill="#115511"/>
+          <rect x="5" y="5" width="2" height="1" fill="#115511"/>
+          <rect x="9" y="5" width="2" height="1" fill="#115511"/>
+          {/* Head */}
+          <rect x="1" y="2" width="5" height="4" fill="#22aa22"/>
+          {/* Eyes */}
+          <rect x="2" y="3" width="2" height="2" fill="#ffff00"/>
+          <rect x="3" y="3" width="1" height="1" fill="#000000"/>
+          {/* Tongue */}
+          <rect x="0" y="4" width="2" height="1" fill="#ff0000"/>
+          <rect x="0" y="3" width="1" height="1" fill="#ff0000"/>
+          <rect x="0" y="5" width="1" height="1" fill="#ff0000"/>
+        </svg>
+      ),
+      dolphin: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Dolphin - playful swimmer */}
+          {/* Body */}
+          <rect x="3" y="5" width="10" height="6" fill="#4488cc"/>
+          <rect x="1" y="7" width="2" height="3" fill="#4488cc"/>
+          {/* Dorsal fin */}
+          <rect x="7" y="2" width="3" height="3" fill="#4488cc"/>
+          <rect x="8" y="1" width="1" height="1" fill="#4488cc"/>
+          {/* Tail */}
+          <rect x="13" y="4" width="2" height="2" fill="#4488cc"/>
+          <rect x="13" y="10" width="2" height="2" fill="#4488cc"/>
+          <rect x="14" y="6" width="2" height="4" fill="#4488cc"/>
+          {/* Belly */}
+          <rect x="3" y="9" width="8" height="2" fill="#aaddff"/>
+          {/* Snout */}
+          <rect x="0" y="7" width="2" height="2" fill="#4488cc"/>
+          {/* Eye */}
+          <rect x="3" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="3" y="6" width="1" height="1" fill="#ffffff"/>
+          {/* Smile */}
+          <rect x="1" y="9" width="2" height="1" fill="#336699"/>
+        </svg>
+      ),
+      eagle: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Eagle - majestic bird */}
+          {/* Head feathers */}
+          <rect x="4" y="0" width="8" height="3" fill="#ffffff"/>
+          {/* Head */}
+          <rect x="3" y="2" width="10" height="8" fill="#ffffff"/>
+          {/* Eye */}
+          <rect x="4" y="4" width="3" height="3" fill="#ffcc00"/>
+          <rect x="5" y="5" width="2" height="1" fill="#000000"/>
+          {/* Beak */}
+          <rect x="0" y="5" width="4" height="3" fill="#ffaa00"/>
+          <rect x="0" y="6" width="2" height="1" fill="#ff8800"/>
+          <rect x="0" y="7" width="3" height="1" fill="#ffaa00"/>
+          {/* Body */}
+          <rect x="5" y="10" width="8" height="5" fill="#553311"/>
+          <rect x="4" y="11" width="1" height="3" fill="#553311"/>
+          {/* Wing */}
+          <rect x="10" y="6" width="5" height="4" fill="#443322"/>
+          <rect x="13" y="10" width="3" height="2" fill="#443322"/>
+        </svg>
+      ),
+      shark: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Shark - fierce ocean predator */}
+          {/* Body */}
+          <rect x="2" y="5" width="12" height="6" fill="#6688aa"/>
+          <rect x="0" y="7" width="2" height="3" fill="#6688aa"/>
+          {/* Dorsal fin */}
+          <rect x="7" y="1" width="3" height="4" fill="#6688aa"/>
+          <rect x="8" y="0" width="1" height="1" fill="#6688aa"/>
+          {/* Tail */}
+          <rect x="14" y="4" width="2" height="3" fill="#6688aa"/>
+          <rect x="14" y="10" width="2" height="3" fill="#6688aa"/>
+          {/* Belly */}
+          <rect x="2" y="9" width="10" height="2" fill="#aabbcc"/>
+          {/* Eye */}
+          <rect x="2" y="6" width="2" height="2" fill="#000000"/>
+          <rect x="2" y="6" width="1" height="1" fill="#ffffff"/>
+          {/* Teeth */}
+          <rect x="0" y="8" width="3" height="1" fill="#ffffff"/>
+          {/* Gills */}
+          <rect x="5" y="6" width="1" height="2" fill="#445566"/>
+          <rect x="7" y="6" width="1" height="2" fill="#445566"/>
+        </svg>
+      ),
+      frog: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Frog - happy hoppy friend */}
+          {/* Big eyes on top */}
+          <rect x="1" y="1" width="5" height="5" fill="#22cc22"/>
+          <rect x="10" y="1" width="5" height="5" fill="#22cc22"/>
+          <rect x="2" y="2" width="3" height="3" fill="#ffffff"/>
+          <rect x="11" y="2" width="3" height="3" fill="#ffffff"/>
+          <rect x="3" y="3" width="2" height="2" fill="#000000"/>
+          <rect x="12" y="3" width="2" height="2" fill="#000000"/>
+          {/* Head */}
+          <rect x="1" y="5" width="14" height="8" fill="#22cc22"/>
+          {/* Mouth */}
+          <rect x="3" y="10" width="10" height="2" fill="#118811"/>
+          <rect x="4" y="11" width="8" height="1" fill="#ff6688"/>
+          {/* Spots */}
+          <rect x="4" y="7" width="2" height="2" fill="#118811"/>
+          <rect x="10" y="7" width="2" height="2" fill="#118811"/>
+        </svg>
+      ),
+      penguin: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Penguin - tuxedo bird */}
+          {/* Body */}
+          <rect x="3" y="2" width="10" height="12" fill="#222222"/>
+          <rect x="4" y="1" width="8" height="1" fill="#222222"/>
+          {/* White belly */}
+          <rect x="5" y="6" width="6" height="7" fill="#ffffff"/>
+          {/* Eyes */}
+          <rect x="4" y="4" width="2" height="2" fill="#ffffff"/>
+          <rect x="10" y="4" width="2" height="2" fill="#ffffff"/>
+          <rect x="5" y="4" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="4" width="1" height="1" fill="#000000"/>
+          {/* Beak */}
+          <rect x="7" y="6" width="2" height="2" fill="#ff8800"/>
+          {/* Feet */}
+          <rect x="4" y="14" width="3" height="1" fill="#ff8800"/>
+          <rect x="9" y="14" width="3" height="1" fill="#ff8800"/>
+          {/* Wings */}
+          <rect x="1" y="6" width="2" height="6" fill="#222222"/>
+          <rect x="13" y="6" width="2" height="6" fill="#222222"/>
+        </svg>
+      ),
+      monkey: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Monkey - playful primate */}
+          {/* Ears */}
+          <rect x="0" y="4" width="4" height="5" fill="#8b4513"/>
+          <rect x="12" y="4" width="4" height="5" fill="#8b4513"/>
+          <rect x="1" y="5" width="2" height="3" fill="#deb887"/>
+          <rect x="13" y="5" width="2" height="3" fill="#deb887"/>
+          {/* Head */}
+          <rect x="3" y="2" width="10" height="12" fill="#8b4513"/>
+          <rect x="4" y="1" width="8" height="1" fill="#8b4513"/>
+          {/* Face */}
+          <rect x="4" y="6" width="8" height="7" fill="#deb887"/>
+          {/* Eyes */}
+          <rect x="5" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="5" width="2" height="2" fill="#000000"/>
+          <rect x="5" y="5" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="5" width="1" height="1" fill="#ffffff"/>
+          {/* Nose */}
+          <rect x="6" y="9" width="4" height="2" fill="#8b4513"/>
+          <rect x="6" y="9" width="1" height="1" fill="#000000"/>
+          <rect x="9" y="9" width="1" height="1" fill="#000000"/>
+          {/* Smile */}
+          <rect x="6" y="12" width="4" height="1" fill="#8b4513"/>
+        </svg>
+      ),
+      dragon: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Dragon - mythical beast */}
+          {/* Horns */}
+          <rect x="1" y="0" width="2" height="4" fill="#ffcc00"/>
+          <rect x="13" y="0" width="2" height="4" fill="#ffcc00"/>
+          {/* Head */}
+          <rect x="2" y="3" width="12" height="10" fill="#22aa22"/>
+          <rect x="3" y="2" width="10" height="1" fill="#22aa22"/>
+          {/* Scales */}
+          <rect x="4" y="4" width="2" height="1" fill="#118811"/>
+          <rect x="10" y="4" width="2" height="1" fill="#118811"/>
+          <rect x="7" y="3" width="2" height="1" fill="#118811"/>
+          {/* Eyes - fierce */}
+          <rect x="3" y="5" width="3" height="3" fill="#ff0000"/>
+          <rect x="10" y="5" width="3" height="3" fill="#ff0000"/>
+          <rect x="4" y="6" width="2" height="1" fill="#ffff00"/>
+          <rect x="11" y="6" width="2" height="1" fill="#ffff00"/>
+          <rect x="5" y="6" width="1" height="1" fill="#000000"/>
+          <rect x="12" y="6" width="1" height="1" fill="#000000"/>
+          {/* Snout */}
+          <rect x="5" y="9" width="6" height="3" fill="#33bb33"/>
+          {/* Nostrils with fire */}
+          <rect x="6" y="10" width="1" height="1" fill="#ff6600"/>
+          <rect x="9" y="10" width="1" height="1" fill="#ff6600"/>
+          {/* Teeth */}
+          <rect x="6" y="12" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="12" width="1" height="1" fill="#ffffff"/>
+        </svg>
+      ),
+      unicorn: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Unicorn - magical horse */}
+          {/* Horn */}
+          <rect x="7" y="0" width="2" height="5" fill="#ffd700"/>
+          <rect x="6" y="2" width="1" height="1" fill="#ffee88"/>
+          <rect x="9" y="3" width="1" height="1" fill="#ffee88"/>
+          {/* Ears */}
+          <rect x="3" y="3" width="2" height="3" fill="#ffffff"/>
+          <rect x="11" y="3" width="2" height="3" fill="#ffffff"/>
+          {/* Head */}
+          <rect x="3" y="5" width="10" height="8" fill="#ffffff"/>
+          <rect x="4" y="4" width="8" height="1" fill="#ffffff"/>
+          {/* Mane */}
+          <rect x="1" y="5" width="2" height="6" fill="#ff88cc"/>
+          <rect x="13" y="5" width="2" height="6" fill="#88ccff"/>
+          {/* Eyes */}
+          <rect x="4" y="7" width="2" height="2" fill="#ff88ff"/>
+          <rect x="10" y="7" width="2" height="2" fill="#88ffff"/>
+          <rect x="5" y="7" width="1" height="1" fill="#ffffff"/>
+          <rect x="11" y="7" width="1" height="1" fill="#ffffff"/>
+          {/* Muzzle */}
+          <rect x="5" y="10" width="6" height="3" fill="#ffeeee"/>
+          <rect x="6" y="11" width="1" height="1" fill="#ffaaaa"/>
+          <rect x="9" y="11" width="1" height="1" fill="#ffaaaa"/>
+        </svg>
+      ),
+      bee: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Bee - busy buzzer */}
+          {/* Wings */}
+          <rect x="1" y="3" width="4" height="4" fill="#aaddff"/>
+          <rect x="11" y="3" width="4" height="4" fill="#aaddff"/>
+          {/* Body */}
+          <rect x="4" y="4" width="8" height="8" fill="#ffcc00"/>
+          <rect x="5" y="3" width="6" height="1" fill="#ffcc00"/>
+          <rect x="5" y="12" width="6" height="1" fill="#ffcc00"/>
+          {/* Stripes */}
+          <rect x="4" y="6" width="8" height="2" fill="#000000"/>
+          <rect x="4" y="10" width="8" height="2" fill="#000000"/>
+          {/* Eyes */}
+          <rect x="5" y="4" width="2" height="2" fill="#000000"/>
+          <rect x="9" y="4" width="2" height="2" fill="#000000"/>
+          <rect x="5" y="4" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="4" width="1" height="1" fill="#ffffff"/>
+          {/* Antennae */}
+          <rect x="5" y="1" width="1" height="2" fill="#000000"/>
+          <rect x="10" y="1" width="1" height="2" fill="#000000"/>
+          <rect x="4" y="0" width="1" height="1" fill="#000000"/>
+          <rect x="11" y="0" width="1" height="1" fill="#000000"/>
+          {/* Stinger */}
+          <rect x="7" y="13" width="2" height="2" fill="#222222"/>
+        </svg>
+      ),
+      butterfly: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Butterfly - colorful wings */}
+          {/* Left wings */}
+          <rect x="0" y="3" width="6" height="5" fill="#ff66aa"/>
+          <rect x="0" y="8" width="6" height="5" fill="#aa66ff"/>
+          <rect x="1" y="4" width="2" height="2" fill="#ffaacc"/>
+          <rect x="1" y="9" width="2" height="2" fill="#ccaaff"/>
+          {/* Right wings */}
+          <rect x="10" y="3" width="6" height="5" fill="#ff66aa"/>
+          <rect x="10" y="8" width="6" height="5" fill="#aa66ff"/>
+          <rect x="13" y="4" width="2" height="2" fill="#ffaacc"/>
+          <rect x="13" y="9" width="2" height="2" fill="#ccaaff"/>
+          {/* Body */}
+          <rect x="7" y="2" width="2" height="12" fill="#222222"/>
+          {/* Head */}
+          <rect x="6" y="1" width="4" height="3" fill="#222222"/>
+          {/* Eyes */}
+          <rect x="6" y="2" width="1" height="1" fill="#ffffff"/>
+          <rect x="9" y="2" width="1" height="1" fill="#ffffff"/>
+          {/* Antennae */}
+          <rect x="5" y="0" width="1" height="2" fill="#222222"/>
+          <rect x="10" y="0" width="1" height="2" fill="#222222"/>
+        </svg>
+      ),
+      skull: (
+        <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges">
+          {/* Skull - spooky */}
+          {/* Head */}
+          <rect x="2" y="1" width="12" height="11" fill="#eeeeee"/>
+          <rect x="3" y="0" width="10" height="1" fill="#eeeeee"/>
+          <rect x="4" y="12" width="8" height="1" fill="#eeeeee"/>
+          {/* Eye sockets */}
+          <rect x="3" y="4" width="4" height="4" fill="#000000"/>
+          <rect x="9" y="4" width="4" height="4" fill="#000000"/>
+          {/* Nose hole */}
+          <rect x="7" y="8" width="2" height="2" fill="#000000"/>
+          <rect x="6" y="9" width="1" height="1" fill="#000000"/>
+          <rect x="9" y="9" width="1" height="1" fill="#000000"/>
+          {/* Teeth */}
+          <rect x="4" y="12" width="8" height="3" fill="#eeeeee"/>
+          <rect x="4" y="13" width="1" height="2" fill="#000000"/>
+          <rect x="6" y="13" width="1" height="2" fill="#000000"/>
+          <rect x="9" y="13" width="1" height="2" fill="#000000"/>
+          <rect x="11" y="13" width="1" height="2" fill="#000000"/>
+          {/* Jaw line */}
+          <rect x="3" y="11" width="10" height="1" fill="#cccccc"/>
+        </svg>
+      ),
     };
     
     return icons[type] || null;
@@ -4956,6 +5342,22 @@ export default function Game() {
                 { type: "tiger", color: "#ff9933" },
                 { type: "panda", color: "#ffffff" },
                 { type: "wolf", color: "#888899" },
+                { type: "bear", color: "#8b4513" },
+                { type: "fox", color: "#ff6600" },
+                { type: "rabbit", color: "#dddddd" },
+                { type: "owl", color: "#daa520" },
+                { type: "snake", color: "#22aa22" },
+                { type: "dolphin", color: "#4488cc" },
+                { type: "eagle", color: "#553311" },
+                { type: "shark", color: "#6688aa" },
+                { type: "frog", color: "#22cc22" },
+                { type: "penguin", color: "#222222" },
+                { type: "monkey", color: "#8b4513" },
+                { type: "dragon", color: "#22aa22" },
+                { type: "unicorn", color: "#ff88cc" },
+                { type: "bee", color: "#ffcc00" },
+                { type: "butterfly", color: "#ff66aa" },
+                { type: "skull", color: "#eeeeee" },
               ].filter(avatar => ownedAvatars.includes(avatar.type)).map((avatar) => {
                 const isSelected = selectedAvatar === avatar.type;
                 
@@ -5020,6 +5422,22 @@ export default function Game() {
               { type: "tiger", color: "#ff9933" },
               { type: "panda", color: "#ffffff" },
               { type: "wolf", color: "#888899" },
+              { type: "bear", color: "#8b4513" },
+              { type: "fox", color: "#ff6600" },
+              { type: "rabbit", color: "#dddddd" },
+              { type: "owl", color: "#daa520" },
+              { type: "snake", color: "#22aa22" },
+              { type: "dolphin", color: "#4488cc" },
+              { type: "eagle", color: "#553311" },
+              { type: "shark", color: "#6688aa" },
+              { type: "frog", color: "#22cc22" },
+              { type: "penguin", color: "#222222" },
+              { type: "monkey", color: "#8b4513" },
+              { type: "dragon", color: "#22aa22" },
+              { type: "unicorn", color: "#ff88cc" },
+              { type: "bee", color: "#ffcc00" },
+              { type: "butterfly", color: "#ff66aa" },
+              { type: "skull", color: "#eeeeee" },
             ].map((avatar) => {
               const isOwned = ownedAvatars.includes(avatar.type);
               const isSelected = selectedAvatar === avatar.type;
