@@ -273,8 +273,13 @@ export const BOOST_DURATIONS = {
 
 export const MAX_BOOSTS_PER_LIFE = 3;
 
-// Avatar types and pricing
-export const avatarTypes = ["leaf", "bud", "joint", "bong", "flame", "smoke", "seed", "crown"] as const;
+// Avatar types and pricing (32 pixel art avatars)
+export const avatarTypes = [
+  "leaf", "bud", "joint", "bong", "flame", "smoke", "seed", "crown",
+  "dog", "cat", "horse", "elephant", "lion", "tiger", "panda", "wolf",
+  "bear", "fox", "rabbit", "owl", "snake", "dolphin", "eagle", "shark",
+  "frog", "penguin", "monkey", "dragon", "unicorn", "bee", "butterfly", "skull"
+] as const;
 export type AvatarType = typeof avatarTypes[number];
 
 export const AVATAR_PRICE = 5; // All avatars cost 5 Stars
