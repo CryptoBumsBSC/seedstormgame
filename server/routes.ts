@@ -529,6 +529,7 @@ export async function registerRoutes(
   app.post("/api/telegram/player", async (req, res) => {
     try {
       const { telegramId, username, firstName, lastName } = req.body;
+      console.log(`[TELEGRAM PLAYER] Received: telegramId=${telegramId}, username=${username}, firstName=${firstName}`);
       if (!telegramId) {
         return res.status(400).json({ error: "Missing telegramId" });
       }
@@ -538,6 +539,7 @@ export async function registerRoutes(
         firstName: firstName || null,
         lastName: lastName || null,
       });
+      console.log(`[TELEGRAM PLAYER] Created/Updated player with telegramId=${telegramId}`);
       res.json(player);
     } catch (error) {
       console.error("Telegram player error:", error);
@@ -723,6 +725,7 @@ export async function registerRoutes(
   app.post("/api/telegram/score", async (req, res) => {
     try {
       const { telegramId, playerName, score, wave, playTime, usedBoosts } = req.body;
+      console.log(`[TELEGRAM SCORE] Received: telegramId=${telegramId}, playerName=${playerName}, score=${score}`);
       
       if (!telegramId || typeof score !== 'number' || typeof wave !== 'number') {
         return res.status(400).json({ error: "Invalid score data" });

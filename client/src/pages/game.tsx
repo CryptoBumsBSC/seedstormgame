@@ -1310,9 +1310,12 @@ export default function Game() {
   useEffect(() => {
     try {
       WebApp.ready();
+      console.log("[SEED STORM] WebApp.initDataUnsafe:", JSON.stringify(WebApp.initDataUnsafe));
       const user = WebApp.initDataUnsafe?.user;
+      console.log("[SEED STORM] User data:", user ? JSON.stringify(user) : "NO USER DATA");
       if (user) {
         const id = user.id.toString();
+        console.log("[SEED STORM] Setting telegramId to:", id);
         setTelegramId(id);
         setTelegramUsername(user.username || user.first_name || "Player");
         
@@ -1327,9 +1330,11 @@ export default function Game() {
             lastName: user.last_name || null,
           }),
         }).catch(console.error);
+      } else {
+        console.log("[SEED STORM] No Telegram user data available - telegramId will be null");
       }
     } catch (e) {
-      console.log("Not running in Telegram Mini App context");
+      console.log("[SEED STORM] Not running in Telegram Mini App context:", e);
     }
   }, []);
 
