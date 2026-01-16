@@ -1716,6 +1716,30 @@ export default function Game() {
     );
   };
 
+  const checkPlayerCollision = (enemy: { x: number; y: number; width: number; height: number }, 
+                                player: { x: number; y: number; width: number; height: number }) => {
+    const expand = 0.10;
+    const expandedPlayer = {
+      x: player.x - player.width * expand / 2,
+      y: player.y - player.height * expand / 2,
+      width: player.width * (1 + expand),
+      height: player.height * (1 + expand)
+    };
+    return checkCollision(enemy, expandedPlayer);
+  };
+
+  const checkProjectileHitEnemy = (proj: { x: number; y: number; width: number; height: number }, 
+                                   enemy: { x: number; y: number; width: number; height: number }) => {
+    const shrink = 0.10;
+    const shrunkEnemy = {
+      x: enemy.x + enemy.width * shrink / 2,
+      y: enemy.y + enemy.height * shrink / 2,
+      width: enemy.width * (1 - shrink),
+      height: enemy.height * (1 - shrink)
+    };
+    return checkCollision(proj, shrunkEnemy);
+  };
+
   const spawnHazard = useCallback(() => {
     const hazardTypes: HazardType[] = ["bong", "joint", "matches"];
     const type = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
@@ -2309,7 +2333,7 @@ export default function Game() {
     // Use a separate loop to ensure we only take one hit per frame
     let tookDamageThisFrame = invincibilityRef.current > 0;
     hazardsRef.current = hazardsRef.current.filter(hazard => {
-      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(hazard, player)) {
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkPlayerCollision(hazard, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
         damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
@@ -2392,7 +2416,7 @@ export default function Game() {
         // Check boss collision first
         if (bossRef.current) {
           const boss = bossRef.current;
-          if (checkCollision(proj, boss)) {
+          if (checkProjectileHitEnemy(proj, boss)) {
             boss.health--;
             soundSystem.hit();
             if (boss.health <= 0) {
@@ -2424,7 +2448,7 @@ export default function Game() {
         
         for (let i = enemiesRef.current.length - 1; i >= 0; i--) {
           const enemy = enemiesRef.current[i];
-          if (checkCollision(proj, enemy)) {
+          if (checkProjectileHitEnemy(proj, enemy)) {
             enemy.health--;
             soundSystem.hit();
             if (enemy.health <= 0) {
@@ -2464,7 +2488,7 @@ export default function Game() {
           }
         }
       } else {
-        if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(proj, player)) {
+        if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkPlayerCollision(proj, player)) {
           tookDamageThisFrame = true;
           soundSystem.damage();
           damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
@@ -2488,7 +2512,7 @@ export default function Game() {
     });
 
     enemiesRef.current = enemiesRef.current.filter(enemy => {
-      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(enemy, player)) {
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkPlayerCollision(enemy, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
         damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
@@ -2578,7 +2602,7 @@ export default function Game() {
       seed.x += seed.angle * seed.speed; // Slight diagonal movement
       
       // Check collision with player (only if not invincible and no shield)
-      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkCollision(seed, player)) {
+      if (!tookDamageThisFrame && shieldEndRef.current <= gameTimeRef.current && checkPlayerCollision(seed, player)) {
         tookDamageThisFrame = true;
         soundSystem.damage();
         damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 150 };
