@@ -639,17 +639,45 @@ export default function Admin() {
                     <p style={{ color: "#ff6600" }}>Use for refunds or compensation</p>
                     <p style={{ color: "#00ffff" }}>Max 99 per boost type in inventory</p>
                   </div>
+                  <div className="p-2 mb-3 rounded text-xs" style={{ background: "#331100", border: "1px solid #ff6600" }}>
+                    <p style={{ color: "#ff6600" }}>IMPORTANT: Use numeric Telegram ID (e.g. 123456789)</p>
+                    <p style={{ color: "#ffaa00" }}>NOT username! Get ID from Players list above.</p>
+                  </div>
                   <div className="space-y-3">
+                    {/* Quick select from existing players */}
+                    {players && players.length > 0 && (
+                      <Select 
+                        value="" 
+                        onValueChange={(val) => {
+                          const player = players.find(p => p.telegramId === val);
+                          if (player) {
+                            setCreditTelegramId(player.telegramId);
+                            setCreditUsername(player.username || player.firstName || "");
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full" data-testid="select-existing-player">
+                          <SelectValue placeholder="Quick select existing player..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {players.map(p => (
+                            <SelectItem key={p.telegramId} value={p.telegramId}>
+                              {p.username || p.firstName || p.telegramId} ({p.telegramId})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                     <Input
                       type="text"
-                      placeholder="Telegram User ID (numeric)"
+                      placeholder="Telegram User ID (numeric, e.g. 123456789)"
                       value={creditTelegramId}
                       onChange={(e) => setCreditTelegramId(e.target.value)}
                       data-testid="input-credit-telegram-id"
                     />
                     <Input
                       type="text"
-                      placeholder="Username (optional, e.g. TheRealityBroker)"
+                      placeholder="Username (optional, for display)"
                       value={creditUsername}
                       onChange={(e) => setCreditUsername(e.target.value)}
                       data-testid="input-credit-username"
