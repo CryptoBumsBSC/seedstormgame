@@ -434,7 +434,7 @@ export default function Admin() {
             </div>
             <div className="grid grid-cols-8 gap-1 text-[10px] font-bold p-2 min-w-[700px]" style={{ color: "#00ffff" }}>
               <span>@USERNAME</span>
-              <span>ID</span>
+              <span style={{ color: "#ff9900" }}>TELEGRAM ID</span>
               <span>GAMES</span>
               <span>SPENT</span>
               <span>WON</span>
@@ -455,7 +455,7 @@ export default function Admin() {
                   <span style={{ color: "#00ffff" }}>
                     {player.username ? `@${player.username}` : player.firstName || "Unknown"}
                   </span>
-                  <span style={{ color: "#666" }}>{player.telegramId}</span>
+                  <span style={{ color: "#ff9900", fontFamily: "monospace" }}>{player.telegramId}</span>
                   <span style={{ color: "#aaa" }}>{player.totalGames}</span>
                   <span style={{ color: "#ffd700" }}>{player.totalStarsSpent} Stars</span>
                   <span style={{ color: "#00ff00" }}>{player.totalStarsWon} Stars</span>
