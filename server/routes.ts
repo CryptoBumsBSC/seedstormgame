@@ -1031,38 +1031,14 @@ export async function registerRoutes(
       }
 
       const avatarNames: Record<string, string> = {
-        leaf: "Cannabis Leaf",
         bud: "Purple Bud",
         joint: "Lit Joint",
-        bong: "Blue Bong",
-        flame: "Fire Flame",
-        smoke: "Smoke Cloud",
-        seed: "Cannabis Seed",
         crown: "Golden Crown",
         dog: "Pixel Dog",
         cat: "Pixel Cat",
-        horse: "Pixel Horse",
         elephant: "Pixel Elephant",
-        lion: "Pixel Lion",
         tiger: "Pixel Tiger",
-        panda: "Pixel Panda",
         wolf: "Pixel Wolf",
-        bear: "Pixel Bear",
-        fox: "Pixel Fox",
-        rabbit: "Pixel Rabbit",
-        owl: "Pixel Owl",
-        snake: "Pixel Snake",
-        dolphin: "Pixel Dolphin",
-        eagle: "Pixel Eagle",
-        shark: "Pixel Shark",
-        frog: "Pixel Frog",
-        penguin: "Pixel Penguin",
-        monkey: "Pixel Monkey",
-        dragon: "Pixel Dragon",
-        unicorn: "Pixel Unicorn",
-        bee: "Pixel Bee",
-        butterfly: "Pixel Butterfly",
-        skull: "Pixel Skull",
       };
 
       const url = `https://api.telegram.org/bot${botToken}/createInvoiceLink`;
