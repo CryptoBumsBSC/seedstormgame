@@ -1220,6 +1220,15 @@ Open the game and tap SHOP to purchase!`;
           replyMarkup = {
             inline_keyboard: [[{ text: "📊 FULL LEADERBOARD", url: gameUrl }]]
           };
+        } else if (text === "/play") {
+          replyText = `🎮 *SEED STORM* 🎮
+
+Tap the button below to launch the game!
+
+Your progress and purchases are saved to your Telegram account.`;
+          replyMarkup = {
+            inline_keyboard: [[{ text: "🚀 LAUNCH GAME", url: gameUrl }]]
+          };
         } else if (text === "/help") {
           replyText = `📖 *HOW TO PLAY*
 
