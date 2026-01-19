@@ -16,6 +16,24 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Diagnostic endpoint for debugging production
+  app.get("/api/debug/paths", (req, res) => {
+    const scriptDir = path.dirname(path.resolve(process.argv[1]));
+    const diagnostics = {
+      nodeEnv: process.env.NODE_ENV,
+      argv: process.argv,
+      cwd: process.cwd(),
+      dirname: __dirname,
+      scriptDir,
+      publicCandidates: [
+        { path: path.join(scriptDir, "public"), exists: fs.existsSync(path.join(scriptDir, "public")) },
+        { path: path.resolve(process.cwd(), "dist", "public"), exists: fs.existsSync(path.resolve(process.cwd(), "dist", "public")) },
+        { path: path.resolve(__dirname, "public"), exists: fs.existsSync(path.resolve(__dirname, "public")) },
+      ],
+    };
+    res.json(diagnostics);
+  });
+
   // Serve banner image for Telegram (must be exactly 640x360)
   app.get("/banner.png", (req, res) => {
     const filePath = path.resolve(process.cwd(), "attached_assets/generated_images/seed_storm_telegram_640x360.png");

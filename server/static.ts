@@ -2,22 +2,33 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 
+declare const __STATIC_PATH__: string | undefined;
+
 export function serveStatic(app: Express) {
+  // Get the directory of the currently running script
+  const scriptDir = path.dirname(path.resolve(process.argv[1]));
+  
   // Try multiple strategies to find the public folder
   const candidates = [
-    // Strategy 1: Relative to the script being executed (most reliable for bundled code)
-    path.resolve(path.dirname(process.argv[1]), "public"),
-    // Strategy 2: Relative to current working directory
+    // Strategy 1: Relative to the resolved script path (most reliable)
+    path.join(scriptDir, "public"),
+    // Strategy 2: Defined at build time
+    typeof __STATIC_PATH__ !== 'undefined' ? path.join(scriptDir, __STATIC_PATH__) : null,
+    // Strategy 3: Relative to current working directory
     path.resolve(process.cwd(), "dist", "public"),
-    // Strategy 3: __dirname (works in development)
+    // Strategy 4: __dirname (works in development)
     path.resolve(__dirname, "public"),
-    // Strategy 4: Absolute path from repo root
-    "/home/runner/workspace/dist/public",
-  ];
+  ].filter(Boolean) as string[];
+  
+  console.log(`[static] Script location: ${process.argv[1]}`);
+  console.log(`[static] Script directory: ${scriptDir}`);
+  console.log(`[static] Current working directory: ${process.cwd()}`);
+  console.log(`[static] __dirname: ${__dirname}`);
   
   let distPath: string | null = null;
   
   for (const candidate of candidates) {
+    console.log(`[static] Checking: ${candidate}`);
     if (fs.existsSync(candidate)) {
       distPath = candidate;
       console.log(`[static] Found public folder at: ${candidate}`);
@@ -33,6 +44,14 @@ export function serveStatic(app: Express) {
   }
 
   console.log(`[static] Serving static files from: ${distPath}`);
+  
+  // List files in the directory to verify
+  try {
+    const files = fs.readdirSync(distPath);
+    console.log(`[static] Files in public folder: ${files.join(', ')}`);
+  } catch (e) {
+    console.error(`[static] Error reading directory: ${e}`);
+  }
   
   app.use(express.static(distPath));
 
