@@ -54,7 +54,6 @@ async function buildAll() {
     outfile: "dist/index.cjs",
     define: {
       "process.env.NODE_ENV": '"production"',
-      "__STATIC_PATH__": '"public"',
     },
     minify: true,
     external: externals,
