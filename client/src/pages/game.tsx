@@ -1256,6 +1256,7 @@ export default function Game() {
   const [loadout, setLoadout] = useState<BoostLoadout>([null, null, null]);
   const [telegramId, setTelegramId] = useState<string | null>(null);
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
+  const [telegramChecked, setTelegramChecked] = useState<boolean>(false);
   const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
   const [isBanned, setIsBanned] = useState<boolean>(false);
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
@@ -1336,6 +1337,7 @@ export default function Game() {
     } catch (e) {
       console.log("[SEED STORM] Not running in Telegram Mini App context:", e);
     }
+    setTelegramChecked(true);
   }, []);
 
   // Check if player is banned and fetch inventory when telegramId is available
@@ -4005,6 +4007,75 @@ export default function Game() {
           style={{ color: "#888" }}
         >
           Your account has been banned from playing SEED STORM. If you believe this is an error, please contact the administrator.
+        </p>
+      </div>
+    );
+  }
+
+  if (!telegramChecked) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <p style={{ color: "#00ff00", fontFamily: "'Press Start 2P', monospace", fontSize: "12px" }}>
+          LOADING...
+        </p>
+      </div>
+    );
+  }
+
+  if (telegramChecked && !telegramId) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center p-6 text-center">
+        <div
+          className="text-5xl mb-6"
+          style={{ filter: "drop-shadow(0 0 20px #00ff00)" }}
+        >
+          🌿
+        </div>
+        <h1
+          className="text-xl mb-3"
+          style={{
+            color: "#00ff00",
+            fontFamily: "'Press Start 2P', monospace",
+            textShadow: "0 0 10px #00ff00",
+            lineHeight: "1.6",
+          }}
+        >
+          SEED STORM
+        </h1>
+        <p
+          className="text-sm mb-2"
+          style={{ color: "#ff00ff", fontFamily: "'Press Start 2P', monospace", fontSize: "10px" }}
+        >
+          TELEGRAM ONLY
+        </p>
+        <p
+          className="mb-8 max-w-xs"
+          style={{ color: "#888", fontSize: "13px", lineHeight: "1.6" }}
+        >
+          This game is only available through Telegram. Open it via the bot to play.
+        </p>
+        <a
+          href="https://t.me/SeedStormBot"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-6 py-3 text-sm font-bold rounded"
+          style={{
+            background: "#00ff00",
+            color: "#000",
+            fontFamily: "'Press Start 2P', monospace",
+            fontSize: "11px",
+            textDecoration: "none",
+            boxShadow: "0 0 20px #00ff00",
+          }}
+          data-testid="link-open-telegram"
+        >
+          OPEN IN TELEGRAM
+        </a>
+        <p
+          className="mt-6 text-xs"
+          style={{ color: "#555" }}
+        >
+          @SeedStormBot
         </p>
       </div>
     );
