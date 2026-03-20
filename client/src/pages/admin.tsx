@@ -53,6 +53,15 @@ interface PrizePoolInfo {
   distributed: boolean;
 }
 
+interface DailyScore {
+  id: number;
+  telegramId: string;
+  playerName: string;
+  score: number;
+  wave: number;
+  usedBoosts: boolean;
+}
+
 export default function Admin() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -108,6 +117,16 @@ export default function Admin() {
         headers: { "x-admin-password": password }
       });
       if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  const { data: dailyScores = [] } = useQuery<DailyScore[]>({
+    queryKey: ["/api/telegram/leaderboard/daily"],
+    queryFn: async () => {
+      const res = await fetch("/api/telegram/leaderboard/daily");
+      if (!res.ok) return [];
       return res.json();
     },
     enabled: isAuthenticated,
@@ -573,12 +592,53 @@ export default function Admin() {
 
                 <Card className="p-4 border" style={{ borderColor: "#ffff00" }}>
                   <h3 className="text-sm mb-3" style={{ color: "#ffff00" }}>PRIZE DISTRIBUTION</h3>
-                  <div className="space-y-2 text-xs mb-4" style={{ color: "#aaa" }}>
-                    <p>Top 3 Winners: 25% / 10% / 5%</p>
-                    <p>Random 10 Players: 1% each</p>
-                    <p>Unclaimed: Goes to owner</p>
-                    <p className="text-[10px]" style={{ color: "#ff6600" }}>Clears classic leaderboard after distribution</p>
+
+                  {/* Stars Breakdown */}
+                  <div className="p-3 rounded mb-4 space-y-2 text-xs" style={{ background: "rgba(255,215,0,0.08)", border: "1px solid #ffd700" }}>
+                    <p className="font-bold mb-1" style={{ color: "#ffd700" }}>★ STARS BREAKDOWN</p>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Total Stars in Pool</span>
+                      <span style={{ color: "#ffd700" }}>{prizePool.totalSpent} ★</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Owner gets (50%)</span>
+                      <span style={{ color: "#ff6600" }}>{prizePool.ownerShare} ★</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span style={{ color: "#aaa" }}>Winners pool (50%)</span>
+                      <span style={{ color: "#00ff00" }}>{prizePool.prizePool} ★</span>
+                    </div>
                   </div>
+
+                  {/* Today's Top Winners */}
+                  <p className="text-xs font-bold mb-2" style={{ color: "#00ffff" }}>TODAY'S TOP PLAYERS & PRIZE ★</p>
+                  <div className="space-y-1 mb-4">
+                    {dailyScores.length === 0 ? (
+                      <p className="text-xs" style={{ color: "#555" }}>No scores yet today</p>
+                    ) : (
+                      [
+                        { place: "🥇 1st", pct: 0.25, label: "25%" },
+                        { place: "🥈 2nd", pct: 0.10, label: "10%" },
+                        { place: "🥉 3rd", pct: 0.05, label: "5%" },
+                      ].map((prize, i) => {
+                        const player = dailyScores[i];
+                        const stars = Math.floor(prizePool.prizePool * prize.pct);
+                        return (
+                          <div key={i} className="flex justify-between items-center text-xs p-2 rounded" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <span style={{ color: "#aaa" }}>{prize.place} {player ? player.playerName : "—"}</span>
+                            <span style={{ color: "#ffd700" }}>{player ? `${stars} ★ (${prize.label})` : "—"}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-[10px] mb-4" style={{ color: "#666" }}>
+                    <p>Random 10 Players: 1% each ({Math.floor(prizePool.prizePool * 0.01)} ★ each)</p>
+                    <p>Unclaimed: Goes to owner</p>
+                    <p style={{ color: "#ff6600" }}>⚠ Clears classic leaderboard after distribution</p>
+                  </div>
+
                   <Button
                     onClick={handleDistribute}
                     disabled={prizePool.distributed || !prizePool.thresholdMet || distributePrizesMutation.isPending}
