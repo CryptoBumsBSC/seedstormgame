@@ -1462,7 +1462,8 @@ No limits on earnings! The more you share, the more you earn.`;
         return res.status(401).json({ error: "Unauthorized" });
       }
       
-      const { telegramId, boostType, quantity, username } = req.body;
+      const { telegramId: rawTelegramId, boostType, quantity, username } = req.body;
+      const telegramId = rawTelegramId?.trim();
       
       if (!telegramId || !boostType || typeof quantity !== 'number' || quantity <= 0) {
         return res.status(400).json({ error: "Invalid telegramId, boostType, or quantity" });
