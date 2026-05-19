@@ -4121,14 +4121,14 @@ export default function Game() {
           </Button>
 
           <Button
-            onClick={() => setScreen("shop")}
+            disabled
             variant="outline"
-            className="w-full py-4 text-sm border-2"
+            className="w-full py-4 text-sm border-2 cursor-not-allowed opacity-50"
             style={{ borderColor: "#ff00ff", color: "#ff00ff" }}
             data-testid="button-boost-shop"
           >
             <Zap className="w-4 h-4 mr-2" />
-            BOOST SHOP ⭐
+            BOOST SHOP — COMING SOON
           </Button>
         </div>
 
