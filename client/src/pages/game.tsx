@@ -4222,13 +4222,18 @@ export default function Game() {
             />
           </a>
         ) : (
-          <div 
-            className="w-[320px] h-[100px] mb-4 flex items-center justify-center border-2 border-dashed rounded"
-            style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.1)" }}
+          <a
+            href="https://www.astraark.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block mb-4 w-[320px] h-[100px] flex flex-col items-center justify-center border-2 border-dashed rounded no-underline"
+            style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.05)" }}
             data-testid="placeholder-ad-title"
           >
-            <p className="text-sm font-bold" style={{ color: "#00ffff" }}>YOUR AD HERE</p>
-          </div>
+            <p className="text-[9px] mb-1" style={{ color: "#888" }}>SPONSORED BY</p>
+            <p className="text-base font-bold tracking-widest" style={{ color: "#00ffff", textShadow: "0 0 8px #00ffff" }}>ASTRAARK</p>
+            <p className="text-[9px] mt-1" style={{ color: "#00ffff", opacity: 0.7 }}>www.astraark.com</p>
+          </a>
         )}
 
         <div className="text-center">
@@ -4577,13 +4582,18 @@ export default function Game() {
                 />
               </a>
             ) : (
-              <div 
-                className="w-[320px] h-[100px] mt-4 flex items-center justify-center border-2 border-dashed rounded"
-                style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.1)" }}
+              <a
+                href="https://www.astraark.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mt-4 w-[320px] h-[100px] flex flex-col items-center justify-center border-2 border-dashed rounded no-underline"
+                style={{ borderColor: "#ff00ff", background: "rgba(255,0,255,0.05)" }}
                 data-testid="placeholder-ad-gameover"
               >
-                <p className="text-sm font-bold" style={{ color: "#ff00ff" }}>YOUR AD HERE</p>
-              </div>
+                <p className="text-[9px] mb-1" style={{ color: "#888" }}>SPONSORED BY</p>
+                <p className="text-base font-bold tracking-widest" style={{ color: "#ff00ff", textShadow: "0 0 8px #ff00ff" }}>ASTRAARK</p>
+                <p className="text-[9px] mt-1" style={{ color: "#ff00ff", opacity: 0.7 }}>www.astraark.com</p>
+              </a>
             )}
           </div>
         ) : (
