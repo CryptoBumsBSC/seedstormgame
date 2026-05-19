@@ -26,6 +26,20 @@ const BOMB_SPEED = 3.2;
 const BARRIER_COUNT = 4;
 const MYSTERY_SPEED = 1.8;
 
+// ============ AD CONFIGURATION ============
+// Change these to update your ads (320x100 banner size recommended)
+const ADS = {
+  titleScreen: {
+    image: "", // Put your ad image URL here, e.g. "/my-ad.png"
+    link: "",  // Where clicking the ad goes, e.g. "https://example.com"
+  },
+  gameOver: {
+    image: "", // Put your ad image URL here
+    link: "",  // Where clicking the ad goes
+  },
+};
+// ==========================================
+
 type Screen = "title" | "game" | "gameover" | "leaderboard" | "help";
 type LeaderboardTab = "daily" | "alltime";
 
@@ -921,6 +935,22 @@ export default function PhotonWars() {
           ? HOW TO PLAY
         </button>
 
+        {/* Ad banner */}
+        {ADS.titleScreen.image ? (
+          <a href={ADS.titleScreen.link || "#"} target="_blank" rel="noopener noreferrer"
+            style={{ display:"block", marginBottom:"16px" }} data-testid="link-ad-title-pw"
+            onClick={() => fetch("/api/ad-click",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({placement:"titleScreen"})}).catch(()=>{})}>
+            <img src={ADS.titleScreen.image} alt="Advertisement" style={{ width:"320px", height:"100px", objectFit:"cover", borderRadius:"2px", border:"2px solid #aa44ff" }} />
+          </a>
+        ) : (
+          <a href="https://www.astraark.com/" target="_blank" rel="noopener noreferrer" data-testid="placeholder-ad-title-pw"
+            style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", width:"320px", height:"100px", border:"2px dashed #aa44ff", borderRadius:"2px", background:"rgba(170,68,255,0.05)", marginBottom:"16px", textDecoration:"none" }}>
+            <p style={{ color:"#555", fontSize:"9px", margin:"0 0 4px" }}>SPONSORED BY</p>
+            <p style={{ color:"#aa44ff", fontSize:"14px", fontWeight:"bold", letterSpacing:"4px", margin:"0 0 4px", textShadow:"0 0 8px #aa44ff" }}>ASTRAARK</p>
+            <p style={{ color:"#aa44ff", fontSize:"9px", margin:0, opacity:0.7 }}>www.astraark.com</p>
+          </a>
+        )}
+
         <div style={{ textAlign:"center" }}>
           <p style={{ color:"#444", fontSize:"7px", marginBottom:"4px" }}>ARROWS / WASD — MOVE</p>
           <p style={{ color:"#444", fontSize:"7px" }}>SPACE — FIRE · ESC — PAUSE</p>
@@ -997,6 +1027,22 @@ export default function PhotonWars() {
           data-testid="button-menu-pw"
           style={{ width:"100%", maxWidth:"280px", padding:"12px", background:"transparent", color:"#888", fontSize:"10px", fontFamily:"'Press Start 2P',monospace", border:"2px solid #444", cursor:"pointer" }}
         >MAIN MENU</button>
+
+        {/* Ad banner */}
+        {ADS.gameOver.image ? (
+          <a href={ADS.gameOver.link || "#"} target="_blank" rel="noopener noreferrer"
+            style={{ display:"block", marginTop:"20px" }} data-testid="link-ad-gameover-pw"
+            onClick={() => fetch("/api/ad-click",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({placement:"gameOver"})}).catch(()=>{})}>
+            <img src={ADS.gameOver.image} alt="Advertisement" style={{ width:"320px", height:"100px", objectFit:"cover", borderRadius:"2px", border:"2px solid #ff4488" }} />
+          </a>
+        ) : (
+          <a href="https://www.astraark.com/" target="_blank" rel="noopener noreferrer" data-testid="placeholder-ad-gameover-pw"
+            style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", width:"320px", height:"100px", border:"2px dashed #ff4488", borderRadius:"2px", background:"rgba(255,68,136,0.05)", marginTop:"20px", textDecoration:"none" }}>
+            <p style={{ color:"#555", fontSize:"9px", margin:"0 0 4px" }}>SPONSORED BY</p>
+            <p style={{ color:"#ff4488", fontSize:"14px", fontWeight:"bold", letterSpacing:"4px", margin:"0 0 4px", textShadow:"0 0 8px #ff4488" }}>ASTRAARK</p>
+            <p style={{ color:"#ff4488", fontSize:"9px", margin:0, opacity:0.7 }}>www.astraark.com</p>
+          </a>
+        )}
       </div>
     );
   }
