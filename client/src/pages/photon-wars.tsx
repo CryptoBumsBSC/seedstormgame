@@ -50,6 +50,7 @@ interface Invader { id: string; col: number; row: number; x: number; y: number; 
 interface Barrier { x: number; y: number; blocks: boolean[][]; }
 interface Mystery { x: number; y: number; dir: number; active: boolean; }
 interface PowerUp { id: string; x: number; y: number; type: "wide"|"laser"|"rapid"|"life"; vy: number; }
+interface Shockwave { id: string; x: number; y: number; r: number; maxR: number; life: number; maxLife: number; color: string; }
 
 // ─── Audio ───────────────────────────────────────────────────────────────────
 function createAudio() {
@@ -176,6 +177,9 @@ export default function PhotonWars() {
     animTimer: 0,
     lastTime: 0,
     screenFlashFrames: 0,
+    shockwaves: [] as Shockwave[],
+    waveAnnounceMs: 0,
+    waveAnnounceWave: 1,
   });
 
   const keysRef = useRef<Record<string, boolean>>({});
@@ -260,6 +264,8 @@ export default function PhotonWars() {
     s.stepTimer = 0;
     s.bombTimer = 0;
     s.mystery.active = false;
+    s.waveAnnounceMs = 2200;
+    s.waveAnnounceWave = s.wave;
     audio.current.levelUp();
   }
 
@@ -319,115 +325,211 @@ export default function PhotonWars() {
 
   // ─── Draw invader sprite ───────────────────────────────────────────────────
   function drawInvader(ctx: CanvasRenderingContext2D, inv: Invader, frame: number) {
-    const colors = ["#00eeff", "#aa44ff", "#ff4488"];
+    const colors = ["#00eeff", "#cc44ff", "#ff2288"];
+    const darkColors = ["#004466", "#440066", "#660022"];
     const col = colors[inv.type];
+    const dark = darkColors[inv.type];
     const dmg = 1 - inv.hp / inv.maxHp;
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = col;
-
     const px = inv.x, py = inv.y, w = INVADER_W, h = INVADER_H;
 
+    ctx.shadowBlur = 14 - dmg * 6;
+    ctx.shadowColor = col;
+
     if (inv.type === 0) {
-      // Squid — 2 frames
+      // ── Squid (small, cyan) ──
       ctx.fillStyle = col;
-      // body
-      ctx.fillRect(px+8, py+2, w-16, h-8);
-      ctx.fillRect(px+4, py+6, w-8, h-10);
-      // antennae
-      ctx.fillRect(px+6, py, 3, 5);
-      ctx.fillRect(px+w-9, py, 3, 5);
-      // eyes
+      ctx.fillRect(px+7, py+3, w-14, h-9);    // body core
+      ctx.fillRect(px+4, py+7, w-8, h-12);    // body wide
+      ctx.fillRect(px+9, py+1, w-18, 4);      // head dome
+      ctx.fillStyle = dark;
+      ctx.fillRect(px+7, py+3, 3, 4);         // body shading left
+      ctx.fillStyle = col;
+      ctx.fillRect(px+6, py-2, 2, 5);         // antenna left
+      ctx.fillRect(px+w-8, py-2, 2, 5);       // antenna right
+      ctx.fillRect(px+5, py-3, 4, 2);
+      ctx.fillRect(px+w-9, py-3, 4, 2);
       ctx.fillStyle = "#000";
-      ctx.fillRect(px+9, py+8, 4, 4);
-      ctx.fillRect(px+w-13, py+8, 4, 4);
-      // tentacles alternate
+      ctx.fillRect(px+8, py+7, 5, 5);         // eye left
+      ctx.fillRect(px+w-13, py+7, 5, 5);      // eye right
+      ctx.fillStyle = "#aaffff";
+      ctx.fillRect(px+9, py+8, 2, 2);         // eye highlight
+      ctx.fillRect(px+w-12, py+8, 2, 2);
+      ctx.fillStyle = col;
+      ctx.fillRect(px+10, py+13, 2, 2);       // mouth dots
+      ctx.fillRect(px+14, py+14, 4, 1);
+      ctx.fillRect(px+w-12, py+13, 2, 2);
       if (frame % 2 === 0) {
-        ctx.fillStyle = col;
-        ctx.fillRect(px+2, py+h-8, 4, 7);
-        ctx.fillRect(px+w/2-2, py+h-8, 4, 7);
-        ctx.fillRect(px+w-6, py+h-8, 4, 7);
+        ctx.fillRect(px+2, py+h-5, 3, 7);
+        ctx.fillRect(px+8, py+h-3, 3, 5);
+        ctx.fillRect(px+w/2-2, py+h-6, 4, 8);
+        ctx.fillRect(px+w-11, py+h-3, 3, 5);
+        ctx.fillRect(px+w-5, py+h-5, 3, 7);
       } else {
-        ctx.fillStyle = col;
-        ctx.fillRect(px+4, py+h-5, 4, 7);
-        ctx.fillRect(px+w/2-2, py+h-4, 4, 7);
-        ctx.fillRect(px+w-8, py+h-5, 4, 7);
+        ctx.fillRect(px+2, py+h-3, 3, 5);
+        ctx.fillRect(px+8, py+h-6, 3, 8);
+        ctx.fillRect(px+w/2-2, py+h-4, 4, 6);
+        ctx.fillRect(px+w-11, py+h-6, 3, 8);
+        ctx.fillRect(px+w-5, py+h-3, 3, 5);
       }
+
     } else if (inv.type === 1) {
-      // Crab
+      // ── Crab (medium, purple) ──
       ctx.fillStyle = col;
-      ctx.fillRect(px+6, py+2, w-12, h-6);
-      ctx.fillRect(px+2, py+6, w-4, h-12);
-      // claws alternate
+      ctx.fillRect(px+4, py+2, w-8, h-5);     // shell
+      ctx.fillRect(px+2, py+6, w-4, h-10);    // wide body
+      ctx.fillRect(px+7, py, w-14, 4);        // top ridge
+      ctx.fillStyle = dark;
+      ctx.fillRect(px+4, py+2, 4, 5);         // shell shading
+      ctx.fillStyle = col;
       if (frame % 2 === 0) {
-        ctx.fillRect(px, py+4, 5, 5);
-        ctx.fillRect(px+w-5, py+4, 5, 5);
+        ctx.fillRect(px-3, py+3, 8, 6);       // claw left out
+        ctx.fillRect(px-3, py+9, 6, 3);
+        ctx.fillRect(px+w-5, py+3, 8, 6);     // claw right out
+        ctx.fillRect(px+w-3, py+9, 6, 3);
       } else {
-        ctx.fillRect(px+2, py+8, 5, 5);
-        ctx.fillRect(px+w-7, py+8, 5, 5);
+        ctx.fillRect(px-1, py+6, 7, 5);       // claw left in
+        ctx.fillRect(px-2, py+11, 5, 3);
+        ctx.fillRect(px+w-6, py+6, 7, 5);     // claw right in
+        ctx.fillRect(px+w-3, py+11, 5, 3);
       }
       ctx.fillStyle = "#000";
-      ctx.fillRect(px+10, py+6, 4, 4);
-      ctx.fillRect(px+w-14, py+6, 4, 4);
-    } else {
-      // Octopus (top row — hardest)
+      ctx.fillRect(px+9, py+5, 5, 5);         // eye left
+      ctx.fillRect(px+w-14, py+5, 5, 5);      // eye right
+      ctx.fillStyle = "#ddaaff";
+      ctx.fillRect(px+10, py+6, 2, 2);
+      ctx.fillRect(px+w-13, py+6, 2, 2);
       ctx.fillStyle = col;
-      ctx.fillRect(px+4, py, w-8, h-4);
-      ctx.fillRect(px, py+6, w, h-12);
-      ctx.fillRect(px+8, py+h-6, w-16, 6);
-      // legs
-      const legOff = frame % 2 === 0 ? 0 : 2;
-      [0,1,2,3].forEach(i => {
-        ctx.fillRect(px + i*(w/4) + legOff, py+h-4, 4, 7);
+      const legs = [0, 7, 14, 21];
+      legs.forEach(lx => {
+        const ly = frame % 2 === 0 ? 1 : -1;
+        ctx.fillRect(px+4+lx, py+h-1+ly, 3, 5);
       });
+
+    } else {
+      // ── Octopus (large, hard, magenta) ──
+      ctx.fillStyle = col;
+      ctx.fillRect(px+2, py+2, w-4, h-4);     // big body
+      ctx.fillRect(px+5, py, w-10, 4);        // top dome
+      ctx.fillRect(px+3, py+1, w-6, 3);
+      ctx.fillRect(px, py+h-5, w, 5);         // bottom plate
+      ctx.fillStyle = dark;
+      ctx.fillRect(px+2, py+2, 4, h-6);       // body shading
+      ctx.fillStyle = col;
+      ctx.fillRect(px-3, py+5, 5, h-10);      // side bumps
+      ctx.fillRect(px+w-2, py+5, 5, h-10);
       ctx.fillStyle = "#000";
-      ctx.fillRect(px+10, py+6, 5, 5);
-      ctx.fillRect(px+w-15, py+6, 5, 5);
+      ctx.fillRect(px+7, py+5, 7, 7);         // eye left (big)
+      ctx.fillRect(px+w-14, py+5, 7, 7);      // eye right (big)
+      ctx.fillStyle = "#ff2222";               // red pupils = menacing
+      ctx.fillRect(px+9, py+7, 3, 3);
+      ctx.fillRect(px+w-12, py+7, 3, 3);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(px+10, py+14, 12, 3);      // mouth
+      ctx.fillStyle = col;
+      ctx.fillRect(px+12, py+14, 2, 3);       // teeth
+      ctx.fillRect(px+16, py+14, 2, 3);
+      ctx.fillRect(px+20, py+14, 2, 3);
+      const legOff = frame % 2 === 0 ? 0 : 3;
+      [0, 7, 15, 22].forEach((lx, i) => {
+        const alt = i % 2 === 0 ? legOff : -legOff + 2;
+        ctx.fillRect(px + lx, py + h - 2, 4, 5 + alt);
+      });
     }
 
     // Damage crack overlay
-    if (dmg > 0) {
+    if (dmg > 0.1) {
       ctx.shadowBlur = 0;
-      ctx.strokeStyle = `rgba(255,80,80,${dmg * 0.7})`;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = `rgba(255,60,60,${dmg * 0.85})`;
+      ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(px + w/2, py + 2);
-      ctx.lineTo(px + w/2 + 4, py + h/2);
-      ctx.lineTo(px + w/2 - 2, py + h - 2);
+      ctx.moveTo(px + w*0.4, py + 2);
+      ctx.lineTo(px + w*0.52, py + h*0.45);
+      ctx.lineTo(px + w*0.44, py + h - 2);
       ctx.stroke();
+      if (dmg > 0.45) {
+        ctx.beginPath();
+        ctx.moveTo(px + w*0.62, py + 3);
+        ctx.lineTo(px + w*0.57, py + h*0.55);
+        ctx.stroke();
+      }
     }
     ctx.shadowBlur = 0;
   }
 
   // ─── Draw player ───────────────────────────────────────────────────────────
-  function drawPlayer(ctx: CanvasRenderingContext2D, x: number, weaponLevel: number) {
+  function drawPlayer(ctx: CanvasRenderingContext2D, x: number, weaponLevel: number, t: number) {
     const py = CH - 68;
-    ctx.shadowBlur = 16;
-    ctx.shadowColor = "#00ffff";
-    ctx.fillStyle = "#00ffff";
 
-    // Base
-    ctx.fillRect(x + 14, py + 20, 8, 8);
-    // Body
-    ctx.fillRect(x + 8, py + 10, 20, 14);
-    // Cockpit
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x + 14, py + 8, 8, 8);
-    ctx.fillStyle = "#00ffff";
-    // Wings
-    ctx.fillRect(x, py + 18, 12, 6);
-    ctx.fillRect(x + 24, py + 18, 12, 6);
-    // Cannon
-    ctx.fillRect(x + 16, py, 4, 14);
+    // ── Thruster flame (animated) ──
+    const flameH = 9 + 5 * Math.sin(t * 0.016);
+    const flameW = 12 + 4 * Math.sin(t * 0.022 + 1.3);
+    ctx.shadowBlur = 22; ctx.shadowColor = "#ff7700";
+    ctx.fillStyle = "rgba(255,200,60,0.95)";
+    ctx.fillRect(x + PLAYER_W/2 - flameW/2, py + PLAYER_H - 4, flameW, flameH * 0.55);
+    ctx.fillStyle = "rgba(255,90,0,0.8)";
+    ctx.fillRect(x + PLAYER_W/2 - flameW/2 + 2, py + PLAYER_H + flameH * 0.3, flameW - 4, flameH * 0.7);
+    ctx.fillStyle = "rgba(255,255,200,0.95)";
+    ctx.fillRect(x + PLAYER_W/2 - 3, py + PLAYER_H - 4, 6, 4);
+    ctx.shadowBlur = 0;
+
+    // ── Wing cannons ──
     if (weaponLevel >= 2) {
-      ctx.fillStyle = "#aa44ff";
-      ctx.fillRect(x + 6, py + 4, 3, 10);
-      ctx.fillRect(x + 27, py + 4, 3, 10);
+      ctx.shadowBlur = 10; ctx.shadowColor = "#cc44ff";
+      ctx.fillStyle = "#551188";
+      ctx.fillRect(x + 1, py + 16, 5, 13);
+      ctx.fillRect(x + PLAYER_W - 6, py + 16, 5, 13);
+      ctx.fillStyle = "#cc44ff";
+      ctx.fillRect(x + 2, py + 8, 3, 9);
+      ctx.fillRect(x + PLAYER_W - 5, py + 8, 3, 9);
     }
     if (weaponLevel >= 3) {
-      ctx.fillStyle = "#ff4488";
-      ctx.fillRect(x, py + 8, 3, 8);
-      ctx.fillRect(x + 33, py + 8, 3, 8);
+      ctx.shadowBlur = 10; ctx.shadowColor = "#ff2288";
+      ctx.fillStyle = "#880033";
+      ctx.fillRect(x - 6, py + 20, 6, 10);
+      ctx.fillRect(x + PLAYER_W, py + 20, 6, 10);
+      ctx.fillStyle = "#ff2288";
+      ctx.fillRect(x - 5, py + 13, 3, 9);
+      ctx.fillRect(x + PLAYER_W + 2, py + 13, 3, 9);
     }
+
+    // ── Ship hull ──
+    ctx.shadowBlur = 20; ctx.shadowColor = "#00ffff";
+    // Engine pods
+    ctx.fillStyle = "#004455";
+    ctx.fillRect(x + 7, py + 22, 7, 6);
+    ctx.fillRect(x + PLAYER_W - 14, py + 22, 7, 6);
+    ctx.fillStyle = "#ff8800";
+    ctx.fillRect(x + 8, py + 25, 5, 3);
+    ctx.fillRect(x + PLAYER_W - 13, py + 25, 5, 3);
+    // Wings
+    ctx.fillStyle = "#003344";
+    ctx.fillRect(x, py + 19, 10, 8);
+    ctx.fillRect(x + PLAYER_W - 10, py + 19, 10, 8);
+    ctx.fillStyle = "#005566";
+    ctx.fillRect(x + 1, py + 20, 8, 5);
+    ctx.fillRect(x + PLAYER_W - 9, py + 20, 8, 5);
+    // Main body
+    ctx.fillStyle = "#005577";
+    ctx.fillRect(x + 6, py + 13, PLAYER_W - 12, 14);
+    ctx.fillStyle = "#0088aa";
+    ctx.fillRect(x + 8, py + 11, PLAYER_W - 16, 14);
+    // Body highlight
+    ctx.fillStyle = "#00aabb";
+    ctx.fillRect(x + 10, py + 12, PLAYER_W - 20, 4);
+    // Cockpit surround
+    ctx.fillStyle = "#002233";
+    ctx.fillRect(x + 13, py + 7, 10, 10);
+    // Cockpit glass
+    ctx.fillStyle = "#00ffee";
+    ctx.fillRect(x + 14, py + 8, 8, 8);
+    ctx.fillStyle = "#aaffff";
+    ctx.fillRect(x + 14, py + 8, 4, 3);
+    ctx.fillRect(x + 19, py + 9, 2, 2);
+    // Main cannon
+    ctx.fillStyle = "#00ccdd";
+    ctx.fillRect(x + 16, py, 4, 14);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x + 17, py, 2, 5);
     ctx.shadowBlur = 0;
   }
 
@@ -459,8 +561,8 @@ export default function PhotonWars() {
       else s.weaponLevel = 0;
 
       // ── Player movement ──
-      if (keys["ArrowLeft"] || keys["KeyA"]) s.playerX = Math.max(0, s.playerX - 3 * dtN);
-      if (keys["ArrowRight"] || keys["KeyD"]) s.playerX = Math.min(CW - PLAYER_W, s.playerX + 3 * dtN);
+      if (keys["ArrowLeft"] || keys["KeyA"]) s.playerX = Math.max(0, s.playerX - 4.5 * dtN);
+      if (keys["ArrowRight"] || keys["KeyD"]) s.playerX = Math.min(CW - PLAYER_W, s.playerX + 4.5 * dtN);
 
       // ── Shoot ──
       if (s.shootCooldown > 0) s.shootCooldown -= dt;
@@ -536,7 +638,7 @@ export default function PhotonWars() {
 
       // ── Move bullets ──
       s.bullets = s.bullets.filter(b => b.y > -10);
-      s.bullets.forEach(b => { b.y -= 9 * dtN; });
+      s.bullets.forEach(b => { b.y -= 12 * dtN; });
 
       // ── Move bombs ──
       s.bombs = s.bombs.filter(b => b.y < CH + 10);
@@ -562,7 +664,8 @@ export default function PhotonWars() {
               const pts = (inv.type + 1) * 10 * s.wave;
               s.score += pts;
               s.shakeFrames = 8;
-              spawnParticles(inv.x + INVADER_W/2, inv.y + INVADER_H/2, col, 20, 5);
+              spawnParticles(inv.x + INVADER_W/2, inv.y + INVADER_H/2, col, 24, 5);
+              s.shockwaves.push({ id: Math.random().toString(36).slice(2), x: inv.x + INVADER_W/2, y: inv.y + INVADER_H/2, r: 4, maxR: 44, life: 18, maxLife: 18, color: col });
               audio.current.boom();
               // Chance to drop power-up
               if (Math.random() < 0.1) {
@@ -679,6 +782,10 @@ export default function PhotonWars() {
       });
       if (s.shakeFrames > 0) s.shakeFrames = Math.max(0, s.shakeFrames - dtN);
       if (s.screenFlashFrames > 0) s.screenFlashFrames = Math.max(0, s.screenFlashFrames - dtN);
+      if (s.waveAnnounceMs > 0) s.waveAnnounceMs = Math.max(0, s.waveAnnounceMs - dt);
+      // ── Update shockwaves ──
+      s.shockwaves = s.shockwaves.filter(sw => sw.life > 0);
+      s.shockwaves.forEach(sw => { sw.r += (sw.maxR - sw.r) * 0.18 * dtN; sw.life -= dtN; });
 
       // ── Check wave clear ──
       if (alive.filter(i => i.alive).length === 0) {
@@ -687,148 +794,237 @@ export default function PhotonWars() {
     }
 
     // ──────── DRAW ────────────────────────────────────────────────────────────
-    const shakeX = s.shakeFrames > 0 ? (Math.random() - 0.5) * 6 : 0;
-    const shakeY = s.shakeFrames > 0 ? (Math.random() - 0.5) * 6 : 0;
+    const shakeX = s.shakeFrames > 0 ? (Math.random() - 0.5) * 8 : 0;
+    const shakeY = s.shakeFrames > 0 ? (Math.random() - 0.5) * 8 : 0;
 
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
-    // Background
-    ctx.fillStyle = "#000010";
+    // ── Deep space gradient background ──
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, CH);
+    bgGrad.addColorStop(0, "#00001a");
+    bgGrad.addColorStop(0.5, "#00000f");
+    bgGrad.addColorStop(1, "#010008");
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(-10, -10, CW + 20, CH + 20);
 
-    // Stars background
-    ctx.fillStyle = "#ffffff";
-    for (let i = 0; i < 60; i++) {
-      const sx = ((i * 137.5 + s.score * 0.1) % CW);
-      const sy = ((i * 97.3 + time * 0.01) % CH);
-      ctx.globalAlpha = 0.3 + (i % 3) * 0.2;
-      ctx.fillRect(sx, sy, i % 3 === 0 ? 2 : 1, i % 3 === 0 ? 2 : 1);
+    // ── Nebula blobs (atmospheric depth) ──
+    const nebulas: [number,number,string,number][] = [[75,110,"#150035",85],[325,190,"#001525",75],[170,390,"#0c0028",65],[240,300,"#001a10",60]];
+    nebulas.forEach(([nx,ny,nc,nr]) => {
+      const g = ctx.createRadialGradient(nx,ny,0,nx,ny,nr);
+      g.addColorStop(0, nc+"88"); g.addColorStop(1, "transparent");
+      ctx.fillStyle = g; ctx.fillRect(nx-nr,ny-nr,nr*2,nr*2);
+    });
+
+    // ── 3-layer parallax starfield ──
+    for (let i = 0; i < 45; i++) {
+      const sx = (i * 173.13) % CW;
+      const sy = ((i * 97.31 + time * 0.009) % CH + CH) % CH;
+      ctx.globalAlpha = 0.15 + (i % 4) * 0.08;
+      ctx.fillStyle = "#aaaadd";
+      ctx.fillRect(sx, sy, 1, 1);
+    }
+    for (let i = 0; i < 28; i++) {
+      const sx = (i * 211.71 + 60) % CW;
+      const sy = ((i * 143.93 + time * 0.022) % CH + CH) % CH;
+      ctx.globalAlpha = 0.35 + (i % 3) * 0.15;
+      ctx.fillStyle = "#ccccff";
+      ctx.fillRect(sx, sy, i % 5 === 0 ? 2 : 1, i % 5 === 0 ? 2 : 1);
+    }
+    for (let i = 0; i < 16; i++) {
+      const sx = (i * 317.37 + 110) % CW;
+      const sy = ((i * 89.71 + time * 0.042) % CH + CH) % CH;
+      const twinkle = 0.5 + 0.5 * Math.sin(time * 0.003 + i * 1.73);
+      ctx.globalAlpha = twinkle * 0.7 + 0.2;
+      ctx.fillStyle = i % 3 === 0 ? "#ffeeaa" : "#ffffff";
+      ctx.fillRect(sx, sy, 2, 2);
     }
     ctx.globalAlpha = 1;
 
-    // Screen flash
+    // ── Screen flash ──
     if (s.screenFlashFrames > 0) {
-      ctx.globalAlpha = s.screenFlashFrames * 0.06;
+      ctx.globalAlpha = Math.min(s.screenFlashFrames / 10, 1) * 0.5;
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, CW, CH);
       ctx.globalAlpha = 1;
     }
 
-    // Barriers
+    // ── Barriers (layered glow) ──
     const blockSize = 4;
-    ctx.shadowBlur = 4; ctx.shadowColor = "#886622";
     s.barriers.forEach(bar => {
-      bar.blocks.forEach((row, r) => {
-        row.forEach((alive2, c) => {
-          if (alive2) {
-            const dmgR = r / bar.blocks.length;
-            ctx.fillStyle = `hsl(40,60%,${30 + dmgR * 20}%)`;
-            ctx.fillRect(bar.x + c * blockSize, bar.y + r * blockSize, blockSize - 1, blockSize - 1);
-          }
+      bar.blocks.forEach((brow, r) => {
+        brow.forEach((alive2, c) => {
+          if (!alive2) return;
+          const bx = bar.x + c * blockSize, by = bar.y + r * blockSize;
+          ctx.shadowBlur = 5; ctx.shadowColor = "#aa7722";
+          const lit = 1 - r / bar.blocks.length * 0.3;
+          ctx.fillStyle = `hsl(36,72%,${Math.floor(36 * lit)}%)`;
+          ctx.fillRect(bx, by, blockSize - 1, blockSize - 1);
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = `hsl(42,85%,58%)`;
+          ctx.fillRect(bx, by, blockSize - 1, 1);
         });
       });
     });
     ctx.shadowBlur = 0;
 
-    // Invaders
-    s.invaders.forEach(inv => {
-      if (inv.alive) drawInvader(ctx, inv, s.invaderAnimFrame);
+    // ── Shockwave rings ──
+    s.shockwaves.forEach(sw => {
+      const alpha = sw.life / sw.maxLife;
+      ctx.save();
+      ctx.globalAlpha = alpha * 0.75;
+      ctx.strokeStyle = sw.color;
+      ctx.lineWidth = 2.5 + (1 - alpha) * 2.5;
+      ctx.shadowBlur = 14; ctx.shadowColor = sw.color;
+      ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
     });
 
-    // Mystery ship
+    // ── Invaders ──
+    s.invaders.forEach(inv => { if (inv.alive) drawInvader(ctx, inv, s.invaderAnimFrame); });
+
+    // ── Mystery ship ──
     if (s.mystery.active) {
-      ctx.shadowBlur = 16; ctx.shadowColor = "#ff0066";
-      ctx.fillStyle = "#ff0066";
       const mx = s.mystery.x, my = s.mystery.y;
-      ctx.fillRect(mx + 10, my, 30, 12);
-      ctx.fillRect(mx + 5,  my + 4, 40, 8);
-      ctx.fillRect(mx, my + 8, 50, 6);
-      ctx.fillRect(mx + 15, my - 4, 8, 6);
-      ctx.fillRect(mx + 27, my - 4, 8, 6);
+      const pulse = 0.85 + 0.15 * Math.sin(time * 0.009);
+      ctx.globalAlpha = pulse;
+      ctx.shadowBlur = 22; ctx.shadowColor = "#ff0066";
+      ctx.fillStyle = "#bb0033";
+      ctx.fillRect(mx+8, my+2, 34, 10);
+      ctx.fillStyle = "#ff0066";
+      ctx.fillRect(mx+4, my+5, 42, 8);
+      ctx.fillRect(mx, my+9, 50, 5);
+      ctx.fillRect(mx+14, my-5, 7, 7);
+      ctx.fillRect(mx+29, my-5, 7, 7);
+      ctx.fillStyle = "#ff88aa";
+      ctx.fillRect(mx+19, my+4, 12, 6);
       ctx.fillStyle = "#ffcc00";
-      ctx.fillRect(mx + 14, my + 4, 5, 5);
-      ctx.fillRect(mx + 31, my + 4, 5, 5);
-      ctx.shadowBlur = 0;
+      ctx.fillRect(mx+13, my+5, 4, 4);
+      ctx.fillRect(mx+33, my+5, 4, 4);
+      const eng = 0.5 + 0.5 * Math.sin(time * 0.017);
+      ctx.fillStyle = `rgba(255,140,0,${eng})`;
+      for (let i = 0; i < 4; i++) ctx.fillRect(mx + 5 + i * 11, my + 13, 5, 3);
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     }
 
-    // Player bullets
+    // ── Player bullets (with trail) ──
     s.bullets.forEach(b => {
-      ctx.shadowBlur = 10; ctx.shadowColor = "#00ffff";
+      ctx.globalAlpha = 0.22; ctx.fillStyle = "#00ffff";
+      ctx.fillRect(b.x + 1, b.y + BULLET_H, BULLET_W - 2, 12);
+      ctx.globalAlpha = 0.1;
+      ctx.fillRect(b.x + 1, b.y + BULLET_H + 10, BULLET_W - 2, 9);
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 16; ctx.shadowColor = "#00ffff";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(b.x + 1, b.y, BULLET_W - 2, 4);
       ctx.fillStyle = "#00ffff";
-      ctx.fillRect(b.x, b.y, BULLET_W, BULLET_H);
+      ctx.fillRect(b.x, b.y + 3, BULLET_W, BULLET_H - 3);
     });
     ctx.shadowBlur = 0;
 
-    // Bombs
+    // ── Bombs (layered) ──
     s.bombs.forEach(b => {
-      ctx.shadowBlur = 8; ctx.shadowColor = "#ff4400";
-      ctx.fillStyle = "#ff6600";
-      ctx.fillRect(b.x, b.y, BULLET_W, 10);
+      ctx.shadowBlur = 12; ctx.shadowColor = "#ff4400";
+      ctx.fillStyle = "#ff2200";
+      ctx.fillRect(b.x, b.y, BULLET_W, 5);
+      ctx.fillStyle = "#ffaa00";
+      ctx.fillRect(b.x+1, b.y+5, BULLET_W-2, 3);
+      ctx.fillRect(b.x, b.y+8, BULLET_W, 3);
     });
     ctx.shadowBlur = 0;
 
-    // Power-ups
-    const puColors: Record<string, string> = { wide: "#aa44ff", rapid: "#ffaa00", life: "#00ff88", laser: "#ff0066" };
-    const puLabels: Record<string, string> = { wide: "W", rapid: "R", life: "♥", laser: "L" };
-    ctx.font = "bold 9px monospace";
+    // ── Power-ups (pulsing) ──
+    const puColors: Record<string, string> = { wide:"#cc44ff", rapid:"#ffaa00", life:"#00ff88", laser:"#ff0066" };
+    const puLabels: Record<string, string> = { wide:"W", rapid:"R", life:"♥", laser:"L" };
+    ctx.font = "bold 9px 'Press Start 2P', monospace";
     s.powerUps.forEach(pu => {
       const col = puColors[pu.type] || "#fff";
-      ctx.shadowBlur = 10; ctx.shadowColor = col;
+      const pulse2 = 0.7 + 0.3 * Math.sin(time * 0.006 + pu.x * 0.05);
+      ctx.globalAlpha = pulse2;
+      ctx.shadowBlur = 16; ctx.shadowColor = col;
       ctx.strokeStyle = col; ctx.lineWidth = 2;
-      ctx.strokeRect(pu.x, pu.y, 20, 20);
+      ctx.strokeRect(pu.x, pu.y, 22, 22);
+      ctx.fillStyle = col + "33";
+      ctx.fillRect(pu.x+1, pu.y+1, 20, 20);
       ctx.fillStyle = col;
       ctx.textAlign = "center";
-      ctx.fillText(puLabels[pu.type] || "?", pu.x + 10, pu.y + 14);
+      ctx.fillText(puLabels[pu.type] || "?", pu.x + 11, pu.y + 15);
+      ctx.globalAlpha = 1;
     });
     ctx.shadowBlur = 0;
 
-    // Particles
+    // ── Particles ──
     s.particles.forEach(p => {
-      ctx.globalAlpha = p.life / p.maxLife;
-      ctx.shadowBlur = 6; ctx.shadowColor = p.color;
-      ctx.fillStyle = p.color;
-      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+      const alpha = p.life / p.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.shadowBlur = 9; ctx.shadowColor = p.color;
+      ctx.fillStyle = alpha > 0.5 ? "#ffffff" : p.color;
+      const sz = p.size * (0.4 + alpha * 0.6);
+      ctx.fillRect(p.x - sz/2, p.y - sz/2, sz, sz);
     });
     ctx.globalAlpha = 1; ctx.shadowBlur = 0;
 
-    // Player
-    drawPlayer(ctx, s.playerX, s.weaponLevel);
+    // ── Player ──
+    drawPlayer(ctx, s.playerX, s.weaponLevel, time);
 
-    // HUD
+    // ── HUD panel ──
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(0, 0, CW, 34);
+    ctx.shadowBlur = 8;
     ctx.font = "bold 11px 'Press Start 2P', monospace";
     ctx.textAlign = "left";
-    ctx.fillStyle = "#00ffff";
-    ctx.shadowBlur = 6; ctx.shadowColor = "#00ffff";
+    ctx.fillStyle = "#00ffff"; ctx.shadowColor = "#00ffff";
     ctx.fillText(`${s.score}`, 8, 22);
     ctx.textAlign = "right";
+    ctx.fillStyle = "#cc44ff"; ctx.shadowColor = "#cc44ff";
     ctx.fillText(`WAVE ${s.wave}`, CW - 8, 22);
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ff4488";
-    ctx.shadowColor = "#ff4488";
+    ctx.fillStyle = "#ff2288"; ctx.shadowColor = "#ff2288";
     ctx.fillText("♥".repeat(s.lives), CW/2, 22);
     ctx.shadowBlur = 0;
 
-    // Active power-up indicators
+    // ── Power-up indicators ──
     ctx.font = "7px 'Press Start 2P', monospace";
     ctx.textAlign = "left";
     let indX = 8;
-    if (s.rapidActive > 0) { ctx.fillStyle="#ffaa00"; ctx.fillText("RAPID", indX, 36); indX += 48; }
-    if (s.wideActive > 0)  { ctx.fillStyle="#aa44ff"; ctx.fillText("WIDE", indX, 36);  indX += 40; }
-    if (s.laserActive > 0) { ctx.fillStyle="#ff0066"; ctx.fillText("LASER", indX, 36); }
+    if (s.rapidActive > 0) { ctx.fillStyle="#ffaa00"; ctx.shadowBlur=4; ctx.shadowColor="#ffaa00"; ctx.fillText("RAPID", indX, 42); indX += 52; }
+    if (s.wideActive > 0)  { ctx.fillStyle="#cc44ff"; ctx.shadowBlur=4; ctx.shadowColor="#cc44ff"; ctx.fillText("WIDE",  indX, 42); indX += 44; }
+    if (s.laserActive > 0) { ctx.fillStyle="#ff0066"; ctx.shadowBlur=4; ctx.shadowColor="#ff0066"; ctx.fillText("LASER", indX, 42); }
+    ctx.shadowBlur = 0;
 
-    // Paused overlay
-    if (s.paused) {
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(0, 0, CW, CH);
-      ctx.font = "bold 16px 'Press Start 2P', monospace";
+    // ── Wave announcement ──
+    if (s.waveAnnounceMs > 0) {
+      const t2 = s.waveAnnounceMs;
+      const fadeIn  = Math.min(t2 / 400, 1);
+      const fadeOut = Math.min((2200 - t2) / 400, 1);
+      ctx.globalAlpha = Math.max(0, Math.min(fadeIn, fadeOut));
+      ctx.font = "bold 22px 'Press Start 2P', monospace";
       ctx.textAlign = "center";
-      ctx.fillStyle = "#00ffff";
-      ctx.shadowBlur = 12; ctx.shadowColor = "#00ffff";
+      ctx.fillStyle = "#cc44ff"; ctx.shadowBlur = 24; ctx.shadowColor = "#cc44ff";
+      ctx.fillText(`WAVE ${s.waveAnnounceWave}`, CW/2, CH/2 - 14);
+      ctx.font = "10px 'Press Start 2P', monospace";
+      ctx.fillStyle = "#00ffff"; ctx.shadowColor = "#00ffff";
+      ctx.fillText("GET READY!", CW/2, CH/2 + 16);
+      ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+    }
+
+    // ── Vignette (dark corners = arcade feel) ──
+    const vign = ctx.createRadialGradient(CW/2, CH/2, CH*0.28, CW/2, CH/2, CH*0.88);
+    vign.addColorStop(0, "transparent");
+    vign.addColorStop(1, "rgba(0,0,0,0.52)");
+    ctx.fillStyle = vign;
+    ctx.fillRect(0, 0, CW, CH);
+
+    // ── Paused overlay ──
+    if (s.paused) {
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.font = "bold 18px 'Press Start 2P', monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#00ffff"; ctx.shadowBlur = 18; ctx.shadowColor = "#00ffff";
       ctx.fillText("PAUSED", CW/2, CH/2);
       ctx.font = "8px 'Press Start 2P', monospace";
-      ctx.fillStyle = "#888";
-      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#777"; ctx.shadowBlur = 0;
       ctx.fillText("ESC TO RESUME", CW/2, CH/2 + 30);
     }
 
