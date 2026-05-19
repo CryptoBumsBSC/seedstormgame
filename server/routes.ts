@@ -638,6 +638,19 @@ export async function registerRoutes(
     }
   });
 
+  // Award free avatar for daily high score (max 1 per 24h)
+  app.post("/api/telegram/avatar/daily-reward", async (req, res) => {
+    try {
+      const { telegramId } = req.body;
+      if (!telegramId) return res.status(400).json({ error: "Missing telegramId" });
+      const result = await storage.awardDailyHighScoreAvatar(telegramId.toString().trim());
+      res.json(result);
+    } catch (error) {
+      console.error("Daily avatar reward error:", error);
+      res.status(500).json({ error: "Failed to check daily reward" });
+    }
+  });
+
   // Set selected avatar
   app.post("/api/telegram/avatar/select", async (req, res) => {
     try {

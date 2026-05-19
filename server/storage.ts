@@ -15,6 +15,7 @@ import {
   allTimeBoostedScores,
   allTimePureScores,
   playerAvatars,
+  dailyAvatarRewards,
   type Score,
   type InsertScore,
   type PlayerAccount,
@@ -137,6 +138,7 @@ export interface IStorage {
   purchaseAvatar(telegramId: string, avatarType: AvatarType): Promise<{ success: boolean; message: string }>;
   setSelectedAvatar(telegramId: string, avatarType: AvatarType | null): Promise<boolean>;
   getPlayerSelectedAvatar(telegramId: string): Promise<string | null>;
+  awardDailyHighScoreAvatar(telegramId: string): Promise<{ awarded: boolean; avatarType: string | null; message: string }>;
 }
 
 function getWeekBounds(): { start: Date; end: Date } {
@@ -773,6 +775,50 @@ export class DatabaseStorage implements IStorage {
   async getPlayerSelectedAvatar(telegramId: string): Promise<string | null> {
     const player = await this.getTelegramPlayer(telegramId);
     return player?.selectedAvatar ?? null;
+  }
+
+  async awardDailyHighScoreAvatar(telegramId: string): Promise<{ awarded: boolean; avatarType: string | null; message: string }> {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // Check if player already got a reward today
+    const existing = await db.select().from(dailyAvatarRewards)
+      .where(and(eq(dailyAvatarRewards.telegramId, telegramId), eq(dailyAvatarRewards.rewardDate, today)));
+    if (existing.length > 0) {
+      return { awarded: false, avatarType: null, message: "Already received avatar reward today" };
+    }
+
+    // Check if player is the daily #1 scorer
+    const topScore = await db.select().from(dailyScores)
+      .where(eq(dailyScores.date, today))
+      .orderBy(desc(dailyScores.score))
+      .limit(1);
+    if (!topScore.length || topScore[0].telegramId !== telegramId) {
+      return { awarded: false, avatarType: null, message: "Not the daily high scorer" };
+    }
+
+    // Find an avatar they don't own yet
+    const { avatarTypes } = await import("@shared/schema");
+    const owned = await this.getPlayerAvatars(telegramId);
+    const ownedTypes = owned.map(a => a.avatarType);
+    const unowned = avatarTypes.filter(t => !ownedTypes.includes(t));
+    if (unowned.length === 0) {
+      return { awarded: false, avatarType: null, message: "You already own all avatars!" };
+    }
+
+    // Pick a random unowned avatar
+    const avatarType = unowned[Math.floor(Math.random() * unowned.length)] as AvatarType;
+
+    // Award it
+    await db.insert(playerAvatars).values({ telegramId, avatarType });
+    await db.insert(dailyAvatarRewards).values({ telegramId, avatarType, rewardDate: today });
+
+    // Auto-equip if first avatar
+    const allOwned = await this.getPlayerAvatars(telegramId);
+    if (allOwned.length === 1) {
+      await this.setSelectedAvatar(telegramId, avatarType);
+    }
+
+    return { awarded: true, avatarType, message: `Free avatar "${avatarType}" awarded for daily high score!` };
   }
 }
 

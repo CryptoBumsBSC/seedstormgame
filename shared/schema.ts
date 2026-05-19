@@ -95,6 +95,14 @@ export const playerAvatars = pgTable("player_avatars", {
   purchasedAt: timestamp("purchased_at").defaultNow().notNull(),
 });
 
+export const dailyAvatarRewards = pgTable("daily_avatar_rewards", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  avatarType: text("avatar_type").notNull(),
+  rewardDate: text("reward_date").notNull(), // YYYY-MM-DD
+  awardedAt: timestamp("awarded_at").defaultNow().notNull(),
+});
+
 export const playerInventory = pgTable("player_inventory", {
   id: serial("id").primaryKey(),
   telegramId: text("telegram_id").notNull(),

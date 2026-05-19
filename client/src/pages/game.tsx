@@ -1265,6 +1265,7 @@ export default function Game() {
   const [ownedAvatars, setOwnedAvatars] = useState<string[]>([]);
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string | null>>({});
+  const [dailyAvatarReward, setDailyAvatarReward] = useState<string | null>(null);
   
   // Per-life boost tracking: stores the loadout slots and current life index
   // Life 1 = index 0, Life 2 = index 1, Life 3 = index 2
@@ -1976,8 +1977,26 @@ export default function Game() {
         isGameOver: true,
       };
     });
+    setDailyAvatarReward(null);
     setScreen("gameover");
-  }, [scores]);
+    // Check for daily high score avatar reward after a short delay (score must be submitted first)
+    if (telegramId) {
+      setTimeout(async () => {
+        try {
+          const res = await fetch("/api/telegram/avatar/daily-reward", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ telegramId }),
+          });
+          const data = await res.json();
+          if (data.awarded && data.avatarType) {
+            setDailyAvatarReward(data.avatarType);
+            setOwnedAvatars(prev => [...prev, data.avatarType]);
+          }
+        } catch {}
+      }, 3000);
+    }
+  }, [scores, telegramId]);
 
   const togglePause = useCallback(() => {
     setGameState(prev => ({
@@ -4423,6 +4442,23 @@ export default function Game() {
             NEW HIGH SCORE!
           </div>
         )}
+
+        {dailyAvatarReward && (
+          <div
+            className="w-full max-w-xs mb-4 p-3 rounded border-2 text-center animate-pulse"
+            style={{ borderColor: "#ffd700", background: "rgba(255,215,0,0.1)" }}
+            data-testid="card-daily-avatar-reward"
+          >
+            <p className="text-xs mb-1" style={{ color: "#ffd700" }}>🏆 DAILY HIGH SCORE REWARD!</p>
+            <div className="flex justify-center my-2">
+              <AvatarIcon type={dailyAvatarReward} size={40} />
+            </div>
+            <p className="text-[10px]" style={{ color: "#ffffff" }}>
+              FREE AVATAR UNLOCKED: <span style={{ color: "#ff00ff" }}>{dailyAvatarReward.toUpperCase()}</span>
+            </p>
+            <p className="text-[9px] mt-1" style={{ color: "#aaa" }}>You topped the daily leaderboard!</p>
+          </div>
+        )}
         
         <h1 
           className="text-2xl mb-4 animate-pulse"
@@ -4722,7 +4758,7 @@ export default function Game() {
                         {index + 1}
                       </span>
                       <span className="w-8 text-center text-[10px]">
-                        {score.usedBoosts ? "🔥💨" : "💎"}
+                        {index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "💎"}
                       </span>
                       <span className="flex-1 text-center text-[9px] flex items-center justify-center gap-2" style={{ color: "#00ffff" }}>
                         {score.avatar ? (
@@ -4960,11 +4996,14 @@ export default function Game() {
               <Zap className="w-4 h-4" />
               WEAPON UPGRADES
             </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>Score higher = bigger guns. Unlocks are automatic!</p>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#ffff00" }}>Start:</span> Single center cannon</p>
-              <p><span style={{ color: "#ffff00" }}>60 sec:</span> Left side gun added</p>
-              <p><span style={{ color: "#ffff00" }}>90 sec:</span> Right side gun added</p>
-              <p><span style={{ color: "#ffff00" }}>4 min:</span> Double barrel machine guns!</p>
+              <p><span style={{ color: "#888" }}>0 pts:</span> Single cannon</p>
+              <p><span style={{ color: "#00ff88" }}>50 pts:</span> Side guns added</p>
+              <p><span style={{ color: "#00ffff" }}>150 pts:</span> Rapid fire unlocked</p>
+              <p><span style={{ color: "#ff00ff" }}>350 pts:</span> Machine gun mode</p>
+              <p><span style={{ color: "#ffff00" }}>600 pts:</span> Full arsenal — all guns!</p>
+              <p className="mt-1" style={{ color: "#ff6600" }}>Lose a life? Weapons reset — earn them back!</p>
             </div>
           </Card>
 
@@ -5068,15 +5107,16 @@ export default function Game() {
             </div>
           </Card>
 
-          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
-            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
-              <Zap className="w-4 h-4" />
-              MACHINE GUN PREVIEW
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffd700" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffd700" }}>
+              <Trophy className="w-4 h-4" />
+              DAILY HIGH SCORE REWARD
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#ff00ff" }}>At 3:30</span> - 5 second preview of machine gun!</p>
-              <p>Test the double barrel before it's permanent</p>
-              <p><span style={{ color: "#ffff00" }}>At 4:00</span> - Machine gun unlocks permanently!</p>
+              <p>Finish the day as the <span style={{ color: "#ffd700" }}>#1 score</span> and win a <span style={{ color: "#ff00ff" }}>FREE AVATAR!</span></p>
+              <p>Avatar is awarded automatically at game over.</p>
+              <p><span style={{ color: "#ffff00" }}>Max 1 free avatar per 24 hours</span></p>
+              <p style={{ color: "#00ff00" }}>Play pure, play hard — top the board to earn it!</p>
             </div>
           </Card>
 
@@ -5092,64 +5132,19 @@ export default function Game() {
             </div>
           </Card>
 
-          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffd700" }}>
-            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffd700" }}>
-              <Zap className="w-4 h-4" />
-              TELEGRAM STARS BOOSTS
-            </h2>
-            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#ffd700" }}>Buy boosts</span> with Telegram Stars - stored in inventory!</p>
-              <p><span style={{ color: "#00ff00" }}>Extra Life (3★):</span> Start with +1 life</p>
-              <p><span style={{ color: "#00ffff" }}>Shield (3★):</span> 5 sec protection at life start</p>
-              <p><span style={{ color: "#ff6600" }}>Rapid Fire (3★):</span> 5 sec fast shots at life start</p>
-              <p><span style={{ color: "#ff00ff" }}>Side Guns (5★):</span> 5 sec side guns at life start</p>
-              <p><span style={{ color: "#ff0000" }}>Machine Gun (10★):</span> 5 sec dual barrels at life start</p>
-              <p><span style={{ color: "#8800ff" }}>Skip Storm (20★):</span> No meteor showers that life</p>
-              <p className="mt-1">Assign <span style={{ color: "#ffff00" }}>1 boost per life</span> before each game!</p>
-              <p>Unused boosts stay in inventory for next time.</p>
-            </div>
-          </Card>
-
-          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff6600" }}>
-            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff6600" }}>
-              <Trophy className="w-4 h-4" />
-              DAILY PRIZE POOL
-            </h2>
-            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#ff6600" }}>Stars spent</span> go into daily prize pool!</p>
-              <p><span style={{ color: "#ffd700" }}>Top 3 winners:</span> 25% / 10% / 5%</p>
-              <p><span style={{ color: "#00ff00" }}>Random 10 players:</span> 1% each</p>
-              <p><span style={{ color: "#ff0000" }}>Minimum:</span> 30 Stars spent daily to activate prizes</p>
-              <p>Win Stars just by playing!</p>
-            </div>
-          </Card>
-
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ffff" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ffff" }}>
               <Trophy className="w-4 h-4" />
               LEADERBOARDS
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#00ffff" }}>TODAY:</span> Daily scores with boost indicators</p>
-              <p>- <span>🔥💨</span> = Used boost (BLAZED)</p>
-              <p>- <span>💎</span> = No boost (PURE skill)</p>
-              <p><span style={{ color: "#ff6600" }}>BLAZED LEGENDS:</span> All-time boosted scores</p>
-              <p><span style={{ color: "#00ff00" }}>MR NATURAL:</span> All-time pure (no boost) scores</p>
+              <p><span style={{ color: "#00ffff" }}>TODAY:</span> Best scores of the day</p>
+              <p><span style={{ color: "#ff6600" }}>ALL-TIME:</span> Greatest scores ever recorded</p>
+              <p><span style={{ color: "#00ff00" }}>MR NATURAL:</span> Pure skill — no boosts used</p>
+              <p className="mt-1">Top daily scorer earns a <span style={{ color: "#ffd700" }}>free avatar reward!</span></p>
             </div>
           </Card>
 
-          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffd700" }}>
-            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffd700" }}>
-              <AlertTriangle className="w-4 h-4" />
-              PRIZE ELIGIBILITY
-            </h2>
-            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p><span style={{ color: "#ffd700" }}>IMPORTANT:</span> All players appear on leaderboards!</p>
-              <p><span style={{ color: "#ff0000" }}>BUT:</span> Only <span style={{ color: "#00ffff" }}>Telegram players</span> can win prizes.</p>
-              <p>To be eligible for Star payouts, you <span style={{ color: "#00ff00" }}>must play through Telegram</span>.</p>
-              <p>Web browser players see their scores but cannot receive Stars.</p>
-            </div>
-          </Card>
 
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#22c55e" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#22c55e" }}>
@@ -5157,14 +5152,14 @@ export default function Game() {
               TIPS
             </h2>
             <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
-              <p>Keep moving - standing still makes you a target</p>
-              <p>Clear enemies before they reach the bottom</p>
-              <p>Watch for hazards after 20 seconds</p>
-              <p><span style={{ color: "#ffff00" }}>Chain kills</span> for combo multiplier bonus!</p>
-              <p>Survive to 4 minutes for max firepower!</p>
-              <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection!</p>
+              <p>Keep moving — standing still makes you a target</p>
+              <p>Chain kills fast for a <span style={{ color: "#ffff00" }}>combo multiplier!</span></p>
+              <p>Every kill builds toward your score unlock — keep the pressure on</p>
+              <p><span style={{ color: "#88ffff" }}>Grab the Bud Angel</span> for shield protection</p>
               <p><span style={{ color: "#ff0000" }}>Avoid the Skull</span> unless you have a shield!</p>
-              <p><span style={{ color: "#ff6600" }}>SEED STORM:</span> Move to edges or shoot the white one!</p>
+              <p><span style={{ color: "#ff6600" }}>SEED STORM:</span> Move to edges or shoot the white seed!</p>
+              <p>Hit <span style={{ color: "#ffd700" }}>350 pts</span> and machine gun mode kicks in — hold on!</p>
+              <p style={{ color: "#ffd700" }}>Top the daily board = free avatar reward!</p>
             </div>
           </Card>
 
