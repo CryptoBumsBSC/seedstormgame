@@ -62,7 +62,7 @@ const CANVAS_HEIGHT = 600;
 const PLAYER_SIZE = 32;
 const ENEMY_SIZE = 28;
 const PROJECTILE_SIZE = 6;
-const DIFFICULTY_INTERVAL = 15000;
+const DIFFICULTY_INTERVAL = 12500;
 const HAZARD_SIZE = 24;
 
 type HazardType = "bong" | "joint" | "matches";
@@ -1595,7 +1595,7 @@ export default function Game() {
     const health = difficultyRef.current;
     
     // Randomized speed: base + difficulty bonus + random variation (-30% to +50%)
-    const baseSpeed = 1 + difficultyRef.current * 0.2;
+    const baseSpeed = 1.2 + difficultyRef.current * 0.24;
     const speedVariation = baseSpeed * (0.7 + Math.random() * 0.8); // 70% to 150% of base
     
     const enemy: Enemy = {
@@ -1688,7 +1688,7 @@ export default function Game() {
       // Base speed + difficulty + random variation
       // Sometimes fires FAST burst shots (15% chance)
       const isBurstShot = Math.random() < 0.15;
-      const baseSpeed = 4 + difficultyRef.current * 0.5;
+      const baseSpeed = 4.8 + difficultyRef.current * 0.6;
       const randomVariation = baseSpeed * (0.6 + Math.random() * 0.8); // 60% to 140% variation
       const burstMultiplier = isBurstShot ? 1.8 + Math.random() * 0.7 : 1; // 1.8x to 2.5x for bursts
       const finalSpeed = randomVariation * burstMultiplier;
@@ -1745,11 +1745,11 @@ export default function Game() {
     const type = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
     
     // Highly randomized hazard speed: some slow, some FAST
-    // 20% chance of "fast hazard" that zooms down
-    const isFastHazard = Math.random() < 0.2;
+    // 25% chance of "fast hazard" that zooms down
+    const isFastHazard = Math.random() < 0.25;
     const hazardSpeed = isFastHazard 
-      ? 4 + Math.random() * 3  // Fast: 4-7 speed
-      : 1.5 + Math.random() * 2.5; // Normal: 1.5-4 speed
+      ? 4.8 + Math.random() * 3.6  // Fast: 4.8-8.4 speed
+      : 1.8 + Math.random() * 3.0; // Normal: 1.8-4.8 speed
     
     const hazard: Hazard = {
       id: generateId(),
@@ -2117,11 +2117,11 @@ export default function Game() {
 
     spawnCooldownRef.current -= deltaTime;
     // Randomized spawn rate: base rate with 50% to 150% variation for unpredictability
-    const baseSpawnRate = Math.max(500, 2000 - difficultyRef.current * 150);
+    const baseSpawnRate = Math.max(416, 1667 - difficultyRef.current * 125);
     const spawnRateVariation = baseSpawnRate * (0.5 + Math.random()); // 50% to 150%
     if (spawnCooldownRef.current <= 0) {
-      // Formation spawning (15% chance after 45 sec)
-      if (gameTimeSec >= 45 && Math.random() < 0.15) {
+      // Formation spawning (20% chance after 45 sec)
+      if (gameTimeSec >= 45 && Math.random() < 0.20) {
         const formationType = Math.floor(Math.random() * 3);
         const centerX = 50 + Math.random() * (CANVAS_WIDTH - 100);
         // Helper to spawn formation enemy with timeout tracking
@@ -2172,8 +2172,8 @@ export default function Game() {
         spawnCooldownRef.current = spawnRateVariation * 2; // Longer cooldown after formation
       } else {
         spawnEnemy();
-        // Sometimes spawn 2 enemies at once (10% chance after 30 sec)
-        if (gameTimeSec >= 30 && Math.random() < 0.1) {
+        // Sometimes spawn 2 enemies at once (15% chance after 30 sec)
+        if (gameTimeSec >= 30 && Math.random() < 0.15) {
           spawnEnemy();
         }
         spawnCooldownRef.current = spawnRateVariation;
@@ -2183,13 +2183,13 @@ export default function Game() {
     // Hazard spawning - starts after 20 seconds, highly randomized timing
     hazardCooldownRef.current -= deltaTime;
     if (gameTimeSec >= 20) {
-      const baseHazardRate = Math.max(1500, 5000 - gameTimeSec * 15);
+      const baseHazardRate = Math.max(1250, 4167 - gameTimeSec * 12);
       // 40% to 160% variation for maximum unpredictability
       const hazardRateVariation = baseHazardRate * (0.4 + Math.random() * 1.2);
       if (hazardCooldownRef.current <= 0) {
         spawnHazard();
-        // Sometimes spawn 2 hazards at once (8% chance after 45 sec)
-        if (gameTimeSec >= 45 && Math.random() < 0.08) {
+        // Sometimes spawn 2 hazards at once (12% chance after 45 sec)
+        if (gameTimeSec >= 45 && Math.random() < 0.12) {
           spawnHazard();
         }
         hazardCooldownRef.current = hazardRateVariation;
@@ -2347,7 +2347,7 @@ export default function Game() {
       
       if (enemy.shootCooldown <= 0) {
         shoot(false, enemy.x + enemy.width / 2, enemy.y);
-        enemy.shootCooldown = Math.random() * 2000 + 1500 - difficultyRef.current * 100;
+        enemy.shootCooldown = Math.random() * 1600 + 1200 - difficultyRef.current * 100;
       }
     });
 
