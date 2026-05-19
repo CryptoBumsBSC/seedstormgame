@@ -1330,10 +1330,14 @@ export default function Game() {
           }),
         }).catch(console.error);
       } else {
-        console.log("[SEED STORM] No Telegram user data available - telegramId will be null");
+        console.log("[SEED STORM] No Telegram user data available - using browser test mode");
+        setTelegramId("browser_test");
+        setTelegramUsername("TestPlayer");
       }
     } catch (e) {
-      console.log("[SEED STORM] Not running in Telegram Mini App context:", e);
+      console.log("[SEED STORM] Not running in Telegram Mini App context - using browser test mode");
+      setTelegramId("browser_test");
+      setTelegramUsername("TestPlayer");
     }
     setTelegramChecked(true);
   }, []);
@@ -3986,7 +3990,7 @@ export default function Game() {
     );
   }
 
-  if (telegramChecked && !telegramId) {
+  if (telegramChecked && !telegramId && false) {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center p-6 text-center">
         <div
