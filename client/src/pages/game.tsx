@@ -46,17 +46,14 @@ const BOOST_PRICES = {
   skip_storm: 20,
 } as const;
 
-// Boost durations in milliseconds (gameTimeRef is in ms)
-const BOOST_DURATIONS = {
-  extra_life: 0,
-  shield_boost: 5000,  // 5 seconds
-  rapid_fire: 5000,    // 5 seconds
-  side_guns: 5000,     // 5 seconds
-  machine_gun: 5000,   // 5 seconds
-  skip_storm: 0,
-} as const;
-
-const MAX_BOOSTS_PER_LIFE = 3;
+// Score-based weapon level thresholds
+const SCORE_WEAPON_LEVELS = [
+  { score: 0,   level: 0, label: "SINGLE CANNON" },
+  { score: 50,  level: 1, label: "SIDE GUNS" },
+  { score: 150, level: 2, label: "RAPID FIRE" },
+  { score: 350, level: 3, label: "MACHINE GUN" },
+  { score: 600, level: 4, label: "FULL ARSENAL" },
+] as const;
 
 type BoostType = keyof typeof BOOST_PRICES;
 
@@ -321,7 +318,7 @@ export default function Game() {
   const lastBossSpawnRef = useRef<number>(0);
   const bossKilledRef = useRef<boolean>(false);
   const budRageActiveRef = useRef<boolean>(false);
-  const machineGunPreviewRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  const machineGunPreviewRef = useRef<{ active: boolean; endTime: number; label?: string }>({ active: false, endTime: 0 });
   const screenShakeRef = useRef<{ intensity: number; duration: number }>({ intensity: 0, duration: 0 });
   const slowMoRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
   const damageFlashRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
@@ -1954,31 +1951,9 @@ export default function Game() {
     starSpeedMultiplierRef.current = 1;
     setIsNewHighScore(false);
     
-    // Apply boost for Life 1 (slot 0)
-    const boosts = activeBoostsRef.current;
-    boosts.currentLifeIndex = 0;
-    const life1Boost = boosts.slots[0];
-    
-    // Count extra_life boosts to determine starting lives
-    const extraLives = boosts.slots.filter(s => s === 'extra_life').length;
-    const startingLives = Math.min(3 + extraLives, 4);
-    
-    // Apply timed boost for life 1 (if not extra_life or skip_storm)
-    if (life1Boost === 'shield_boost') {
-      shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
-    } else if (life1Boost === 'rapid_fire') {
-      rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
-    } else if (life1Boost === 'side_guns') {
-      sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
-    } else if (life1Boost === 'machine_gun') {
-      machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
-    } else if (life1Boost === 'skip_storm') {
-      boosts.skipStormActive = true;
-    }
-    
     setGameState({
       score: 0,
-      lives: startingLives,
+      lives: 3,
       wave: 1,
       gameTime: 0,
       isPlaying: true,
@@ -2011,33 +1986,10 @@ export default function Game() {
     }));
   }, []);
   
-  // Handle boost when player loses a life - apply boost for next life
+  // Handle life lost - weapon level resets but will be restored by score on next frame
   const handleLifeLost = useCallback(() => {
-    const boosts = activeBoostsRef.current;
-    
-    // Move to next life slot
-    boosts.currentLifeIndex++;
-    boosts.skipStormActive = false; // Reset skip storm for new life
-    
-    // Apply boost for the new life (if we have a slot for it)
-    if (boosts.currentLifeIndex < 3) {
-      const nextBoost = boosts.slots[boosts.currentLifeIndex];
-      
-      if (nextBoost === 'shield_boost') {
-        shieldEndRef.current = gameTimeRef.current + BOOST_DURATIONS.shield_boost;
-      } else if (nextBoost === 'rapid_fire') {
-        rapidFireEndRef.current = gameTimeRef.current + BOOST_DURATIONS.rapid_fire;
-      } else if (nextBoost === 'side_guns') {
-        sideGunsBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.side_guns;
-      } else if (nextBoost === 'machine_gun') {
-        machineGunBoostEndRef.current = gameTimeRef.current + BOOST_DURATIONS.machine_gun;
-      } else if (nextBoost === 'skip_storm') {
-        boosts.skipStormActive = true;
-      }
-    }
-    
-    // Reset weapon level for new life (will be recalculated in update loop)
     weaponLevelRef.current = 0;
+    rapidFireEndRef.current = 0; // reset rapid fire — will re-unlock at score 150
   }, []);
 
   const update = useCallback((deltaTime: number) => {
@@ -2050,30 +2002,29 @@ export default function Game() {
     gameTimeRef.current += effectiveDelta;
     const gameTimeSec = gameTimeRef.current / 1000;
     
-    // Weapon upgrades based on time (with boost support)
-    // Timed boosts are set at game start and expire after their duration
-    const hasSideGunsBoost = sideGunsBoostEndRef.current > gameTimeRef.current;
-    const hasMachineGunBoost = machineGunBoostEndRef.current > gameTimeRef.current;
+    // Weapon upgrades based on SCORE — the better you play, the more firepower you get
+    const currentScore = gameState.score;
+    let newWeaponLevel = 0;
+    for (const tier of SCORE_WEAPON_LEVELS) {
+      if (currentScore >= tier.score) newWeaponLevel = tier.level;
+    }
+    // Level 4 = machine gun + side guns (all active) — map to weaponLevel 3 for firing pattern
+    // but track full level separately for rapid fire
+    const prevWeaponLevel = weaponLevelRef.current;
+    weaponLevelRef.current = Math.min(newWeaponLevel, 3); // 0-3 for firing pattern
     
-    // Determine weapon level based on natural progression + active boosts
-    // Priority: Machine gun boost > Natural 4min > Side guns boost > Natural 90s > Natural 60s
-    // Calculate natural weapon level first, then apply boosts on top
-    let naturalWeaponLevel = 0;
-    if (gameTimeSec >= 240) {
-      naturalWeaponLevel = 3; // Natural machine gun at 4 min
-    } else if (gameTimeSec >= 90) {
-      naturalWeaponLevel = 2; // Both side guns at 90s
-    } else if (gameTimeSec >= 60) {
-      naturalWeaponLevel = 1; // Left gun at 60s
+    // Level 2+ unlocks rapid fire as part of natural progression
+    if (newWeaponLevel >= 2 && rapidFireEndRef.current <= gameTimeRef.current) {
+      // Keeps rapid fire active permanently once score level 2 reached
+      rapidFireEndRef.current = gameTimeRef.current + 99999999;
     }
     
-    // Apply boosts: take the higher of boost level or natural level
-    if (hasMachineGunBoost) {
-      weaponLevelRef.current = Math.max(3, naturalWeaponLevel);
-    } else if (hasSideGunsBoost) {
-      weaponLevelRef.current = Math.max(2, naturalWeaponLevel);
-    } else {
-      weaponLevelRef.current = naturalWeaponLevel;
+    // Show weapon unlock notification when level increases
+    if (newWeaponLevel > prevWeaponLevel) {
+      const tier = SCORE_WEAPON_LEVELS.find(t => t.level === newWeaponLevel);
+      if (tier) {
+        machineGunPreviewRef.current = { active: true, endTime: gameTimeRef.current + 3000, label: `${tier.label} UNLOCKED!` };
+      }
     }
     
     const newDifficulty = Math.floor(gameTimeRef.current / DIFFICULTY_INTERVAL) + 1;
@@ -2098,10 +2049,7 @@ export default function Game() {
       slowMoRef.current.active = false;
     }
     
-    // Machine gun preview at 3:30 (210 seconds)
-    if (gameTimeSec >= 210 && gameTimeSec < 215 && !machineGunPreviewRef.current.active && weaponLevelRef.current < 3) {
-      machineGunPreviewRef.current = { active: true, endTime: gameTimeRef.current + 5000 };
-    }
+    // Clear weapon unlock notification when expired
     if (machineGunPreviewRef.current.active && gameTimeRef.current > machineGunPreviewRef.current.endTime) {
       machineGunPreviewRef.current.active = false;
     }
@@ -3837,18 +3785,15 @@ export default function Game() {
         ctx.shadowBlur = 0;
       }
       
-      // Machine gun preview indicator
+      // Weapon unlock notification
       if (machineGunPreviewRef.current.active) {
         ctx.font = "6px 'Press Start 2P'";
         ctx.textAlign = "center";
-        ctx.fillStyle = "#ff00ff";
-        ctx.shadowColor = "#ff00ff";
-        ctx.shadowBlur = 10;
-        ctx.globalAlpha = 0.7 + Math.sin(Date.now() / 100) * 0.3;
-        ctx.fillText("MACHINE GUN PREVIEW!", CANVAS_WIDTH / 2, 55);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "5px 'Press Start 2P'";
-        ctx.fillText("PERMANENT AT 4:00", CANVAS_WIDTH / 2, 65);
+        ctx.fillStyle = "#ffff00";
+        ctx.shadowColor = "#ffff00";
+        ctx.shadowBlur = 12;
+        ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 80) * 0.2;
+        ctx.fillText(machineGunPreviewRef.current.label || "WEAPON UPGRADED!", CANVAS_WIDTH / 2, 55);
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
       }
