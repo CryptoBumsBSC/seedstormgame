@@ -166,6 +166,7 @@ export default function PhotonWars() {
 
   const keysRef = useRef<Record<string, boolean>>({});
   const animFrameRef = useRef<number>(0);
+  const dprRef = useRef<number>(1);
 
   // ─── Telegram init ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -252,7 +253,7 @@ export default function PhotonWars() {
   function fireBullet() {
     const s = stateRef.current;
     if (s.shootCooldown > 0) return;
-    const cooldown = s.rapidActive > 0 ? 4 : 10;
+    const cooldown = s.rapidActive > 0 ? 67 : 167;
     s.shootCooldown = cooldown;
     audio.current.shoot();
     const cx = s.playerX + PLAYER_W / 2;
@@ -429,6 +430,12 @@ export default function PhotonWars() {
 
     const dt = Math.min(time - s.lastTime, 50);
     s.lastTime = time;
+    const dtN = dt / 16.667; // normalise to 60 fps
+
+    // ── Apply DPR scaling once per frame (crisp pixel art on retina) ──
+    const dpr = dprRef.current;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
 
     if (!s.paused) {
       // ── Weapon level ──
@@ -438,12 +445,11 @@ export default function PhotonWars() {
       else s.weaponLevel = 0;
 
       // ── Player movement ──
-      const spd = 3;
-      if (keys["ArrowLeft"] || keys["KeyA"]) s.playerX = Math.max(0, s.playerX - spd);
-      if (keys["ArrowRight"] || keys["KeyD"]) s.playerX = Math.min(CW - PLAYER_W, s.playerX + spd);
+      if (keys["ArrowLeft"] || keys["KeyA"]) s.playerX = Math.max(0, s.playerX - 3 * dtN);
+      if (keys["ArrowRight"] || keys["KeyD"]) s.playerX = Math.min(CW - PLAYER_W, s.playerX + 3 * dtN);
 
       // ── Shoot ──
-      if (s.shootCooldown > 0) s.shootCooldown--;
+      if (s.shootCooldown > 0) s.shootCooldown -= dt;
       if (keys["Space"] || keys["ArrowUp"]) fireBullet();
 
       // ── Invader step ──
@@ -510,21 +516,21 @@ export default function PhotonWars() {
         audio.current.mystery();
       }
       if (s.mystery.active) {
-        s.mystery.x += MYSTERY_SPEED * s.mystery.dir;
+        s.mystery.x += MYSTERY_SPEED * s.mystery.dir * dtN;
         if (s.mystery.x > CW + 60 || s.mystery.x < -60) s.mystery.active = false;
       }
 
       // ── Move bullets ──
       s.bullets = s.bullets.filter(b => b.y > -10);
-      s.bullets.forEach(b => { b.y -= 9; });
+      s.bullets.forEach(b => { b.y -= 9 * dtN; });
 
       // ── Move bombs ──
       s.bombs = s.bombs.filter(b => b.y < CH + 10);
-      s.bombs.forEach(b => { b.y += b.vy; });
+      s.bombs.forEach(b => { b.y += b.vy * dtN; });
 
       // ── Move power-ups ──
       s.powerUps = s.powerUps.filter(p => p.y < CH);
-      s.powerUps.forEach(p => { p.y += p.vy; });
+      s.powerUps.forEach(p => { p.y += p.vy * dtN; });
 
       // ── Bullet vs invader ──
       s.bullets = s.bullets.filter(bullet => {
@@ -635,9 +641,9 @@ export default function PhotonWars() {
       s.powerUps = s.powerUps.filter(pu => {
         if (pu.x < px + PLAYER_W && pu.x + 20 > px && pu.y < py2 + PLAYER_H && pu.y + 20 > py2) {
           if (pu.type === "life") { s.lives = Math.min(5, s.lives + 1); }
-          else if (pu.type === "rapid") { s.rapidActive = 300; }
-          else if (pu.type === "wide")  { s.wideActive  = 300; }
-          else if (pu.type === "laser") { s.laserActive = 300; }
+          else if (pu.type === "rapid") { s.rapidActive = 5000; }
+          else if (pu.type === "wide")  { s.wideActive  = 5000; }
+          else if (pu.type === "laser") { s.laserActive = 5000; }
           audio.current.powerup();
           spawnParticles(pu.x + 10, pu.y + 10, "#ffff00", 16, 4);
           return false;
@@ -645,16 +651,20 @@ export default function PhotonWars() {
         return true;
       });
 
-      // Tick power-up timers
-      if (s.rapidActive > 0) s.rapidActive--;
-      if (s.wideActive > 0)  s.wideActive--;
-      if (s.laserActive > 0) s.laserActive--;
+      // Tick power-up timers (ms-based)
+      if (s.rapidActive > 0) s.rapidActive = Math.max(0, s.rapidActive - dt);
+      if (s.wideActive > 0)  s.wideActive  = Math.max(0, s.wideActive  - dt);
+      if (s.laserActive > 0) s.laserActive = Math.max(0, s.laserActive - dt);
 
       // ── Update particles ──
       s.particles = s.particles.filter(p => p.life > 0);
-      s.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life--; p.vx *= 0.94; });
-      if (s.shakeFrames > 0) s.shakeFrames--;
-      if (s.screenFlashFrames > 0) s.screenFlashFrames--;
+      s.particles.forEach(p => {
+        p.x += p.vx * dtN; p.y += p.vy * dtN;
+        p.vy += 0.12 * dtN; p.life -= dtN;
+        p.vx *= Math.pow(0.94, dtN);
+      });
+      if (s.shakeFrames > 0) s.shakeFrames = Math.max(0, s.shakeFrames - dtN);
+      if (s.screenFlashFrames > 0) s.screenFlashFrames = Math.max(0, s.screenFlashFrames - dtN);
 
       // ── Check wave clear ──
       if (alive.filter(i => i.alive).length === 0) {
@@ -813,6 +823,19 @@ export default function PhotonWars() {
     animFrameRef.current = requestAnimationFrame(gameLoop);
   }, [endGame]);
 
+  // ─── DPR canvas setup — run before loop starts ─────────────────────────────
+  useEffect(() => {
+    if (screen !== "game") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    dprRef.current = dpr;
+    canvas.width = CW * dpr;
+    canvas.height = CH * dpr;
+    canvas.style.width = `${CW}px`;
+    canvas.style.height = `${CH}px`;
+  }, [screen]);
+
   // ─── Start/stop loop ───────────────────────────────────────────────────────
   useEffect(() => {
     if (screen === "game") {
@@ -910,7 +933,7 @@ export default function PhotonWars() {
   if (screen === "game") {
     return (
       <div style={{ minHeight:"100vh", background:"#000010", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", touchAction:"none" }}>
-        <canvas ref={canvasRef} width={CW} height={CH} style={{ display:"block", maxWidth:"100vw", maxHeight:"calc(100vh - 80px)", imageRendering:"pixelated", border:"1px solid #222" }} />
+        <canvas ref={canvasRef} style={{ display:"block", width:`${CW}px`, height:`${CH}px`, maxWidth:"100vw", maxHeight:"calc(100vh - 80px)", imageRendering:"pixelated", border:"1px solid #222" }} />
 
         {/* Mobile controls */}
         <div style={{ display:"flex", gap:"12px", marginTop:"10px", justifyContent:"center", width:"100%", maxWidth:"400px" }}>
