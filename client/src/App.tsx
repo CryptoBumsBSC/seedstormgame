@@ -7,11 +7,15 @@ import { WagmiProvider } from "wagmi";
 import { wagmiConfig } from "./lib/web3Config";
 import Game from "@/pages/game";
 import Admin from "@/pages/admin";
+import Hub from "@/pages/hub";
+import PhotonWars from "@/pages/photon-wars";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Game} />
+      <Route path="/" component={Hub} />
+      <Route path="/seed-storm" component={Game} />
+      <Route path="/photon-wars" component={PhotonWars} />
       <Route path="/admin" component={Admin} />
     </Switch>
   );

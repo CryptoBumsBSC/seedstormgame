@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
+import { insertScoreSchema, insertPlayerSchema, pwScores, type InsertPwScore } from "@shared/schema";
+import { db } from "./db";
+import { desc, gte, sql as drizzleSql } from "drizzle-orm";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
 import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier } from "./profanityFilter";
@@ -1223,6 +1225,59 @@ Tap below to start playing!`;
     } catch (error) {
       console.error("Demo seed error:", error);
       res.status(500).json({ error: "Failed to seed demo data" });
+    }
+  });
+
+  // ─── PHOTON WARS API ───────────────────────────────────────────────────────
+
+  db.execute(drizzleSql`
+    CREATE TABLE IF NOT EXISTS pw_scores (
+      id SERIAL PRIMARY KEY,
+      telegram_id TEXT NOT NULL,
+      player_name TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      wave INTEGER NOT NULL DEFAULT 1,
+      created_at TIMESTAMP DEFAULT NOW() NOT NULL
+    )
+  `).catch(e => console.error("[PW] Table creation error:", e));
+
+  app.post("/api/pw/scores", async (req, res) => {
+    try {
+      const { telegramId, playerName, score, wave } = req.body;
+      if (!telegramId || !playerName || typeof score !== "number") {
+        return res.status(400).json({ error: "Missing fields" });
+      }
+      const clean = playerName.trim().slice(0, 16).toUpperCase();
+      await db.insert(pwScores).values({ telegramId, playerName: clean, score, wave: wave || 1 });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[PW] Score submit error:", error);
+      res.status(500).json({ error: "Failed to submit score" });
+    }
+  });
+
+  app.get("/api/pw/scores/daily", async (_req, res) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const rows = await db.select().from(pwScores)
+        .where(gte(pwScores.createdAt, today))
+        .orderBy(desc(pwScores.score))
+        .limit(10);
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch daily scores" });
+    }
+  });
+
+  app.get("/api/pw/scores/alltime", async (_req, res) => {
+    try {
+      const rows = await db.select().from(pwScores)
+        .orderBy(desc(pwScores.score))
+        .limit(10);
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch all-time scores" });
     }
   });
 

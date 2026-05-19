@@ -260,6 +260,18 @@ export type DailyScore = typeof dailyScores.$inferSelect;
 export type AllTimeBoostedScore = typeof allTimeBoostedScores.$inferSelect;
 export type AllTimePureScore = typeof allTimePureScores.$inferSelect;
 
+// ─── PHOTON WARS tables ───────────────────────────────────────────────────────
+export const pwScores = pgTable("pw_scores", {
+  id: serial("id").primaryKey(),
+  telegramId: text("telegram_id").notNull(),
+  playerName: text("player_name").notNull(),
+  score: integer("score").notNull(),
+  wave: integer("wave").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+export type PwScore = typeof pwScores.$inferSelect;
+export type InsertPwScore = typeof pwScores.$inferInsert;
+
 // Avatar types (8 pixel art avatars — earned free via daily high score)
 export const avatarTypes = [
   "bud", "joint", "crown", "dog", "cat", "elephant", "tiger", "wolf"
