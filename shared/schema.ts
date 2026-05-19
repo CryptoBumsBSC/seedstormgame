@@ -260,47 +260,13 @@ export type DailyScore = typeof dailyScores.$inferSelect;
 export type AllTimeBoostedScore = typeof allTimeBoostedScores.$inferSelect;
 export type AllTimePureScore = typeof allTimePureScores.$inferSelect;
 
-// Boost pricing and metadata
-export const BOOST_PRICES = {
-  extra_life: 3,      // +1 life instantly
-  shield_boost: 3,    // 5 sec shield
-  rapid_fire: 3,      // 5 sec rapid fire
-  side_guns: 5,       // 5 sec side guns
-  machine_gun: 10,    // 5 sec machine gun
-  skip_storm: 20,     // Skip meteor storms for life
-} as const;
-
-export const BOOST_DURATIONS = {
-  extra_life: 0,      // Instant effect
-  shield_boost: 5,    // 5 seconds
-  rapid_fire: 5,      // 5 seconds
-  side_guns: 5,       // 5 seconds
-  machine_gun: 5,     // 5 seconds
-  skip_storm: 0,      // Lasts entire life
-} as const;
-
-export const MAX_BOOSTS_PER_LIFE = 3;
-
-// Avatar types and pricing (8 pixel art avatars)
+// Avatar types (8 pixel art avatars — earned free via daily high score)
 export const avatarTypes = [
   "bud", "joint", "crown", "dog", "cat", "elephant", "tiger", "wolf"
 ] as const;
 export type AvatarType = typeof avatarTypes[number];
 
-export const AVATAR_PRICE = 5; // All avatars cost 5 Stars
-
 export type PlayerAvatar = typeof playerAvatars.$inferSelect;
-
-// Prize distribution constants
-export const PRIZE_CONFIG = {
-  MIN_THRESHOLD: 30, // Minimum stars for prizes to activate
-  OWNER_PERCENT: 50,
-  FIRST_PLACE_PERCENT: 25,
-  SECOND_PLACE_PERCENT: 10,
-  THIRD_PLACE_PERCENT: 5,
-  RANDOM_PERCENT_EACH: 1,
-  MAX_RANDOM_WINNERS: 10,
-} as const;
 
 // Game Types (client-side only)
 export interface GameState {

@@ -17,34 +17,8 @@ import { Heart, ChevronLeft, ChevronRight, Target, Trophy, Play, Pause, RotateCc
 import { useToast } from "@/hooks/use-toast";
 import WebApp from "@twa-dev/sdk";
 
-type Screen = "title" | "game" | "gameover" | "leaderboard" | "help" | "shop" | "loadout";
+type Screen = "title" | "game" | "gameover" | "leaderboard" | "help";
 type LeaderboardTab = "daily" | "blazed" | "natural";
-
-// Telegram Stars Boost Types
-interface PlayerInventory {
-  extra_life: number;
-  shield_boost: number;
-  rapid_fire: number;
-  side_guns: number;
-  machine_gun: number;
-  skip_storm: number;
-}
-
-// Per-life boost slot: each life can have one boost assigned
-type BoostSlot = BoostType | null;
-
-// Loadout is an array of 3 slots (one per life)
-// Life 1 uses slot[0], Life 2 uses slot[1], Life 3 uses slot[2]
-type BoostLoadout = [BoostSlot, BoostSlot, BoostSlot];
-
-const BOOST_PRICES = {
-  extra_life: 3,
-  shield_boost: 3,
-  rapid_fire: 3,
-  side_guns: 5,
-  machine_gun: 10,
-  skip_storm: 20,
-} as const;
 
 // Score-based weapon level thresholds
 const SCORE_WEAPON_LEVELS = [
@@ -54,8 +28,6 @@ const SCORE_WEAPON_LEVELS = [
   { score: 350, level: 3, label: "MACHINE GUN" },
   { score: 600, level: 4, label: "FULL ARSENAL" },
 ] as const;
-
-type BoostType = keyof typeof BOOST_PRICES;
 
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600;
@@ -1246,20 +1218,11 @@ export default function Game() {
 
   const [submitError, setSubmitError] = useState<string | null>(null);
   
-  // Telegram Stars / Boost System State
-  const [inventory, setInventory] = useState<PlayerInventory>({ 
-    extra_life: 0, shield_boost: 0, rapid_fire: 0, side_guns: 0, machine_gun: 0, skip_storm: 0 
-  });
-  const [loadout, setLoadout] = useState<BoostLoadout>([null, null, null]);
   const [telegramId, setTelegramId] = useState<string | null>(null);
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [telegramChecked, setTelegramChecked] = useState<boolean>(false);
-  const [usedBoostsThisGame, setUsedBoostsThisGame] = useState<boolean>(false);
   const [isBanned, setIsBanned] = useState<boolean>(false);
   const [leaderboardTab, setLeaderboardTab] = useState<LeaderboardTab>("daily");
-  const [shopQuantities, setShopQuantities] = useState<Record<BoostType, number>>({
-    extra_life: 1, shield_boost: 1, rapid_fire: 1, side_guns: 1, machine_gun: 1, skip_storm: 1
-  });
   
   // Avatar state
   const [ownedAvatars, setOwnedAvatars] = useState<string[]>([]);
@@ -1267,13 +1230,6 @@ export default function Game() {
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string | null>>({});
   const [dailyAvatarReward, setDailyAvatarReward] = useState<string | null>(null);
   
-  // Per-life boost tracking: stores the loadout slots and current life index
-  // Life 1 = index 0, Life 2 = index 1, Life 3 = index 2
-  const activeBoostsRef = useRef<{
-    slots: BoostLoadout;      // The 3 boost slots [life1, life2, life3]
-    currentLifeIndex: number; // Which life we're on (0, 1, or 2)
-    skipStormActive: boolean; // If current life has skip storm active
-  }>({ slots: [null, null, null], currentLifeIndex: 0, skipStormActive: false });
   
   const submitScoreMutation = useMutation({
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
@@ -1282,7 +1238,7 @@ export default function Game() {
         const response = await apiRequest("POST", "/api/telegram/score", {
           ...data,
           telegramId,
-          usedBoosts: usedBoostsThisGame,
+          usedBoosts: false,
         });
         return response;
       } else {
@@ -1355,23 +1311,6 @@ export default function Game() {
         })
         .catch(console.error);
 
-      // Fetch inventory
-      fetch(`/api/telegram/inventory/${telegramId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && !data.error) {
-            setInventory({
-              extra_life: data.extra_life || 0,
-              shield_boost: data.shield_boost || 0,
-              rapid_fire: data.rapid_fire || 0,
-              side_guns: data.side_guns || 0,
-              machine_gun: data.machine_gun || 0,
-              skip_storm: data.skip_storm || 0,
-            });
-          }
-        })
-        .catch(console.error);
-      
       // Fetch avatars
       fetch(`/api/telegram/avatars/${telegramId}`)
         .then(res => res.json())
@@ -1385,179 +1324,6 @@ export default function Game() {
     }
   }, [telegramId]);
 
-  // Purchase boost with Telegram Stars
-  const handlePurchaseBoost = useCallback(async (boostType: BoostType, quantity: number = 1) => {
-    if (!telegramId) {
-      toast({
-        title: "Not Connected",
-        description: "Please open this app in Telegram",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/telegram/create-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telegramId,
-          boostType,
-          quantity,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!data.invoiceUrl) {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to create invoice",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Open Telegram's native payment UI
-      WebApp.openInvoice(data.invoiceUrl, async (status: string) => {
-        if (status === "paid") {
-          // Confirm the payment and update inventory
-          const confirmRes = await fetch("/api/telegram/confirm-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              telegramId,
-              boostType,
-              quantity,
-              totalStars: data.totalStars,
-            }),
-          });
-          
-          const confirmData = await confirmRes.json();
-          
-          if (confirmData.success && confirmData.inventory) {
-            const inv = confirmData.inventory;
-            const getQty = (type: string) => inv.find((i: { boostType: string; quantity: number }) => i.boostType === type)?.quantity || 0;
-            setInventory({
-              extra_life: getQty("extra_life"),
-              shield_boost: getQty("shield_boost"),
-              rapid_fire: getQty("rapid_fire"),
-              side_guns: getQty("side_guns"),
-              machine_gun: getQty("machine_gun"),
-              skip_storm: getQty("skip_storm"),
-            });
-            
-            toast({
-              title: "Purchase Successful!",
-              description: confirmData.message,
-            });
-          }
-        } else if (status === "cancelled") {
-          toast({
-            title: "Payment Cancelled",
-            description: "No Stars were charged",
-          });
-        } else if (status === "failed") {
-          toast({
-            title: "Payment Failed",
-            description: "Please try again",
-            variant: "destructive",
-          });
-        }
-      });
-    } catch (error) {
-      console.error("Purchase error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to process purchase",
-        variant: "destructive",
-      });
-    }
-  }, [telegramId, toast]);
-
-  // Purchase avatar with Telegram Stars
-  const handlePurchaseAvatar = useCallback(async (avatarType: string) => {
-    if (!telegramId) {
-      toast({
-        title: "Not Connected",
-        description: "Please open this app in Telegram",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (ownedAvatars.includes(avatarType)) {
-      toast({
-        title: "Already Owned",
-        description: "You already have this avatar!",
-      });
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/telegram/create-avatar-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          telegramId,
-          avatarType,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!data.invoiceUrl) {
-        toast({
-          title: "Error",
-          description: data.error || "Failed to create invoice",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Open Telegram's native payment UI
-      WebApp.openInvoice(data.invoiceUrl, async (status: string) => {
-        if (status === "paid") {
-          // Confirm the payment
-          const confirmRes = await fetch("/api/telegram/avatar/purchase", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              telegramId,
-              avatarType,
-              telegramPaymentId: `avatar_${Date.now()}`,
-            }),
-          });
-          
-          const confirmData = await confirmRes.json();
-          
-          if (confirmData.success) {
-            setOwnedAvatars(prev => [...prev, avatarType]);
-            if (!selectedAvatar) {
-              setSelectedAvatar(avatarType);
-            }
-            
-            toast({
-              title: "Avatar Purchased!",
-              description: confirmData.message,
-            });
-          }
-        } else if (status === "cancelled") {
-          toast({
-            title: "Payment Cancelled",
-            description: "No Stars were charged",
-          });
-        }
-      });
-    } catch (error) {
-      console.error("Avatar purchase error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to process purchase",
-        variant: "destructive",
-      });
-    }
-  }, [telegramId, toast, ownedAvatars, selectedAvatar]);
 
   // Select avatar
   const handleSelectAvatar = useCallback(async (avatarType: string | null) => {
@@ -1860,9 +1626,6 @@ export default function Game() {
     if (gameTimeSec < 90) return;
     // Don't start if already active
     if (meteorShowerActiveRef.current) return;
-    // Skip storm boost - no meteor showers this life
-    const boosts = activeBoostsRef.current;
-    if (boosts.skipStormActive) return;
     // Min 15 seconds between showers
     if (gameTimeRef.current - lastMeteorShowerRef.current < 15000) return;
     // 3% chance per check
@@ -4065,9 +3828,9 @@ export default function Game() {
         <div className="flex flex-col gap-4 w-full max-w-xs mb-6 mt-2">
           <Button
             onClick={() => {
-              // Reset loadout and go to loadout screen
-              setLoadout([null, null, null]);
-              setScreen("loadout");
+              initStars();
+              resetGame();
+              setScreen("game");
             }}
             className="w-full py-8 text-lg font-bold animate-bounce"
             style={{ 
@@ -4244,22 +4007,6 @@ export default function Game() {
           <p className="text-[8px]" style={{ color: "#888" }}>ARROWS/WASD TO MOVE - SPACE TO SHOOT</p>
         </div>
 
-        <div className="mt-4 text-center">
-          <p className="text-[8px]" style={{ color: "#888" }}>ad enquiry @dudley420</p>
-        </div>
-
-        <div className="mt-2 text-center">
-          <a 
-            href="https://t.me/SeedStormBot?start=affiliate" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-[10px] underline hover:no-underline"
-            style={{ color: "#ffff00", textShadow: "0 0 8px #ffff00" }}
-            data-testid="link-affiliate"
-          >
-            AFFILIATE PROGRAM - Earn 10% on referrals
-          </a>
-        </div>
 
         {scores.length > 0 && (
           <div className="mt-2 text-center">
@@ -4524,14 +4271,9 @@ export default function Game() {
             
             <Button
               onClick={() => {
-                // Clear active boosts - player must select fresh from loadout
-                activeBoostsRef.current = {
-                  slots: [null, null, null],
-                  currentLifeIndex: 0,
-                  skipStormActive: false,
-                };
-                setLoadout([null, null, null]);
-                setScreen("loadout");
+                initStars();
+                resetGame();
+                setScreen("game");
               }}
               className="w-full py-4 text-sm"
               style={{ 
@@ -4545,16 +4287,7 @@ export default function Game() {
             </Button>
             
             <Button
-              onClick={() => {
-                // Clear active boosts when going to main menu
-                activeBoostsRef.current = {
-                  slots: [null, null, null],
-                  currentLifeIndex: 0,
-                  skipStormActive: false,
-                };
-                setLoadout([null, null, null]);
-                setScreen("title");
-              }}
+              onClick={() => setScreen("title")}
               variant="outline"
               className="w-full py-4 text-sm border-2"
               style={{ borderColor: "#00ffff", color: "#00ffff" }}
@@ -4916,7 +4649,7 @@ export default function Game() {
 
         <div className="flex flex-col gap-3 w-full max-w-xs">
           <Button
-            onClick={() => setScreen("loadout")}
+            onClick={() => { initStars(); resetGame(); setScreen("game"); }}
             className="w-full py-5 text-sm"
             style={{ 
               background: "linear-gradient(135deg, #00ff00, #22c55e)",
@@ -5336,474 +5069,6 @@ export default function Game() {
     );
   }
 
-  const updateShopQty = (type: BoostType, delta: number) => {
-    setShopQuantities(prev => ({
-      ...prev,
-      [type]: Math.max(1, Math.min(20, prev[type] + delta))
-    }));
-  };
-
-  // ==========================================
-  // BOOST SHOP SCREEN
-  // ==========================================
-  if (screen === "shop") {
-    const SHOP_BOOSTS: { type: BoostType; icon: string; name: string; desc: string; color: string; textColor: string }[] = [
-      { type: "extra_life", icon: "❤️", name: "EXTRA LIFE", desc: "+1 life instant", color: "#00ff00", textColor: "#000" },
-      { type: "shield_boost", icon: "🛡️", name: "SHIELD", desc: "5 sec protection", color: "#00ffff", textColor: "#000" },
-      { type: "rapid_fire", icon: "⚡", name: "RAPID FIRE", desc: "5 sec fast shots", color: "#ff6600", textColor: "#fff" },
-      { type: "side_guns", icon: "🔫", name: "SIDE GUNS", desc: "5 sec extra guns", color: "#ff00ff", textColor: "#fff" },
-      { type: "machine_gun", icon: "💥", name: "MACHINE GUN", desc: "5 sec rapid barrels", color: "#ff0000", textColor: "#fff" },
-      { type: "skip_storm", icon: "🌀", name: "SKIP STORM", desc: "No meteors this life", color: "#8800ff", textColor: "#fff" },
-    ];
-
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
-        <h1 
-          className="text-xl md:text-2xl text-center mb-4 mt-2"
-          style={{ 
-            color: "#ff00ff", 
-            textShadow: "0 0 10px #ff00ff, 0 0 20px #ff00ff" 
-          }}
-          data-testid="text-shop-title"
-        >
-          ⭐ BOOST SHOP ⭐
-        </h1>
-
-        <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
-          Buy 1-20 at a time • Use per life • Unused stay in inventory
-        </p>
-
-        <div className="grid grid-cols-2 gap-3 w-full max-w-sm mb-4">
-          {SHOP_BOOSTS.map((boost) => {
-            const qty = shopQuantities[boost.type];
-            const price = BOOST_PRICES[boost.type];
-            const total = price * qty;
-            
-            return (
-              <Card key={boost.type} className="p-3 border-2" style={{ borderColor: boost.color, background: `${boost.color}15` }}>
-                <div className="flex flex-col items-center text-center">
-                  <span className="text-2xl mb-1">{boost.icon}</span>
-                  <p className="text-xs font-bold" style={{ color: boost.color }}>{boost.name}</p>
-                  <p className="text-[8px] mb-1" style={{ color: "#aaa" }}>{boost.desc}</p>
-                  <p className="text-[10px]" style={{ color: "#ffff00" }}>{price}⭐ each</p>
-                  <p className="text-[8px] mb-2" style={{ color: "#888" }}>Owned: {inventory[boost.type]}</p>
-                  
-                  <div className="flex items-center gap-1 mb-2">
-                    <Button 
-                      size="sm" 
-                      className="w-6 h-6 p-0 text-xs"
-                      style={{ background: "#333", color: "#fff" }}
-                      onClick={() => updateShopQty(boost.type, -1)}
-                      data-testid={`button-qty-minus-${boost.type}`}
-                    >-</Button>
-                    <span className="text-sm font-bold w-8 text-center" style={{ color: "#fff" }}>{qty}</span>
-                    <Button 
-                      size="sm" 
-                      className="w-6 h-6 p-0 text-xs"
-                      style={{ background: "#333", color: "#fff" }}
-                      onClick={() => updateShopQty(boost.type, 1)}
-                      data-testid={`button-qty-plus-${boost.type}`}
-                    >+</Button>
-                  </div>
-                  
-                  <Button 
-                    size="sm" 
-                    className="w-full text-xs" 
-                    style={{ background: boost.color, color: boost.textColor }}
-                    onClick={() => handlePurchaseBoost(boost.type, qty)}
-                    data-testid={`button-buy-${boost.type}`}
-                  >
-                    BUY {qty} = {total}⭐
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-
-        <p className="text-[10px] mb-3 text-center" style={{ color: "#ff00ff" }}>
-          ⚠️ Max 3 boosts per life - choose wisely!
-        </p>
-
-        <div className="w-full max-w-xs mb-4">
-          <Card 
-            className="p-3 border-2"
-            style={{ borderColor: "#00ffff", background: "rgba(0,255,255,0.1)" }}
-          >
-            <p className="text-[10px] font-bold mb-2" style={{ color: "#00ffff" }}>
-              💰 DAILY PRIZES
-            </p>
-            <p className="text-[9px]" style={{ color: "#888" }}>
-              50% of Stars → Prize Pool
-            </p>
-            <p className="text-[9px]" style={{ color: "#888" }}>
-              Top 3: 25% / 10% / 5%
-            </p>
-            <p className="text-[9px]" style={{ color: "#888" }}>
-              Random 10 players: 1% each
-            </p>
-            <p className="text-[8px] mt-1" style={{ color: "#ffff00" }}>
-              Min 30 Stars daily to activate prizes
-            </p>
-          </Card>
-        </div>
-
-        {/* MY AVATARS - Owned avatars for quick switching */}
-        {ownedAvatars.length > 0 && (
-          <div className="w-full max-w-sm mb-4">
-            <h2 
-              className="text-sm text-center mb-2"
-              style={{ color: "#00ffff", textShadow: "0 0 8px #00ffff" }}
-            >
-              MY AVATARS
-            </h2>
-            <p className="text-[9px] mb-3 text-center" style={{ color: "#888" }}>
-              Tap to equip or unequip
-            </p>
-            
-            <div className="flex flex-wrap justify-center gap-3">
-              {[
-                { type: "bud", color: "#88ff88" },
-                { type: "joint", color: "#ff6600" },
-                { type: "crown", color: "#ffd700" },
-                { type: "dog", color: "#cc9966" },
-                { type: "cat", color: "#888888" },
-                { type: "elephant", color: "#8899aa" },
-                { type: "tiger", color: "#ff9933" },
-                { type: "wolf", color: "#888899" },
-              ].filter(avatar => ownedAvatars.includes(avatar.type)).map((avatar) => {
-                const isSelected = selectedAvatar === avatar.type;
-                
-                return (
-                  <Card 
-                    key={`owned-${avatar.type}`}
-                    className="p-3 border-2 cursor-pointer transition-all"
-                    style={{ 
-                      borderColor: isSelected ? "#ffd700" : avatar.color,
-                      background: isSelected ? "rgba(255,215,0,0.3)" : `${avatar.color}30`,
-                      boxShadow: isSelected ? "0 0 12px #ffd700" : "none",
-                      transform: isSelected ? "scale(1.05)" : "scale(1)"
-                    }}
-                    onClick={() => handleSelectAvatar(isSelected ? null : avatar.type)}
-                    data-testid={`my-avatar-${avatar.type}`}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 flex items-center justify-center">
-                        <AvatarIcon type={avatar.type} size={36} />
-                      </div>
-                      <p className="text-[8px] mt-1 font-bold" style={{ color: isSelected ? "#ffd700" : avatar.color }}>
-                        {avatar.type.toUpperCase()}
-                      </p>
-                      <p className="text-[7px]" style={{ color: isSelected ? "#ffd700" : "#00ff00" }}>
-                        {isSelected ? "EQUIPPED" : "TAP TO USE"}
-                      </p>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* AVATAR SHOP */}
-        <div className="w-full max-w-sm mb-4">
-          <h2 
-            className="text-sm text-center mb-3"
-            style={{ color: "#ffd700", textShadow: "0 0 8px #ffd700" }}
-          >
-            {ownedAvatars.length > 0 ? "BUY MORE AVATARS - 5⭐ each" : "AVATAR ICONS - 5⭐ each"}
-          </h2>
-          <p className="text-[9px] mb-3 text-center" style={{ color: "#888" }}>
-            Show your style on leaderboards!
-          </p>
-          
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { type: "bud", color: "#88ff88" },
-              { type: "joint", color: "#ff6600" },
-              { type: "crown", color: "#ffd700" },
-              { type: "dog", color: "#cc9966" },
-              { type: "cat", color: "#888888" },
-              { type: "elephant", color: "#8899aa" },
-              { type: "tiger", color: "#ff9933" },
-              { type: "wolf", color: "#888899" },
-            ].map((avatar) => {
-              const isOwned = ownedAvatars.includes(avatar.type);
-              const isSelected = selectedAvatar === avatar.type;
-              
-              return (
-                <Card 
-                  key={avatar.type}
-                  className="p-2 border-2 cursor-pointer transition-all"
-                  style={{ 
-                    borderColor: isSelected ? "#ffd700" : (isOwned ? avatar.color : "#333"),
-                    background: isSelected ? "rgba(255,215,0,0.2)" : (isOwned ? `${avatar.color}20` : "transparent"),
-                    boxShadow: isSelected ? "0 0 10px #ffd700" : "none"
-                  }}
-                  onClick={() => {
-                    if (isOwned) {
-                      handleSelectAvatar(isSelected ? null : avatar.type);
-                    } else {
-                      handlePurchaseAvatar(avatar.type);
-                    }
-                  }}
-                  data-testid={`avatar-${avatar.type}`}
-                >
-                  <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 flex items-center justify-center">
-                      <AvatarIcon type={avatar.type} size={28} />
-                    </div>
-                    <p className="text-[8px] mt-1" style={{ color: avatar.color }}>
-                      {avatar.type.toUpperCase()}
-                    </p>
-                    {isOwned ? (
-                      <p className="text-[7px]" style={{ color: isSelected ? "#ffd700" : "#00ff00" }}>
-                        {isSelected ? "EQUIPPED" : "OWNED"}
-                      </p>
-                    ) : (
-                      <p className="text-[7px]" style={{ color: "#ffff00" }}>5⭐</p>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-          
-          <p className="text-[8px] mt-2 text-center" style={{ color: "#888" }}>
-            Tap to buy • Tap owned to equip
-          </p>
-        </div>
-
-        <Button
-          onClick={() => setScreen("title")}
-          variant="outline"
-          className="w-full max-w-xs py-4 text-sm border-2"
-          style={{ borderColor: "#00ffff", color: "#00ffff" }}
-          data-testid="button-back-from-shop"
-        >
-          BACK TO MENU
-        </Button>
-      </div>
-    );
-  }
-
-  // ==========================================
-  // LOADOUT SCREEN (Pre-Game Boost Selection)
-  // ==========================================
-  if (screen === "loadout") {
-    const hasAnyBoosts = inventory.extra_life > 0 || inventory.shield_boost > 0 || inventory.rapid_fire > 0 || 
-                         inventory.side_guns > 0 || inventory.machine_gun > 0 || inventory.skip_storm > 0;
-    const totalBoostsSelected = loadout.filter(slot => slot !== null).length;
-
-    // Count how many of each boost type are used across all slots
-    const getUsedCount = (boostType: BoostType): number => {
-      return loadout.filter(slot => slot === boostType).length;
-    };
-
-    // Check if we can add a boost type to a slot
-    const canAddBoost = (boostType: BoostType): boolean => {
-      const inventoryCount = inventory[boostType];
-      const usedCount = getUsedCount(boostType);
-      return usedCount < inventoryCount;
-    };
-
-    // Boost info for display
-    const BOOST_INFO: Record<BoostType, { icon: string; label: string; color: string }> = {
-      extra_life: { icon: "❤️", label: "+1 LIFE", color: "#00ff00" },
-      shield_boost: { icon: "🛡️", label: "SHIELD 5s", color: "#00ffff" },
-      rapid_fire: { icon: "⚡", label: "RAPID 5s", color: "#ff6600" },
-      side_guns: { icon: "🔫", label: "GUNS 5s", color: "#ff00ff" },
-      machine_gun: { icon: "💥", label: "M.GUN 5s", color: "#ff0000" },
-      skip_storm: { icon: "🌀", label: "NO STORM", color: "#8800ff" },
-    };
-
-    const handleStartGame = async () => {
-      // Set up active boosts for the game - copy the loadout to activeBoostsRef
-      activeBoostsRef.current = {
-        slots: [...loadout] as BoostLoadout,
-        currentLifeIndex: 0,
-        skipStormActive: false,
-      };
-      
-      // Track if using boosts
-      setUsedBoostsThisGame(totalBoostsSelected > 0);
-      
-      // Deduct boosts from inventory via API
-      if (telegramId && totalBoostsSelected > 0) {
-        // Count how many of each boost type are in the loadout
-        const boostsToUse: Record<string, number> = {};
-        loadout.forEach(slot => {
-          if (slot) {
-            boostsToUse[slot] = (boostsToUse[slot] || 0) + 1;
-          }
-        });
-        
-        try {
-          const response = await fetch("/api/telegram/use-boosts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              telegramId,
-              boosts: boostsToUse,
-            }),
-          });
-          
-          if (response.ok) {
-            // Update local inventory state
-            setInventory(prev => {
-              const newInv = { ...prev };
-              Object.entries(boostsToUse).forEach(([type, count]) => {
-                newInv[type as BoostType] = Math.max(0, newInv[type as BoostType] - count);
-              });
-              return newInv;
-            });
-          }
-        } catch (error) {
-          console.error("Failed to deduct boosts:", error);
-        }
-      }
-      
-      // Clear loadout for next game
-      setLoadout([null, null, null]);
-      
-      initStars();
-      resetGame();
-      setScreen("game");
-    };
-
-    // Set boost for a specific life slot
-    const setSlotBoost = (slotIndex: number, boost: BoostSlot) => {
-      setLoadout(prev => {
-        const newLoadout: BoostLoadout = [...prev] as BoostLoadout;
-        newLoadout[slotIndex] = boost;
-        return newLoadout;
-      });
-    };
-
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center p-4 overflow-auto">
-        <h1 
-          className="text-xl md:text-2xl text-center mb-4 mt-2"
-          style={{ 
-            color: "#00ff00", 
-            textShadow: "0 0 10px #00ff00, 0 0 20px #00ff00" 
-          }}
-          data-testid="text-loadout-title"
-        >
-          🎮 BOOST PER LIFE
-        </h1>
-
-        <p className="text-[10px] mb-4 text-center" style={{ color: "#888" }}>
-          Choose 1 boost for each life (or leave empty)
-        </p>
-
-        {/* 3 Life Slots */}
-        <div className="flex flex-col gap-3 w-full max-w-sm mb-4">
-          {[0, 1, 2].map((slotIndex) => (
-            <Card key={slotIndex} className="p-3 border-2" style={{ borderColor: loadout[slotIndex] ? BOOST_INFO[loadout[slotIndex]!].color : "#444" }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold" style={{ color: "#ffff00" }}>LIFE {slotIndex + 1}</span>
-                  {loadout[slotIndex] && (
-                    <span className="text-lg">{BOOST_INFO[loadout[slotIndex]!].icon}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  {loadout[slotIndex] ? (
-                    <>
-                      <span className="text-xs font-bold" style={{ color: BOOST_INFO[loadout[slotIndex]!].color }}>
-                        {BOOST_INFO[loadout[slotIndex]!].label}
-                      </span>
-                      <Button 
-                        size="sm" 
-                        className="w-6 h-6 p-0 ml-2" 
-                        style={{ background: "#ff0000" }}
-                        onClick={() => setSlotBoost(slotIndex, null)}
-                      >
-                        X
-                      </Button>
-                    </>
-                  ) : (
-                    <span className="text-xs" style={{ color: "#666" }}>No boost</span>
-                  )}
-                </div>
-              </div>
-              
-              {/* Boost selection buttons */}
-              {!loadout[slotIndex] && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {(Object.keys(BOOST_INFO) as BoostType[]).map((boostType) => (
-                    <Button
-                      key={boostType}
-                      size="sm"
-                      className="px-2 py-1 text-[10px]"
-                      style={{ 
-                        background: canAddBoost(boostType) ? BOOST_INFO[boostType].color : "#333",
-                        color: canAddBoost(boostType) ? "#000" : "#666",
-                        opacity: canAddBoost(boostType) ? 1 : 0.5
-                      }}
-                      disabled={!canAddBoost(boostType)}
-                      onClick={() => setSlotBoost(slotIndex, boostType)}
-                    >
-                      {BOOST_INFO[boostType].icon} {BOOST_INFO[boostType].label}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </Card>
-          ))}
-        </div>
-
-        {/* Inventory display */}
-        <Card className="p-2 mb-4 w-full max-w-sm border" style={{ borderColor: "#444" }}>
-          <p className="text-[10px] text-center mb-2" style={{ color: "#888" }}>YOUR INVENTORY</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {(Object.keys(BOOST_INFO) as BoostType[]).map((boostType) => (
-              <div key={boostType} className="flex items-center gap-1">
-                <span className="text-xs">{BOOST_INFO[boostType].icon}</span>
-                <span className="text-[10px]" style={{ color: inventory[boostType] > 0 ? BOOST_INFO[boostType].color : "#555" }}>
-                  {inventory[boostType]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {totalBoostsSelected > 0 && (
-          <p className="text-[10px] mb-4" style={{ color: "#ff00ff" }}>
-            🔥💨 Your score will show BOOSTED icon
-          </p>
-        )}
-
-        <Button
-          onClick={handleStartGame}
-          className="w-full max-w-xs py-8 text-lg font-bold mb-3"
-          style={{ 
-            background: "linear-gradient(135deg, #00ff00, #22c55e)",
-            color: "#000",
-            boxShadow: "0 0 30px #00ff00, 0 0 60px #00ff00"
-          }}
-          data-testid="button-start-game"
-        >
-          <Play className="w-6 h-6 mr-2" />
-          {totalBoostsSelected > 0 ? `START (${totalBoostsSelected} BOOSTS)` : "START PURE 💎"}
-        </Button>
-
-        <Button
-          onClick={() => {
-            setLoadout([null, null, null]);
-            setScreen("title");
-          }}
-          variant="outline"
-          className="w-full max-w-xs py-4 text-sm border-2"
-          style={{ borderColor: "#888", color: "#888" }}
-          data-testid="button-back-from-loadout"
-        >
-          BACK TO MENU
-        </Button>
-      </div>
-    );
-  }
 
   return null;
 }

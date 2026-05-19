@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertScoreSchema, insertPlayerSchema, BOOST_PRICES, boostTypes, type BoostType } from "@shared/schema";
+import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
 import { verifyUSDCPayment } from "./blockchain";
 import { sessionManager } from "./sessions";
 import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier } from "./profanityFilter";
@@ -557,32 +557,6 @@ export async function registerRoutes(
     }
   });
 
-  // Get player inventory
-  app.get("/api/telegram/inventory/:telegramId", async (req, res) => {
-    try {
-      const inventory = await storage.getPlayerInventory(req.params.telegramId);
-      // Format as object with boost types as keys - include ALL boost types
-      const inventoryMap: Record<string, number> = {
-        extra_life: 0,
-        shield_boost: 0,
-        rapid_fire: 0,
-        side_guns: 0,
-        machine_gun: 0,
-        skip_storm: 0,
-      };
-      inventory.forEach(item => {
-        inventoryMap[item.boostType] = item.quantity;
-      });
-      res.json(inventoryMap);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch inventory" });
-    }
-  });
-
-  // Get boost prices
-  app.get("/api/telegram/boost-prices", (req, res) => {
-    res.json(BOOST_PRICES);
-  });
 
   // Avatar Routes
   
@@ -597,46 +571,6 @@ export async function registerRoutes(
     }
   });
 
-  // Purchase an avatar
-  app.post("/api/telegram/avatar/purchase", async (req, res) => {
-    try {
-      const { telegramId, avatarType, telegramPaymentId } = req.body;
-      
-      if (!telegramId || !avatarType || !telegramPaymentId) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      
-      const { avatarTypes, AVATAR_PRICE } = await import("@shared/schema");
-      
-      if (!avatarTypes.includes(avatarType)) {
-        return res.status(400).json({ error: "Invalid avatar type" });
-      }
-      
-      // Record purchase as a star purchase
-      await storage.recordStarPurchase({
-        telegramId,
-        boostType: `avatar_${avatarType}` as any,
-        starsAmount: AVATAR_PRICE,
-        quantity: 1,
-        telegramPaymentId,
-      });
-      
-      // Add avatar to player's collection
-      const result = await storage.purchaseAvatar(telegramId, avatarType);
-      
-      if (!result.success) {
-        return res.status(400).json({ error: result.message });
-      }
-      
-      // Add to daily prize pool
-      await storage.addToDailyPool(AVATAR_PRICE);
-      
-      res.json({ success: true, message: result.message });
-    } catch (error) {
-      console.error("Avatar purchase error:", error);
-      res.status(500).json({ error: "Failed to purchase avatar" });
-    }
-  });
 
   // Award free avatar for daily high score (max 1 per 24h)
   app.post("/api/telegram/avatar/daily-reward", async (req, res) => {
@@ -672,67 +606,6 @@ export async function registerRoutes(
     }
   });
 
-  // Record Star purchase and add to inventory
-  app.post("/api/telegram/purchase", async (req, res) => {
-    try {
-      const { telegramId, boostType, quantity, telegramPaymentId } = req.body;
-      
-      if (!telegramId || !boostType || !quantity || !telegramPaymentId) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      
-      if (!boostTypes.includes(boostType)) {
-        return res.status(400).json({ error: "Invalid boost type" });
-      }
-      
-      const starsAmount = BOOST_PRICES[boostType as BoostType] * quantity;
-      
-      // Record purchase
-      const purchase = await storage.recordStarPurchase({
-        telegramId,
-        boostType,
-        starsAmount,
-        quantity,
-        telegramPaymentId,
-      });
-      
-      // Add to inventory
-      await storage.addToInventory(telegramId, boostType as BoostType, quantity);
-      
-      // Add to daily prize pool
-      await storage.addToDailyPool(starsAmount);
-      
-      res.json({ success: true, purchase });
-    } catch (error) {
-      console.error("Purchase error:", error);
-      res.status(500).json({ error: "Failed to record purchase" });
-    }
-  });
-
-  // Use boosts from inventory (before game start)
-  app.post("/api/telegram/use-boosts", async (req, res) => {
-    try {
-      const { telegramId, boosts } = req.body;
-      // boosts is an object like { side_guns: 2, machine_gun: 1, skip_storm: 0 }
-      
-      if (!telegramId || !boosts) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-      
-      const results: Record<string, boolean> = {};
-      
-      for (const [boostType, quantity] of Object.entries(boosts)) {
-        if (boostTypes.includes(boostType as BoostType) && typeof quantity === 'number' && quantity > 0) {
-          const success = await storage.useFromInventory(telegramId, boostType as BoostType, quantity);
-          results[boostType] = success;
-        }
-      }
-      
-      res.json({ success: true, results });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to use boosts" });
-    }
-  });
 
   // Submit Telegram score (with boost tracking)
   app.post("/api/telegram/score", async (req, res) => {
@@ -930,170 +803,6 @@ export async function registerRoutes(
     }
   });
 
-  // ============ TELEGRAM STARS PAYMENTS ============
-
-  // Create invoice link for purchasing boosts with Telegram Stars
-  app.post("/api/telegram/create-invoice", async (req, res) => {
-    try {
-      const { telegramId, boostType, quantity } = req.body;
-      const MAX_INVENTORY = 99;
-      
-      if (!telegramId || !boostType || !quantity || quantity < 1) {
-        return res.status(400).json({ error: "Invalid request data" });
-      }
-
-      const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      if (!botToken) {
-        return res.status(500).json({ error: "Payment system not configured" });
-      }
-
-      const price = BOOST_PRICES[boostType as BoostType];
-      if (!price) {
-        return res.status(400).json({ error: "Invalid boost type" });
-      }
-
-      // Check current inventory and enforce max 99 limit
-      const inventory = await storage.getPlayerInventory(telegramId);
-      const currentItem = inventory.find(i => i.boostType === boostType);
-      const currentQty = currentItem?.quantity || 0;
-      
-      if (currentQty >= MAX_INVENTORY) {
-        return res.status(400).json({ error: `Max ${MAX_INVENTORY} reached for this boost type` });
-      }
-      
-      if (currentQty + quantity > MAX_INVENTORY) {
-        return res.status(400).json({ 
-          error: `Can only purchase ${MAX_INVENTORY - currentQty} more (max ${MAX_INVENTORY})`,
-          maxCanBuy: MAX_INVENTORY - currentQty
-        });
-      }
-
-      const totalStars = price * quantity;
-      
-      const boostNames: Record<BoostType, string> = {
-        extra_life: "Extra Life Boost",
-        shield_boost: "Shield Boost",
-        rapid_fire: "Rapid Fire Boost",
-        side_guns: "Side Guns Boost",
-        machine_gun: "Machine Gun Boost", 
-        skip_storm: "Skip Storm Boost",
-      };
-
-      const boostDescriptions: Record<BoostType, string> = {
-        extra_life: "Start with an extra life",
-        shield_boost: "5 second shield at start of life",
-        rapid_fire: "5 second rapid fire at start of life",
-        side_guns: "5 second side guns at start of life",
-        machine_gun: "5 second machine guns at start of life",
-        skip_storm: "No meteor showers (SEED STORM) for that life",
-      };
-
-      const url = `https://api.telegram.org/bot${botToken}/createInvoiceLink`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `${boostNames[boostType as BoostType]} x${quantity}`,
-          description: boostDescriptions[boostType as BoostType],
-          payload: JSON.stringify({ 
-            telegramId, 
-            boostType, 
-            quantity,
-            timestamp: Date.now()
-          }),
-          provider_token: '', // Empty for Telegram Stars
-          currency: 'XTR', // Telegram Stars
-          prices: [{ amount: totalStars, label: `${quantity}x ${boostNames[boostType as BoostType]}` }]
-        })
-      });
-
-      const data = await response.json();
-      
-      if (!data.ok) {
-        console.error("Telegram invoice error:", data);
-        return res.status(500).json({ error: "Failed to create invoice" });
-      }
-
-      res.json({ 
-        invoiceUrl: data.result,
-        totalStars,
-        boostType,
-        quantity
-      });
-    } catch (error) {
-      console.error("Invoice creation error:", error);
-      res.status(500).json({ error: "Failed to create invoice" });
-    }
-  });
-
-  // Create invoice for avatar purchase with Telegram Stars
-  app.post("/api/telegram/create-avatar-invoice", async (req, res) => {
-    try {
-      const { telegramId, avatarType } = req.body;
-      const { avatarTypes, AVATAR_PRICE } = await import("@shared/schema");
-      
-      if (!telegramId || !avatarType) {
-        return res.status(400).json({ error: "Invalid request data" });
-      }
-
-      if (!avatarTypes.includes(avatarType)) {
-        return res.status(400).json({ error: "Invalid avatar type" });
-      }
-
-      const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      if (!botToken) {
-        return res.status(500).json({ error: "Payment system not configured" });
-      }
-
-      const avatarNames: Record<string, string> = {
-        bud: "Purple Bud",
-        joint: "Lit Joint",
-        crown: "Golden Crown",
-        dog: "Pixel Dog",
-        cat: "Pixel Cat",
-        elephant: "Pixel Elephant",
-        tiger: "Pixel Tiger",
-        wolf: "Pixel Wolf",
-      };
-
-      const url = `https://api.telegram.org/bot${botToken}/createInvoiceLink`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: `${avatarNames[avatarType] || avatarType} Avatar`,
-          description: "Show off your style on the leaderboard!",
-          payload: JSON.stringify({ 
-            telegramId, 
-            avatarType,
-            type: 'avatar',
-            timestamp: Date.now()
-          }),
-          provider_token: '',
-          currency: 'XTR',
-          prices: [{ amount: AVATAR_PRICE, label: avatarNames[avatarType] || avatarType }]
-        })
-      });
-
-      const data = await response.json();
-      
-      if (!data.ok) {
-        console.error("Telegram avatar invoice error:", data);
-        return res.status(500).json({ error: "Failed to create invoice" });
-      }
-
-      res.json({ 
-        invoiceUrl: data.result,
-        totalStars: AVATAR_PRICE,
-        avatarType
-      });
-    } catch (error) {
-      console.error("Avatar invoice creation error:", error);
-      res.status(500).json({ error: "Failed to create invoice" });
-    }
-  });
 
   // Webhook handler for Telegram payment confirmations and bot commands
   app.post("/api/telegram/webhook", async (req, res) => {
@@ -1199,22 +908,6 @@ Tap below to launch the game!`;
           replyMarkup = {
             inline_keyboard: [[{ text: "🎮 LAUNCH GAME", url: gameUrl }]]
           };
-        } else if (text === "/shop") {
-          replyText = `🛒 *BOOST SHOP*
-
-Buy boosts with Telegram Stars:
-
-❤️ Extra Life - 3⭐
-🛡️ Shield (5s) - 3⭐
-⚡ Rapid Fire (5s) - 3⭐
-🔫 Side Guns (5s) - 5⭐
-💥 Machine Gun (5s) - 10⭐
-🌀 Skip Storm - 20⭐
-
-Open the game and tap SHOP to purchase!`;
-          replyMarkup = {
-            inline_keyboard: [[{ text: "🛒 OPEN SHOP", url: gameUrl }]]
-          };
         } else if (text === "/leaderboard") {
           // Fetch top 5 from daily leaderboard
           const dailyScores = await storage.getDailyScores();
@@ -1260,32 +953,13 @@ Survive waves of enemy buds and get the highest score!
 ⚡ *Power-Ups*
 Collect dropped items for speed, damage, rapid fire, or extra lives!
 
-🏆 *Daily Prizes*
-Top 3 players share 40% of daily Stars spent!
+🏆 *Leaderboards*
+Daily, All-Time Boosted and All-Time Pure leaderboards!
 
 Tap below to start playing!`;
           replyMarkup = {
             inline_keyboard: [[{ text: "🎮 PLAY NOW", url: gameUrl }]]
           };
-        } else if (text === "/affiliate") {
-          replyText = `💰 *AFFILIATE PROGRAM*
-
-Earn 10% commission on every Telegram Stars purchase made by players you refer!
-
-*How to become an affiliate:*
-
-1️⃣ Open Telegram *Settings*
-2️⃣ Go to *My Stars* → *Earn Stars*
-3️⃣ Find *@SeedStormBot* in the list
-4️⃣ Tap *Join* to get your unique link
-5️⃣ Share your link with friends!
-
-When someone clicks your link and buys Stars boosts, you automatically receive 10% of their purchase.
-
-*Example:*
-Player buys 10⭐ of boosts → You earn 1⭐
-
-No limits on earnings! The more you share, the more you earn.`;
         } else if (text?.startsWith("/ban ")) {
           const parts = text.split(" ");
           if (parts.length < 3) {
@@ -1402,70 +1076,6 @@ No limits on earnings! The more you share, the more you earn.`;
     }
   });
 
-  // Sync inventory after WebApp.openInvoice returns 'paid'
-  // NOTE: This endpoint is READ-ONLY - actual inventory updates happen in webhook
-  // This just returns the current inventory so client can sync after payment
-  app.post("/api/telegram/confirm-payment", async (req, res) => {
-    try {
-      const { telegramId, boostType, quantity, totalStars } = req.body;
-      
-      if (!telegramId) {
-        return res.status(400).json({ error: "Missing telegramId" });
-      }
-      
-      // If boostType and quantity provided, this is a fallback for when webhook fails
-      // The client calls this after WebApp.openInvoice returns "paid"
-      if (boostType && quantity && totalStars) {
-        console.log(`[CONFIRM] Fallback payment processing: ${quantity}x ${boostType} for ${telegramId}`);
-        
-        // Generate a unique payment ID based on timestamp to prevent exact duplicates
-        const fallbackPaymentId = `fallback_${telegramId}_${boostType}_${Date.now()}`;
-        
-        // Check if this exact purchase was already recorded by webhook recently (within last 5 mins)
-        const recentPurchases = await storage.getPlayerPurchases(telegramId);
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const recentSamePurchase = recentPurchases.find(p => 
-          p.boostType === boostType && 
-          p.quantity === quantity &&
-          p.starsAmount === totalStars &&
-          new Date(p.purchasedAt) > fiveMinutesAgo
-        );
-        
-        if (!recentSamePurchase) {
-          // Record the purchase (webhook didn't process it)
-          await storage.recordStarPurchase({
-            telegramId,
-            boostType: boostType as BoostType,
-            quantity,
-            starsAmount: totalStars,
-            telegramPaymentId: fallbackPaymentId,
-          });
-          
-          // Add boosts to inventory
-          await storage.addToInventory(telegramId, boostType as BoostType, quantity);
-          
-          // Add to daily prize pool
-          await storage.addToDailyPool(totalStars);
-          
-          console.log(`[CONFIRM] Fallback purchase recorded: ${quantity}x ${boostType} for ${telegramId}`);
-        } else {
-          console.log(`[CONFIRM] Purchase already recorded by webhook, skipping duplicate`);
-        }
-      }
-      
-      // Return current inventory
-      const inventory = await storage.getPlayerInventory(telegramId);
-      
-      res.json({ 
-        success: true, 
-        inventory,
-        message: "Inventory updated"
-      });
-    } catch (error) {
-      console.error("Payment confirmation error:", error);
-      res.status(500).json({ error: "Failed to confirm payment" });
-    }
-  });
 
   // Admin: Manually credit boosts to a player's inventory
   app.post("/api/admin/credit-boosts", async (req, res) => {
@@ -1496,7 +1106,7 @@ No limits on earnings! The more you share, the more you earn.`;
       });
       
       // Add boosts to inventory
-      await storage.addToInventory(telegramId, boostType as BoostType, quantity);
+      await storage.addToInventory(telegramId, boostType, quantity);
       
       // Get updated inventory
       const inventory = await storage.getPlayerInventory(telegramId);

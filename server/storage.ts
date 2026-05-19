@@ -42,9 +42,6 @@ import {
   type BoostType,
   type AvatarType,
   type PlayerAvatar,
-  BOOST_PRICES,
-  PRIZE_CONFIG,
-  AVATAR_PRICE,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, lte, sql, count, ne } from "drizzle-orm";
@@ -446,7 +443,7 @@ export class DatabaseStorage implements IStorage {
 
   async addToDailyPool(starsAmount: number): Promise<void> {
     const pool = await this.getTodayPrizePool();
-    const ownerShare = Math.floor(starsAmount * (PRIZE_CONFIG.OWNER_PERCENT / 100));
+    const ownerShare = Math.floor(starsAmount * (50 / 100));
     const prizeAmount = starsAmount - ownerShare;
     
     await db.update(dailyPrizePools)
@@ -463,7 +460,7 @@ export class DatabaseStorage implements IStorage {
     if (!pool || pool.distributed) return;
     
     // Check minimum threshold
-    if (pool.totalStars < PRIZE_CONFIG.MIN_THRESHOLD) {
+    if (pool.totalStars < 30) {
       // All goes to owner - mark as distributed
       await db.update(dailyPrizePools)
         .set({ distributed: true })
@@ -481,17 +478,17 @@ export class DatabaseStorage implements IStorage {
     const topScores = telegramOnlyScores.slice(0, 3);
     
     const totalPrize = pool.prizePool;
-    const firstPrize = Math.floor(totalPrize * (PRIZE_CONFIG.FIRST_PLACE_PERCENT / 50));
-    const secondPrize = Math.floor(totalPrize * (PRIZE_CONFIG.SECOND_PLACE_PERCENT / 50));
-    const thirdPrize = Math.floor(totalPrize * (PRIZE_CONFIG.THIRD_PLACE_PERCENT / 50));
+    const firstPrize = Math.floor(totalPrize * (25 / 50));
+    const secondPrize = Math.floor(totalPrize * (10 / 50));
+    const thirdPrize = Math.floor(totalPrize * (5 / 50));
     
     // Get random players (exclude web players)
     const allPlayers = await this.getPlayersWhoPlayedToday(date);
     const telegramOnlyPlayers = allPlayers.filter(id => !id.startsWith("WEB_"));
     const topPlayerIds = topScores.map(s => s.telegramId);
     const eligibleForRandom = telegramOnlyPlayers.filter(id => !topPlayerIds.includes(id));
-    const randomWinners = eligibleForRandom.sort(() => Math.random() - 0.5).slice(0, PRIZE_CONFIG.MAX_RANDOM_WINNERS);
-    const randomPrizeEach = randomWinners.length > 0 ? Math.floor(totalPrize * (PRIZE_CONFIG.RANDOM_PERCENT_EACH / 50)) : 0;
+    const randomWinners = eligibleForRandom.sort(() => Math.random() - 0.5).slice(0, 10);
+    const randomPrizeEach = randomWinners.length > 0 ? Math.floor(totalPrize * (1 / 50)) : 0;
     
     await db.update(dailyPrizePools)
       .set({
