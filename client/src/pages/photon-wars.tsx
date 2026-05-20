@@ -21,6 +21,7 @@ const INVADER_GAP_X = 8;
 const INVADER_GAP_Y = 10;
 const INVADER_STEP = 16;
 const INVADER_DROP = 18;
+const INVADER_DRIFT = 3;
 const BASE_STEP_MS = 700;
 const BOMB_SPEED = 3.2;
 const BARRIER_COUNT = 4;
@@ -589,8 +590,8 @@ export default function PhotonWars() {
 
         s.invaders.forEach(inv => {
           if (!inv.alive) return;
-          if (drop) inv.y += INVADER_DROP;
-          else inv.x += INVADER_STEP * s.stepDir;
+          inv.x += INVADER_STEP * s.stepDir;
+          inv.y += drop ? INVADER_DROP : INVADER_DRIFT;
         });
 
         // Check if invaders reached player
