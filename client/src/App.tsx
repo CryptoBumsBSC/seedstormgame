@@ -5,15 +5,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Game from "@/pages/game";
 import Admin from "@/pages/admin";
-import Hub from "@/pages/hub";
-import PhotonWars from "@/pages/photon-wars";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Hub} />
-      <Route path="/seed-storm" component={Game} />
-      <Route path="/photon-wars" component={PhotonWars} />
+      <Route path="/" component={Game} />
       <Route path="/admin" component={Admin} />
     </Switch>
   );
