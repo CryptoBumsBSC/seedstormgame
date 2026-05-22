@@ -37,6 +37,16 @@ const PROJECTILE_SIZE = 6;
 const DIFFICULTY_INTERVAL = 12500;
 const HAZARD_SIZE = 24;
 
+// Near-miss / graze tuning
+const GRAZE_DISTANCE = 14; // pixels of clearance that still counts as a graze
+const GRAZE_POINTS = 5;
+
+// Personal best ghost
+const GHOST_SAMPLE_INTERVAL = 50; // ms between samples
+const GHOST_STORAGE_KEY = "seedstorm:ghost:v1";
+type GhostSample = { t: number; x: number };
+type GhostRun = { score: number; path: GhostSample[] };
+
 type HazardType = "bong" | "joint" | "matches";
 type PowerUpType = "speed" | "shield" | "rapid" | "life";
 type SpecialObjectType = "budAngel" | "skull";
@@ -220,6 +230,12 @@ class SoundSystem {
       setTimeout(() => this.playTone(freq, 0.2, "sine", 0.15), i * 150);
     });
   }
+
+  graze() {
+    // Quick high-pitched zap
+    this.playTone(1400, 0.05, "square", 0.12);
+    setTimeout(() => this.playTone(1900, 0.04, "square", 0.08), 25);
+  }
 }
 
 const soundSystem = new SoundSystem();
@@ -297,6 +313,13 @@ export default function Game() {
   const killStreakRef = useRef<number>(0);
   const totalKillsRef = useRef<number>(0);
   const personalBestRef = useRef<number>(0);
+  // Near-miss / graze tracking
+  const grazedIdsRef = useRef<Set<string>>(new Set());
+  const grazeFlashesRef = useRef<{ x: number; y: number; life: number }[]>([]);
+  // Personal best ghost
+  const ghostRunRef = useRef<GhostRun | null>(null);
+  const currentRunPathRef = useRef<GhostSample[]>([]);
+  const lastGhostSampleRef = useRef<number>(0);
   const bossRef = useRef<Boss | null>(null);
   const lastBossSpawnRef = useRef<number>(0);
   const bossKilledRef = useRef<boolean>(false);
@@ -1818,6 +1841,18 @@ export default function Game() {
     sideShipUnlockedRef.current = false;
     lastBonusRapidRef.current = 0;
     bonusNoticeRef.current = { active: false, endTime: 0, label: "" };
+    // Reset graze + ghost-run state
+    grazedIdsRef.current = new Set();
+    grazeFlashesRef.current = [];
+    currentRunPathRef.current = [];
+    lastGhostSampleRef.current = 0;
+    // Load best run ghost (if any) for this run
+    try {
+      const raw = typeof window !== "undefined" ? window.localStorage.getItem(GHOST_STORAGE_KEY) : null;
+      ghostRunRef.current = raw ? (JSON.parse(raw) as GhostRun) : null;
+    } catch {
+      ghostRunRef.current = null;
+    }
     setIsNewHighScore(false);
     
     setGameState({
@@ -1838,6 +1873,16 @@ export default function Game() {
       if (prev.score > currentHighScore) {
         setIsNewHighScore(true);
         setTimeout(() => soundSystem.newHighScore(), 500);
+      }
+      // Save this run as the ghost if it beats the stored ghost's score
+      try {
+        const prevBest = ghostRunRef.current?.score ?? 0;
+        if (prev.score > prevBest && currentRunPathRef.current.length > 1 && typeof window !== "undefined") {
+          const run: GhostRun = { score: prev.score, path: currentRunPathRef.current.slice(0, 6000) };
+          window.localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(run));
+        }
+      } catch {
+        // localStorage may be unavailable; ignore
       }
       return {
         ...prev,
@@ -1892,6 +1937,63 @@ export default function Game() {
     
     gameTimeRef.current += effectiveDelta;
     const gameTimeSec = gameTimeRef.current / 1000;
+
+    // Sample player position for the ghost replay
+    if (gameTimeRef.current - lastGhostSampleRef.current >= GHOST_SAMPLE_INTERVAL) {
+      lastGhostSampleRef.current = gameTimeRef.current;
+      const px = playerRef.current.x;
+      currentRunPathRef.current.push({ t: Math.round(gameTimeRef.current), x: Math.round(px) });
+    }
+
+    // Near-miss / graze detection: small bonus + zap when a hazard, enemy projectile,
+    // enemy, or skull whizzes just past the player without hitting
+    const grazeShield = shieldEndRef.current > gameTimeRef.current;
+    const isInvincible = invincibilityRef.current > 0;
+    if (!grazeShield && !isInvincible) {
+      const p = playerRef.current;
+      const pcx = p.x + p.width / 2;
+      const pcy = p.y + p.height / 2;
+      const checkGraze = (id: string, ox: number, oy: number, ow: number, oh: number) => {
+        if (grazedIdsRef.current.has(id)) return;
+        const ocx = ox + ow / 2;
+        const ocy = oy + oh / 2;
+        const dx = Math.abs(pcx - ocx) - (p.width / 2 + ow / 2);
+        const dy = Math.abs(pcy - ocy) - (p.height / 2 + oh / 2);
+        // Already overlapping → skip (the collision system handles damage)
+        if (dx < 0 && dy < 0) return;
+        const gap = Math.max(dx, dy);
+        if (gap > 0 && gap <= GRAZE_DISTANCE) {
+          grazedIdsRef.current.add(id);
+          soundSystem.graze();
+          setGameState(prev => ({ ...prev, score: prev.score + GRAZE_POINTS }));
+          grazeFlashesRef.current.push({ x: ocx, y: ocy, life: 1 });
+          // Tiny spark particles
+          for (let i = 0; i < 6; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const s = 1 + Math.random() * 2;
+            particlesRef.current.push({
+              x: ocx, y: ocy,
+              vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+              life: 1, maxLife: 1,
+              color: "#ffff00",
+              size: 1 + Math.random() * 2,
+            });
+          }
+        }
+      };
+      hazardsRef.current.forEach(h => checkGraze("h" + h.id, h.x, h.y, h.width, h.height));
+      projectilesRef.current.forEach(pr => {
+        if (!pr.isPlayerBullet) checkGraze("p" + pr.id, pr.x, pr.y, pr.width, pr.height);
+      });
+      enemiesRef.current.forEach(e => checkGraze("e" + e.id, e.x, e.y, e.width, e.height));
+      specialObjectsRef.current.forEach(o => {
+        if (o.type === "skull") checkGraze("s" + o.id, o.x, o.y, o.width, o.height);
+      });
+    }
+    // Decay graze flash effects
+    grazeFlashesRef.current = grazeFlashesRef.current
+      .map(f => ({ ...f, life: f.life - 0.05 }))
+      .filter(f => f.life > 0);
     
     // Weapon upgrades based on SCORE — the better you play, the more firepower you get
     const currentScore = gameState.score;
@@ -3612,6 +3714,54 @@ export default function Game() {
           ctx.stroke();
           ctx.shadowBlur = 0;
         }
+        // GHOST — faint Dudley Bud showing your best ever run's path
+        if (ghostRunRef.current && ghostRunRef.current.path.length > 1) {
+          const path = ghostRunRef.current.path;
+          const t = gameTimeRef.current;
+          // Binary search for the sample at or just after t
+          let lo = 0, hi = path.length - 1;
+          while (lo < hi) {
+            const mid = (lo + hi) >> 1;
+            if (path[mid].t < t) lo = mid + 1; else hi = mid;
+          }
+          if (lo > 0 && path[lo].t >= t) {
+            const a = path[lo - 1];
+            const b = path[lo];
+            const span = Math.max(1, b.t - a.t);
+            const k = Math.min(1, Math.max(0, (t - a.t) / span));
+            const gx = a.x + (b.x - a.x) * k;
+            const gy = playerRef.current.y;
+            ctx.save();
+            ctx.globalAlpha = 0.28;
+            drawPlayer(ctx, { ...playerRef.current, x: gx, y: gy });
+            ctx.restore();
+            // Subtle "GHOST" label above
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = "#88ffff";
+            ctx.font = "6px 'Press Start 2P', monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("BEST", gx + playerRef.current.width / 2, gy - 4);
+            ctx.restore();
+          }
+        }
+
+        // GRAZE flashes — yellow rings where a hazard zipped past
+        if (grazeFlashesRef.current.length > 0) {
+          ctx.save();
+          for (const f of grazeFlashesRef.current) {
+            ctx.globalAlpha = f.life * 0.8;
+            ctx.strokeStyle = "#ffff00";
+            ctx.lineWidth = 2;
+            ctx.shadowColor = "#ffff00";
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, (1 - f.life) * 18 + 6, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
         drawPlayer(ctx, playerRef.current);
 
         // WINGMAN side ships — small Dudley Buds flanking the player
