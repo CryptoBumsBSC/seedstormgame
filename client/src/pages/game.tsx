@@ -29,6 +29,59 @@ const SCORE_WEAPON_LEVELS = [
   { score: 600, level: 4, label: "FULL ARSENAL" },
 ] as const;
 
+// Score milestone announcements — big flashy text + screen shake when crossed
+const SCORE_MILESTONES: { score: number; label: string; color: string }[] = [
+  { score: 100,   label: "100!",         color: "#00ff88" },
+  { score: 250,   label: "SHARP! 250",   color: "#00ffff" },
+  { score: 500,   label: "500 CLUB!",    color: "#ffff00" },
+  { score: 1000,  label: "GRAND! 1000",  color: "#ff00ff" },
+  { score: 2000,  label: "2K BLAZE!",    color: "#ff8800" },
+  { score: 3500,  label: "3.5K BEAST!",  color: "#88ff88" },
+  { score: 5000,  label: "5K MONSTER!",  color: "#ff4444" },
+  { score: 7500,  label: "7.5K GOD!",    color: "#ffd700" },
+  { score: 10000, label: "10K LEGEND!",  color: "#ff00ff" },
+];
+
+// Combo title tiers — fire when chain count hits each threshold
+const COMBO_TITLES: { count: number; label: string; color: string }[] = [
+  { count: 3,  label: "TRIPLE!",      color: "#00ffff" },
+  { count: 5,  label: "RAMPAGE!",     color: "#ffff00" },
+  { count: 7,  label: "UNSTOPPABLE!", color: "#ff8800" },
+  { count: 10, label: "GODLIKE!",     color: "#ff00ff" },
+  { count: 15, label: "LEGENDARY!",   color: "#ffd700" },
+];
+
+// Risk-reward zone — kills made in the top band of the screen score 2x
+const RISK_ZONE_HEIGHT = 80;
+const RISK_ZONE_MULTIPLIER = 2;
+
+// Daily challenge — buff-only modifiers selected by day of week
+type DailyModifier = {
+  id: string;
+  label: string;
+  color: string;
+  description: string;
+  startLives?: number;
+  startShieldMs?: number;
+  pointsMultiplier?: number;
+  powerUpDropMultiplier?: number;
+  weaponThresholdScale?: number;
+  wingmanFromStart?: boolean;
+  rapidFireFromStart?: boolean;
+};
+const DAILY_MODIFIERS: DailyModifier[] = [
+  { id: "sun", label: "SUNDAY FUNDAY",       color: "#ffd700", description: "Power-up drops +50%",                  powerUpDropMultiplier: 1.5 },
+  { id: "mon", label: "MELLOW MONDAY",       color: "#88ff88", description: "Start with 4 lives",                    startLives: 4 },
+  { id: "tue", label: "DOUBLE POINTS TUES",  color: "#ff00ff", description: "Every kill worth 2x base points",       pointsMultiplier: 2 },
+  { id: "wed", label: "WINGMAN WEDNESDAY",   color: "#00ffff", description: "Wingman ships flank you from the start",wingmanFromStart: true },
+  { id: "thu", label: "RAPID THURSDAY",      color: "#ffff00", description: "Rapid fire active for the whole run",   rapidFireFromStart: true },
+  { id: "fri", label: "FIRE FRIDAY",         color: "#ff6600", description: "Weapon upgrades unlock 30% sooner",     weaponThresholdScale: 0.7 },
+  { id: "sat", label: "SHIELD SATURDAY",     color: "#88ffff", description: "Start each run with a 6-second shield", startShieldMs: 6000 },
+];
+function getTodayModifier(): DailyModifier {
+  return DAILY_MODIFIERS[new Date().getDay()];
+}
+
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600;
 const PLAYER_SIZE = 32;
@@ -331,6 +384,18 @@ export default function Game() {
   const comboMultiplierRef = useRef<number>(1);
   const lastKillTimeRef = useRef<number>(0);
   const killStreakRef = useRef<number>(0);
+  // Score milestone announcements
+  const milestonesHitRef = useRef<Set<number>>(new Set());
+  const milestoneFlashRef = useRef<{ active: boolean; endTime: number; label: string; color: string }>({ active: false, endTime: 0, label: "", color: "" });
+  // Combo title pop-ups
+  const lastComboTitleRef = useRef<number>(0);
+  const comboTitleFlashRef = useRef<{ active: boolean; endTime: number; label: string; color: string }>({ active: false, endTime: 0, label: "", color: "" });
+  // Risk-reward zone flash
+  const riskZoneFlashRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
+  // Daily modifier
+  const dailyModifierRef = useRef<DailyModifier>(getTodayModifier());
+  const [dailyModifier] = useState<DailyModifier>(() => getTodayModifier());
+  const dailyBannerRef = useRef<{ active: boolean; endTime: number }>({ active: false, endTime: 0 });
   const totalKillsRef = useRef<number>(0);
   const personalBestRef = useRef<number>(0);
   // Near-miss / graze tracking
@@ -1691,7 +1756,8 @@ export default function Game() {
   }, []);
 
   const spawnPowerUp = useCallback((x: number, y: number) => {
-    if (Math.random() > 0.2) return; // 20% chance to drop power-up
+    const dropChance = 0.2 * (dailyModifierRef.current.powerUpDropMultiplier ?? 1);
+    if (Math.random() > dropChance) return;
     
     const types: PowerUpType[] = ["speed", "shield", "rapid", "life"];
     const weights = [0.3, 0.3, 0.3, 0.1]; // life is rarer
@@ -1874,16 +1940,58 @@ export default function Game() {
       ghostRunRef.current = null;
     }
     setIsNewHighScore(false);
-    
+
+    // Reset milestone / combo-title / risk-zone state
+    milestonesHitRef.current = new Set();
+    milestoneFlashRef.current = { active: false, endTime: 0, label: "", color: "" };
+    lastComboTitleRef.current = 0;
+    comboTitleFlashRef.current = { active: false, endTime: 0, label: "", color: "" };
+    riskZoneFlashRef.current = { active: false, endTime: 0 };
+
+    // Apply daily modifier (buffs only)
+    const today = getTodayModifier();
+    dailyModifierRef.current = today;
+    dailyBannerRef.current = { active: true, endTime: 4000 };
+    const startingLives = today.startLives ?? 3;
+    if (today.startShieldMs) {
+      shieldEndRef.current = today.startShieldMs;
+    }
+    if (today.wingmanFromStart) {
+      sideShipUnlockedRef.current = true;
+    }
+    if (today.rapidFireFromStart) {
+      rapidFireEndRef.current = 99999999;
+    }
+
     setGameState({
       score: 0,
-      lives: 3,
+      lives: startingLives,
       wave: 1,
       gameTime: 0,
       isPlaying: true,
       isPaused: false,
       isGameOver: false,
     });
+  }, []);
+
+  // Milestone announcement helper — fires once per crossing
+  const checkScoreMilestone = useCallback((newScore: number) => {
+    for (const m of SCORE_MILESTONES) {
+      if (newScore >= m.score && !milestonesHitRef.current.has(m.score)) {
+        milestonesHitRef.current.add(m.score);
+        milestoneFlashRef.current = {
+          active: true,
+          endTime: gameTimeRef.current + 1800,
+          label: m.label,
+          color: m.color,
+        };
+        soundSystem.powerUp();
+        screenShakeRef.current = {
+          intensity: Math.max(screenShakeRef.current.intensity, 5),
+          duration: Math.max(screenShakeRef.current.duration, 300),
+        };
+      }
+    }
   }, []);
 
   const endGame = useCallback(() => {
@@ -1987,7 +2095,11 @@ export default function Game() {
         if (gap > 0 && gap <= GRAZE_DISTANCE) {
           grazedIdsRef.current.add(id);
           soundSystem.graze();
-          setGameState(prev => ({ ...prev, score: prev.score + GRAZE_POINTS }));
+          setGameState(prev => {
+            const next = prev.score + GRAZE_POINTS;
+            checkScoreMilestone(next);
+            return { ...prev, score: next };
+          });
           grazeFlashesRef.current.push({ x: ocx, y: ocy, life: 1 });
           // Tiny spark particles
           for (let i = 0; i < 6; i++) {
@@ -2019,9 +2131,10 @@ export default function Game() {
     
     // Weapon upgrades based on SCORE — the better you play, the more firepower you get
     const currentScore = gameState.score;
+    const weaponScale = dailyModifierRef.current.weaponThresholdScale ?? 1;
     let newWeaponLevel = 0;
     for (const tier of SCORE_WEAPON_LEVELS) {
-      if (currentScore >= tier.score) newWeaponLevel = tier.level;
+      if (currentScore >= Math.round(tier.score * weaponScale)) newWeaponLevel = tier.level;
     }
     // Level 4 = machine gun + side guns (all active) — map to weaponLevel 3 for firing pattern
     // but track full level separately for rapid fire
@@ -2078,6 +2191,20 @@ export default function Game() {
     if (bonusNoticeRef.current.active && gameTimeRef.current > bonusNoticeRef.current.endTime) {
       bonusNoticeRef.current.active = false;
     }
+    // Milestone / combo-title flash expiry
+    if (milestoneFlashRef.current.active && gameTimeRef.current > milestoneFlashRef.current.endTime) {
+      milestoneFlashRef.current.active = false;
+    }
+    if (comboTitleFlashRef.current.active && gameTimeRef.current > comboTitleFlashRef.current.endTime) {
+      comboTitleFlashRef.current.active = false;
+    }
+    if (riskZoneFlashRef.current.active && gameTimeRef.current > riskZoneFlashRef.current.endTime) {
+      riskZoneFlashRef.current.active = false;
+    }
+    // Daily challenge intro banner expiry
+    if (dailyBannerRef.current.active && gameTimeRef.current > dailyBannerRef.current.endTime) {
+      dailyBannerRef.current.active = false;
+    }
     
     // Screen shake decay
     if (screenShakeRef.current.duration > 0) {
@@ -2101,6 +2228,7 @@ export default function Game() {
     if (gameTimeRef.current - lastKillTimeRef.current > 2000 && comboCountRef.current > 0) {
       comboCountRef.current = 0;
       comboMultiplierRef.current = 1;
+      lastComboTitleRef.current = 0;
     }
     
     starsRef.current.forEach(star => {
@@ -2335,6 +2463,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        lastComboTitleRef.current = 0;
         handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -2421,7 +2550,11 @@ export default function Game() {
               
               // Big score bonus
               const bossPoints = 50;
-              setGameState(prev => ({ ...prev, score: prev.score + bossPoints }));
+              setGameState(prev => {
+                const next = prev.score + bossPoints;
+                checkScoreMilestone(next);
+                return { ...prev, score: next };
+              });
               
               // Grant Bud Rage power-up (permanent 25% faster fire)
               budRageActiveRef.current = true;
@@ -2465,19 +2598,44 @@ export default function Game() {
               createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemyColor, bigHit);
               spawnPowerUp(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
               
-              // Calculate points with combo multiplier
-              const basePoints = enemy.points;
-              const finalPoints = Math.round(basePoints * comboMultiplierRef.current);
-              
+              // Combo title pop-ups — fire when chain hits each tier
+              for (const t of COMBO_TITLES) {
+                if (comboCountRef.current >= t.count && lastComboTitleRef.current < t.count) {
+                  lastComboTitleRef.current = t.count;
+                  comboTitleFlashRef.current = {
+                    active: true,
+                    endTime: gameTimeRef.current + 1200,
+                    label: t.label,
+                    color: t.color,
+                  };
+                  soundSystem.powerUp();
+                  break;
+                }
+              }
+
+              // Risk-reward zone — kills in the top band score 2x
+              const enemyCenterY = enemy.y + enemy.height / 2;
+              const inRiskZone = enemyCenterY < RISK_ZONE_HEIGHT;
+              const zoneMultiplier = inRiskZone ? RISK_ZONE_MULTIPLIER : 1;
+              if (inRiskZone) {
+                riskZoneFlashRef.current = { active: true, endTime: gameTimeRef.current + 400 };
+              }
+
+              // Calculate points: base × daily × combo × zone
+              const dailyMult = dailyModifierRef.current.pointsMultiplier ?? 1;
+              const basePoints = enemy.points * dailyMult;
+              const finalPoints = Math.round(basePoints * comboMultiplierRef.current * zoneMultiplier);
+
               // Extra screen shake on big combos (createExplosion already shakes on bigHit)
               if (comboCountRef.current >= 5) {
                 screenShakeRef.current = { intensity: 6 + comboCountRef.current, duration: 200 };
               }
-              
-              setGameState(prev => ({ 
-                ...prev, 
-                score: prev.score + finalPoints 
-              }));
+
+              setGameState(prev => {
+                const next = prev.score + finalPoints;
+                checkScoreMilestone(next);
+                return { ...prev, score: next };
+              });
               enemiesRef.current.splice(i, 1);
             }
             return false;
@@ -2517,6 +2675,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        lastComboTitleRef.current = 0;
         handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -2607,6 +2766,7 @@ export default function Game() {
         killStreakRef.current = 0;
         comboCountRef.current = 0;
         comboMultiplierRef.current = 1;
+        lastComboTitleRef.current = 0;
         handleLifeLost();
         setGameState(prev => {
           const newLives = prev.lives - 1;
@@ -3576,6 +3736,29 @@ export default function Game() {
       ctx.fillRect(Math.floor(star.x), Math.floor(star.y), Math.floor(star.size), Math.floor(star.size));
     });
 
+    // Risk-reward zone — pulsing band at the top, 2x kill points
+    if (gameState.isPlaying && !gameState.isGameOver) {
+      const zonePulse = 0.08 + Math.sin(Date.now() / 220) * 0.04;
+      const zoneFlash = riskZoneFlashRef.current.active ? 0.22 : 0;
+      ctx.fillStyle = `rgba(255, 170, 0, ${zonePulse + zoneFlash})`;
+      ctx.fillRect(0, 0, CANVAS_WIDTH, RISK_ZONE_HEIGHT);
+      ctx.strokeStyle = `rgba(255, 200, 0, ${0.5 + Math.sin(Date.now() / 180) * 0.3})`;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, RISK_ZONE_HEIGHT);
+      ctx.lineTo(CANVAS_WIDTH, RISK_ZONE_HEIGHT);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "6px 'Press Start 2P'";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#ffaa00";
+      ctx.shadowColor = "#ffaa00";
+      ctx.shadowBlur = 6;
+      ctx.fillText("2X ZONE", 6, 14);
+      ctx.shadowBlur = 0;
+    }
+
     if (gameState.isPlaying && !gameState.isGameOver) {
       // Draw particles (explosions)
       particlesRef.current.forEach(particle => {
@@ -3924,6 +4107,65 @@ export default function Game() {
         ctx.fillText(bonusNoticeRef.current.label, CANVAS_WIDTH / 2, 75);
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
+      }
+
+      // Daily challenge intro banner — pops at run start, in upper third
+      if (dailyBannerRef.current.active) {
+        const mod = dailyModifierRef.current;
+        ctx.textAlign = "center";
+        ctx.font = "11px 'Press Start 2P'";
+        ctx.fillStyle = mod.color;
+        ctx.shadowColor = mod.color;
+        ctx.shadowBlur = 20;
+        ctx.globalAlpha = 0.85 + Math.sin(Date.now() / 80) * 0.15;
+        ctx.fillText(mod.label, CANVAS_WIDTH / 2, 130);
+        ctx.font = "6px 'Press Start 2P'";
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = mod.color;
+        ctx.shadowBlur = 10;
+        ctx.fillText(mod.description.toUpperCase(), CANVAS_WIDTH / 2, 148);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+
+      // Score milestone flash — loud, colorful, centered above gameplay
+      if (milestoneFlashRef.current.active) {
+        const remaining = milestoneFlashRef.current.endTime - gameTimeRef.current;
+        const fade = Math.min(1, remaining / 600);
+        const pulse = 1 + Math.sin(Date.now() / 90) * 0.08;
+        ctx.save();
+        ctx.translate(CANVAS_WIDTH / 2, 180);
+        ctx.scale(pulse, pulse);
+        ctx.textAlign = "center";
+        ctx.font = "16px 'Press Start 2P'";
+        ctx.fillStyle = milestoneFlashRef.current.color;
+        ctx.shadowColor = milestoneFlashRef.current.color;
+        ctx.shadowBlur = 24;
+        ctx.globalAlpha = fade;
+        ctx.fillText(milestoneFlashRef.current.label, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
+      // Combo title pop-up — TRIPLE / RAMPAGE / GODLIKE
+      if (comboTitleFlashRef.current.active) {
+        const remaining = comboTitleFlashRef.current.endTime - gameTimeRef.current;
+        const fade = Math.min(1, remaining / 500);
+        const pulse = 1 + Math.sin(Date.now() / 70) * 0.1;
+        ctx.save();
+        ctx.translate(CANVAS_WIDTH / 2, 220);
+        ctx.scale(pulse, pulse);
+        ctx.textAlign = "center";
+        ctx.font = "13px 'Press Start 2P'";
+        ctx.fillStyle = comboTitleFlashRef.current.color;
+        ctx.shadowColor = comboTitleFlashRef.current.color;
+        ctx.shadowBlur = 20;
+        ctx.globalAlpha = fade;
+        ctx.fillText(comboTitleFlashRef.current.label, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.restore();
       }
       
       // Kill streak display (left side)
@@ -4381,6 +4623,18 @@ export default function Game() {
   if (screen === "game") {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center py-2 px-2 select-none overflow-x-hidden overflow-y-auto">
+        <div
+          className="w-full max-w-[400px] px-2 py-1 mb-1 border-2 rounded-sm text-center"
+          style={{
+            borderColor: dailyModifier.color,
+            color: dailyModifier.color,
+            boxShadow: `0 0 12px ${dailyModifier.color}`,
+            background: "rgba(0,0,0,0.4)",
+          }}
+          data-testid="badge-daily-modifier"
+        >
+          <span className="text-[9px]">DAILY: {dailyModifier.label}</span>
+        </div>
         <div 
           className="w-full max-w-[400px] flex items-center justify-between px-2 py-2 mb-2 border-b-2"
           style={{ borderColor: "#ff00ff" }}
@@ -5265,6 +5519,67 @@ export default function Game() {
               <p><span style={{ color: "#ff8800" }}>Screen shake</span> on 3+ combo kills</p>
               <p><span style={{ color: "#00ff88" }}>Kill streak</span> counter tracks consecutive kills</p>
               <p>Combo resets after 2 seconds without a kill</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffaa00" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffaa00" }}>
+              <Target className="w-4 h-4" />
+              RISK-REWARD ZONE
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>See that <span style={{ color: "#ffaa00" }}>pulsing orange band</span> at the top of the screen?</p>
+              <p>That's the <span style={{ color: "#ffaa00" }}>2X ZONE</span> — kills made up there are worth <span style={{ color: "#ffff00" }}>DOUBLE POINTS</span>.</p>
+              <p>Stacks with combo multipliers and daily bonuses!</p>
+              <p><span style={{ color: "#00ff88" }}>Tip:</span> Push enemies higher before you fire to cash in.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
+              <Zap className="w-4 h-4" />
+              SCORE MILESTONES
+            </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>Every big score lights up the screen with a flash + chime!</p>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#00ff88" }}>100!</span> · <span style={{ color: "#00ffff" }}>SHARP! 250</span> · <span style={{ color: "#ffff00" }}>500 CLUB!</span></p>
+              <p><span style={{ color: "#ff00ff" }}>GRAND! 1000</span> · <span style={{ color: "#ff8800" }}>2K BLAZE!</span> · <span style={{ color: "#88ff88" }}>3.5K BEAST!</span></p>
+              <p><span style={{ color: "#ff4444" }}>5K MONSTER!</span> · <span style={{ color: "#ffd700" }}>7.5K GOD!</span> · <span style={{ color: "#ff00ff" }}>10K LEGEND!</span></p>
+              <p className="mt-1" style={{ color: "#00ff88" }}>Each one only fires once per run — keep climbing!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffff00" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffff00" }}>
+              <Crosshair className="w-4 h-4" />
+              COMBO TITLES
+            </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>Chain kills fast enough and the screen yells your name back at you.</p>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#00ffff" }}>3 kills:</span> TRIPLE!</p>
+              <p><span style={{ color: "#ffff00" }}>5 kills:</span> RAMPAGE!</p>
+              <p><span style={{ color: "#ff8800" }}>7 kills:</span> UNSTOPPABLE!</p>
+              <p><span style={{ color: "#ff00ff" }}>10 kills:</span> GODLIKE!</p>
+              <p><span style={{ color: "#ffd700" }}>15 kills:</span> LEGENDARY!</p>
+              <p className="mt-1" style={{ color: "#00ff88" }}>Lose a life or break the chain and the titles reset.</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: dailyModifier.color }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: dailyModifier.color }}>
+              <Trophy className="w-4 h-4" />
+              DAILY CHALLENGE
+            </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>A different free buff every day of the week!</p>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffd700" }}>SUN — SUNDAY FUNDAY:</span> Power-up drops +50%</p>
+              <p><span style={{ color: "#88ff88" }}>MON — MELLOW MONDAY:</span> Start with 4 lives</p>
+              <p><span style={{ color: "#ff00ff" }}>TUE — DOUBLE POINTS:</span> Every kill worth 2x</p>
+              <p><span style={{ color: "#00ffff" }}>WED — WINGMAN:</span> Wingman ships from the start</p>
+              <p><span style={{ color: "#ffff00" }}>THU — RAPID:</span> Rapid fire for the whole run</p>
+              <p><span style={{ color: "#ff6600" }}>FRI — FIRE FRIDAY:</span> Weapons unlock 30% sooner</p>
+              <p><span style={{ color: "#88ffff" }}>SAT — SHIELD SATURDAY:</span> Start with a 6-sec shield</p>
+              <p className="mt-1" style={{ color: dailyModifier.color }}>TODAY: {dailyModifier.label} — {dailyModifier.description}</p>
             </div>
           </Card>
 
