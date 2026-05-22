@@ -41,10 +41,10 @@ const HAZARD_SIZE = 24;
 const GRAZE_DISTANCE = 14; // pixels of clearance that still counts as a graze
 const GRAZE_POINTS = 5;
 
-// Personal best ghost — currently disabled; flip to true to re-enable the replay
-const GHOST_ENABLED = false;
+// Personal best ghost — runtime toggle; persisted in localStorage under GHOST_ENABLED_KEY
 const GHOST_SAMPLE_INTERVAL = 50; // ms between samples
 const GHOST_STORAGE_KEY = "seedstorm:ghost:v1";
+const GHOST_ENABLED_KEY = "seedstorm:ghostEnabled:v1";
 type GhostSample = { t: number; x: number };
 type GhostRun = { score: number; path: GhostSample[] };
 
@@ -256,6 +256,25 @@ export default function Game() {
   const [showNameInput, setShowNameInput] = useState(false);
   const [isNewHighScore, setIsNewHighScore] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [ghostEnabled, setGhostEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(GHOST_ENABLED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const ghostEnabledRef = useRef<boolean>(ghostEnabled);
+  useEffect(() => {
+    ghostEnabledRef.current = ghostEnabled;
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(GHOST_ENABLED_KEY, ghostEnabled ? "1" : "0");
+      }
+    } catch {
+      // ignore
+    }
+  }, [ghostEnabled]);
   
   const { toast } = useToast();
 
@@ -1876,7 +1895,7 @@ export default function Game() {
         setTimeout(() => soundSystem.newHighScore(), 500);
       }
       // Save this run as the ghost if it beats the stored ghost's score (only when feature is on)
-      if (GHOST_ENABLED) {
+      if (ghostEnabledRef.current) {
         try {
           const prevBest = ghostRunRef.current?.score ?? 0;
           if (prev.score > prevBest && currentRunPathRef.current.length > 1 && typeof window !== "undefined") {
@@ -1942,7 +1961,7 @@ export default function Game() {
     const gameTimeSec = gameTimeRef.current / 1000;
 
     // Sample player position for the ghost replay
-    if (GHOST_ENABLED && gameTimeRef.current - lastGhostSampleRef.current >= GHOST_SAMPLE_INTERVAL) {
+    if (ghostEnabledRef.current && gameTimeRef.current - lastGhostSampleRef.current >= GHOST_SAMPLE_INTERVAL) {
       lastGhostSampleRef.current = gameTimeRef.current;
       const px = playerRef.current.x;
       currentRunPathRef.current.push({ t: Math.round(gameTimeRef.current), x: Math.round(px) });
@@ -3718,7 +3737,7 @@ export default function Game() {
           ctx.shadowBlur = 0;
         }
         // GHOST — faint Dudley Bud showing your best ever run's path
-        if (GHOST_ENABLED && ghostRunRef.current && ghostRunRef.current.path.length > 1) {
+        if (ghostEnabledRef.current && ghostRunRef.current && ghostRunRef.current.path.length > 1) {
           const path = ghostRunRef.current.path;
           const t = gameTimeRef.current;
           // Binary search for the sample at or just after t
@@ -4204,6 +4223,22 @@ export default function Game() {
           >
             <HelpCircle className="w-4 h-4 mr-2" />
             HOW TO PLAY
+          </Button>
+
+          <Button
+            onClick={() => setGhostEnabled(v => !v)}
+            variant="outline"
+            className="w-full py-4 text-sm border-2"
+            style={{
+              borderColor: ghostEnabled ? "#88ffff" : "#666",
+              color: ghostEnabled ? "#88ffff" : "#999",
+              boxShadow: ghostEnabled ? "0 0 12px #88ffff" : "none",
+            }}
+            data-testid="button-ghost-toggle"
+            aria-pressed={ghostEnabled}
+          >
+            <Eye className="w-4 h-4 mr-2" />
+            BEST-RUN GHOST: {ghostEnabled ? "ON" : "OFF"}
           </Button>
 
           <Button
@@ -5188,6 +5223,19 @@ export default function Game() {
               <p><span style={{ color: "#88ffff" }}>Yellow ring + zap</span> marks the graze</p>
               <p>Each object can only graze you <span style={{ color: "#ff00ff" }}>once</span></p>
               <p><span style={{ color: "#ff8800" }}>Disabled while shielded</span> or invincible</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#88ffff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#88ffff" }}>
+              <Eye className="w-4 h-4" />
+              BEST-RUN GHOST (OPTIONAL)
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>Toggle this on from the <span style={{ color: "#ffff00" }}>title screen</span> to race a faint replay of your best ever run.</p>
+              <p><span style={{ color: "#88ffff" }}>When ON:</span> your movement is recorded; if you beat your previous best, the new path is saved for next time.</p>
+              <p><span style={{ color: "#ff8800" }}>When OFF:</span> nothing is recorded or shown — your choice is remembered.</p>
+              <p>Default is <span style={{ color: "#ff8800" }}>OFF</span>.</p>
             </div>
           </Card>
 

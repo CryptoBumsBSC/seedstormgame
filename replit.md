@@ -48,7 +48,7 @@ I prefer clear and concise communication.
     -   **Power-Ups**: Speed Boost, Double Damage, Rapid Fire, Extra Life (dropped by enemies).
     -   **Combos & Streaks**: Chain kills for point multipliers and kill streak tracking. Combo kills (3+) trigger BIG explosions with extra particles, white screen flash, and screen shake.
     -   **Near-Miss / Graze Bonus**: When a hazard, enemy projectile, enemy, or skull passes within 14px of the player without hitting, award +5 points, play a high-pitched zap, and draw a yellow ring + sparks. Each object can only be grazed once. Disabled while shielded or invincible.
-    -   **Personal Best Ghost** *(currently disabled — gated behind `GHOST_ENABLED = false` in `game.tsx`)*: Code path that samples the player's x position every 50ms and, on a new personal best, persists `{score, path}` to localStorage (`seedstorm:ghost:v1`) for a faint replay on later runs. Flip the constant to `true` to re-enable.
+    -   **Personal Best Ghost** *(player-toggleable; default OFF)*: Title-screen toggle (`button-ghost-toggle`) sets `ghostEnabled`, persisted in localStorage under `seedstorm:ghostEnabled:v1`. When ON, samples the player's x position every 50ms and, on a new personal best, persists `{score, path}` to `seedstorm:ghost:v1` to render a faint "BEST" Dudley Bud replay on later runs. When OFF, nothing is recorded or rendered.
     -   **Time-Based Rewards** (stack on top of normal gameplay):
         -   **1:30 Flawless Bonus** (one-time): Reach 90 sec without losing a life → +1 free life and 10 sec rapid fire.
         -   **4:00 Wingman Unlock** (one-time, permanent): Two small Dudley Bud side ships appear flanking the player, each firing double cannons; also grants 5 sec rapid fire.
