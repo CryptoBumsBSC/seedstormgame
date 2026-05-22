@@ -41,7 +41,8 @@ const HAZARD_SIZE = 24;
 const GRAZE_DISTANCE = 14; // pixels of clearance that still counts as a graze
 const GRAZE_POINTS = 5;
 
-// Personal best ghost
+// Personal best ghost — currently disabled; flip to true to re-enable the replay
+const GHOST_ENABLED = false;
 const GHOST_SAMPLE_INTERVAL = 50; // ms between samples
 const GHOST_STORAGE_KEY = "seedstorm:ghost:v1";
 type GhostSample = { t: number; x: number };
@@ -1874,15 +1875,17 @@ export default function Game() {
         setIsNewHighScore(true);
         setTimeout(() => soundSystem.newHighScore(), 500);
       }
-      // Save this run as the ghost if it beats the stored ghost's score
-      try {
-        const prevBest = ghostRunRef.current?.score ?? 0;
-        if (prev.score > prevBest && currentRunPathRef.current.length > 1 && typeof window !== "undefined") {
-          const run: GhostRun = { score: prev.score, path: currentRunPathRef.current.slice(0, 6000) };
-          window.localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(run));
+      // Save this run as the ghost if it beats the stored ghost's score (only when feature is on)
+      if (GHOST_ENABLED) {
+        try {
+          const prevBest = ghostRunRef.current?.score ?? 0;
+          if (prev.score > prevBest && currentRunPathRef.current.length > 1 && typeof window !== "undefined") {
+            const run: GhostRun = { score: prev.score, path: currentRunPathRef.current.slice(0, 6000) };
+            window.localStorage.setItem(GHOST_STORAGE_KEY, JSON.stringify(run));
+          }
+        } catch {
+          // localStorage may be unavailable; ignore
         }
-      } catch {
-        // localStorage may be unavailable; ignore
       }
       return {
         ...prev,
@@ -1939,7 +1942,7 @@ export default function Game() {
     const gameTimeSec = gameTimeRef.current / 1000;
 
     // Sample player position for the ghost replay
-    if (gameTimeRef.current - lastGhostSampleRef.current >= GHOST_SAMPLE_INTERVAL) {
+    if (GHOST_ENABLED && gameTimeRef.current - lastGhostSampleRef.current >= GHOST_SAMPLE_INTERVAL) {
       lastGhostSampleRef.current = gameTimeRef.current;
       const px = playerRef.current.x;
       currentRunPathRef.current.push({ t: Math.round(gameTimeRef.current), x: Math.round(px) });
@@ -3715,7 +3718,7 @@ export default function Game() {
           ctx.shadowBlur = 0;
         }
         // GHOST — faint Dudley Bud showing your best ever run's path
-        if (ghostRunRef.current && ghostRunRef.current.path.length > 1) {
+        if (GHOST_ENABLED && ghostRunRef.current && ghostRunRef.current.path.length > 1) {
           const path = ghostRunRef.current.path;
           const t = gameTimeRef.current;
           // Binary search for the sample at or just after t
@@ -5171,6 +5174,20 @@ export default function Game() {
               <p>Warning text "SEED STORM!" appears during event</p>
               <p className="mt-2"><span style={{ color: "#ffffff", textShadow: "0 0 5px #fff" }}>WHITE-HOT SEED:</span> Rare glowing white seed!</p>
               <p><span style={{ color: "#88ff88" }}>Shoot it:</span> Get 5 sec shield + 5 sec rapid fire!</p>
+            </div>
+          </Card>
+
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ffff00" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ffff00" }}>
+              <Zap className="w-4 h-4" />
+              NEAR-MISS BONUS
+            </h2>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p>Live dangerously — <span style={{ color: "#ffff00" }}>graze hazards</span> for bonus points!</p>
+              <p><span style={{ color: "#ffff00" }}>+5 points</span> every time a bong, joint, matches, skull, enemy or enemy bullet zips just past you</p>
+              <p><span style={{ color: "#88ffff" }}>Yellow ring + zap</span> marks the graze</p>
+              <p>Each object can only graze you <span style={{ color: "#ff00ff" }}>once</span></p>
+              <p><span style={{ color: "#ff8800" }}>Disabled while shielded</span> or invincible</p>
             </div>
           </Card>
 
