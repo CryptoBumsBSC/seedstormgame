@@ -5,6 +5,7 @@ import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
 import { db } from "./db";
 import { desc, gte, sql as drizzleSql } from "drizzle-orm";
 import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier } from "./profanityFilter";
+import { isAdmin, requireAdmin, verifyTelegramWebhook, getTelegramWebhookSecret } from "./auth";
 import path from "path";
 import fs from "fs";
 
@@ -215,10 +216,7 @@ export async function registerRoutes(
   // Admin: Get all scores with stats (points per second)
   app.get("/api/admin/scores", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const scoresWithStats = await storage.getScoresWithStats();
       res.json(scoresWithStats);
     } catch (error) {
@@ -229,10 +227,7 @@ export async function registerRoutes(
   // Admin: Delete a score by ID
   app.delete("/api/admin/scores/:id", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid score ID" });
@@ -344,12 +339,39 @@ export async function registerRoutes(
   app.post("/api/telegram/score", async (req, res) => {
     try {
       const { telegramId, playerName, score, wave, playTime, usedBoosts } = req.body;
-      console.log(`[TELEGRAM SCORE] Received: telegramId=${telegramId}, playerName=${playerName}, score=${score}`);
-      
-      if (!telegramId || typeof score !== 'number' || typeof wave !== 'number') {
+
+      if (!telegramId || typeof telegramId !== 'string' || telegramId.length > 64 ||
+          typeof score !== 'number' || typeof wave !== 'number') {
         return res.status(400).json({ error: "Invalid score data" });
       }
-      
+
+      // Rate limit per client IP
+      const clientId = getClientIdentifier(req);
+      const rateCheck = checkRateLimit(clientId);
+      if (!rateCheck.allowed) {
+        return res.status(429).json({
+          error: `Please wait ${rateCheck.waitTime} seconds before submitting again`
+        });
+      }
+
+      // Reject impossible scores for the reported play time
+      const scoreCheck = validateScore(score, playTime || 0);
+      if (!scoreCheck.valid) {
+        return res.status(400).json({ error: scoreCheck.error });
+      }
+
+      // Refuse names that fail moderation
+      const nameToCheck = playerName || 'PLAYER';
+      const nameCheck = validatePlayerName(nameToCheck);
+      if (!nameCheck.valid) {
+        return res.status(400).json({ error: nameCheck.error });
+      }
+
+      // Banned players can't submit
+      if (await storage.isPlayerBanned(telegramId)) {
+        return res.status(403).json({ error: "Player is banned" });
+      }
+
       const today = new Date().toISOString().split('T')[0];
       
       // Create daily score
@@ -451,10 +473,7 @@ export async function registerRoutes(
   // Admin: Get all Telegram players
   app.get("/api/admin/telegram-players", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const players = await storage.getAllTelegramPlayers();
       res.json(players);
     } catch (error) {
@@ -465,10 +484,7 @@ export async function registerRoutes(
   // Admin: Get all Telegram players (alternate path for admin panel)
   app.get("/api/admin/telegram/players", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const players = await storage.getAllTelegramPlayers();
       res.json(players);
     } catch (error) {
@@ -479,10 +495,7 @@ export async function registerRoutes(
   // Admin: Get revenue statistics
   app.get("/api/admin/telegram/revenue", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const revenue = await storage.getRevenueStats();
       res.json(revenue);
     } catch (error) {
@@ -493,10 +506,7 @@ export async function registerRoutes(
   // Admin: Get today's prize pool info
   app.get("/api/admin/telegram/prize-pool", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const today = new Date().toISOString().split('T')[0];
       const pool = await storage.getPrizePoolInfo(today);
       res.json(pool);
@@ -508,10 +518,7 @@ export async function registerRoutes(
   // Admin: Distribute daily prizes (run at end of day)
   app.post("/api/admin/distribute-prizes", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const { date } = req.body;
       const targetDate = date || new Date().toISOString().split('T')[0];
       await storage.distributeDailyPrizes(targetDate);
@@ -524,10 +531,7 @@ export async function registerRoutes(
   // Admin: Distribute daily prizes (alternate path)
   app.post("/api/admin/telegram/distribute-prizes", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       const today = new Date().toISOString().split('T')[0];
       await storage.distributeDailyPrizes(today);
       res.json({ success: true, message: `Prizes distributed for ${today}` });
@@ -540,11 +544,18 @@ export async function registerRoutes(
   // Webhook handler for Telegram payment confirmations and bot commands
   app.post("/api/telegram/webhook", async (req, res) => {
     try {
+      // Authenticate webhook origin — Telegram echoes our secret in this header
+      if (!verifyTelegramWebhook(req)) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
       const update = req.body;
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
-      
-      // Debug logging - log all incoming webhook updates
-      console.log("[WEBHOOK] Received update:", JSON.stringify(update, null, 2));
+
+      // Minimal logging in production to avoid leaking payment/PII details
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[WEBHOOK] Received update keys:", Object.keys(update || {}));
+      }
       
       // Handle pre-checkout query (must be answered within 10 seconds)
       if (update.pre_checkout_query) {
@@ -570,21 +581,24 @@ export async function registerRoutes(
       
       // Handle successful payment
       if (update.message?.successful_payment) {
-        console.log("[WEBHOOK] Successful payment received!");
         const payment = update.message.successful_payment;
-        console.log("[WEBHOOK] Payment details:", JSON.stringify(payment, null, 2));
-        
+
         let payload;
         try {
           payload = JSON.parse(payment.invoice_payload);
-          console.log("[WEBHOOK] Parsed payload:", payload);
         } catch (parseError) {
-          console.error("[WEBHOOK] Failed to parse payload:", payment.invoice_payload, parseError);
+          console.error("[WEBHOOK] Failed to parse payload");
           return res.status(400).json({ error: "Invalid payload" });
         }
-        
+
         const { telegramId, boostType, quantity } = payload;
-        console.log(`[WEBHOOK] Processing: ${quantity}x ${boostType} for user ${telegramId}`);
+        const validBoosts = ['extra_life', 'shield_boost', 'rapid_fire', 'side_guns', 'machine_gun', 'skip_storm'];
+        if (!telegramId || !validBoosts.includes(boostType) || typeof quantity !== 'number' || quantity <= 0 || quantity > 100) {
+          return res.status(400).json({ error: "Invalid payload contents" });
+        }
+        if (typeof payment.total_amount !== 'number' || payment.total_amount < 0 || payment.total_amount > 1_000_000) {
+          return res.status(400).json({ error: "Invalid amount" });
+        }
         
         // Record the purchase in database
         try {
@@ -595,18 +609,12 @@ export async function registerRoutes(
             starsAmount: payment.total_amount,
             telegramPaymentId: payment.telegram_payment_charge_id,
           });
-          console.log("[WEBHOOK] Purchase recorded:", purchase);
-          
-          // Add boosts to player inventory
+
           await storage.addToInventory(telegramId, boostType, quantity);
-          console.log("[WEBHOOK] Inventory updated");
-          
-          // Add stars to today's prize pool
           await storage.addToDailyPool(payment.total_amount);
-          console.log("[WEBHOOK] Prize pool updated");
-          
-          console.log(`[WEBHOOK] Payment success: ${quantity}x ${boostType} for user ${telegramId}, ${payment.total_amount} Stars`);
-          
+
+          console.log(`[WEBHOOK] Payment recorded: ${quantity}x ${boostType}, ${payment.total_amount} Stars`);
+
           return res.json({ ok: true, purchase });
         } catch (storageError) {
           console.error("[WEBHOOK] Storage error:", storageError);
@@ -757,23 +765,27 @@ Tap below to start playing!`;
     }
   });
 
-  // Setup Telegram webhook (call once after deploying)
+  // Setup Telegram webhook (admin only — registers our secret token with Telegram)
   app.post("/api/telegram/setup-webhook", async (req, res) => {
     try {
+      if (!requireAdmin(req, res)) return;
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) {
         return res.status(500).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
       }
-      
-      // Get the host from the request or use the production URL
-      const host = req.headers.host || "galaga-clone--oscarjameshardi.replit.app";
+
+      const host = req.headers.host;
+      if (!host) {
+        return res.status(400).json({ error: "Missing host header" });
+      }
       const webhookUrl = `https://${host}/api/telegram/webhook`;
-      
+
       const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: webhookUrl,
+          secret_token: getTelegramWebhookSecret(),
           allowed_updates: ["message", "pre_checkout_query"]
         })
       });
@@ -792,9 +804,10 @@ Tap below to start playing!`;
     }
   });
 
-  // Check current webhook status
+  // Check current webhook status (admin only — exposes webhook URL config)
   app.get("/api/telegram/webhook-info", async (req, res) => {
     try {
+      if (!requireAdmin(req, res)) return;
       const botToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!botToken) {
         return res.status(500).json({ error: "TELEGRAM_BOT_TOKEN not configured" });
@@ -813,10 +826,7 @@ Tap below to start playing!`;
   // Admin: Manually credit boosts to a player's inventory
   app.post("/api/admin/credit-boosts", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       
       const { telegramId: rawTelegramId, boostType, quantity, username } = req.body;
       const telegramId = rawTelegramId?.trim();
@@ -860,10 +870,7 @@ Tap below to start playing!`;
   // Admin: Manual payout to specific player
   app.post("/api/admin/manual-payout", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       
       const { telegramId, starsAmount } = req.body;
       
@@ -886,10 +893,7 @@ Tap below to start playing!`;
   // Admin: Trigger prize distribution manually
   app.post("/api/admin/distribute-prizes", async (req, res) => {
     try {
-      const adminPassword = req.headers['x-admin-password'];
-      if (!process.env.ADMIN_PASSWORD || adminPassword !== process.env.ADMIN_PASSWORD) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
+      if (!requireAdmin(req, res)) return;
       
       const today = new Date().toISOString().split('T')[0];
       await storage.distributeDailyPrizes(today);
@@ -907,9 +911,10 @@ Tap below to start playing!`;
   // Setup midnight cron job for automatic prize distribution
   setupMidnightCron();
 
-  // Demo endpoint - seed test leaderboard data with avatars
+  // Demo endpoint - seed test leaderboard data with avatars (admin only)
   app.post("/api/demo/seed-avatars", async (req, res) => {
     try {
+      if (!requireAdmin(req, res)) return;
       const today = new Date().toISOString().split('T')[0];
       const demoPlayers = [
         { telegramId: "demo_1", name: "BLAZER420", score: 15000, wave: 12, avatar: "leaf", boosts: true },
