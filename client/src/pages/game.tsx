@@ -4908,6 +4908,20 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
+              <Zap className="w-4 h-4" />
+              TIME-BASED REWARDS
+            </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>Survive long enough and the game pays you back!</p>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#00ff00" }}>1:30 FLAWLESS:</span> Reach 90 sec without losing a life → <span style={{ color: "#ff00ff" }}>+1 FREE LIFE</span> + 10 sec rapid fire</p>
+              <p><span style={{ color: "#00ffff" }}>4:00 WINGMAN:</span> Two side ships appear flanking you, each with double cannons — <span style={{ color: "#ffff00" }}>permanent</span>! + 5 sec rapid fire kicker</p>
+              <p><span style={{ color: "#ff00ff" }}>4:30+ BURSTS:</span> Every 30 sec you get a fresh <span style={{ color: "#ffff00" }}>5 sec rapid fire burst</span>, forever</p>
+              <p className="mt-1" style={{ color: "#00ff88" }}>All bonuses stack on top of normal gameplay!</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff8800" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff8800" }}>
               <AlertTriangle className="w-4 h-4" />

@@ -46,7 +46,11 @@ I prefer clear and concise communication.
     -   **Hazards**: Bong, Lit Joint, Matches (damaging), Skull & Crossbones (instant game over unless shielded).
     -   **Special Helper**: Bud Angel (grants shield).
     -   **Power-Ups**: Speed Boost, Double Damage, Rapid Fire, Extra Life (dropped by enemies).
-    -   **Combos & Streaks**: Chain kills for point multipliers and kill streak tracking.
+    -   **Combos & Streaks**: Chain kills for point multipliers and kill streak tracking. Combo kills (3+) trigger BIG explosions with extra particles, white screen flash, and screen shake.
+    -   **Time-Based Rewards** (stack on top of normal gameplay):
+        -   **1:30 Flawless Bonus** (one-time): Reach 90 sec without losing a life → +1 free life and 10 sec rapid fire.
+        -   **4:00 Wingman Unlock** (one-time, permanent): Two small Dudley Bud side ships appear flanking the player, each firing double cannons; also grants 5 sec rapid fire.
+        -   **4:30+ Rapid Fire Bursts** (recurring): Every 30 sec a fresh 5-second rapid fire burst is granted, indefinitely.
     -   **Meteor Shower**: "SEED STORM" event with falling seeds.
     -   **Enemy Formations**: Dynamic enemy formations after 45 seconds.
     -   **Boss Enemy**: Appears every 2 minutes, grants "Bud Rage" power-up.
