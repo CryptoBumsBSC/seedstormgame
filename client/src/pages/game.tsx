@@ -84,6 +84,8 @@ function getTodayModifier(): DailyModifier {
 
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 600;
+// Render at 1.25× internal resolution then display at logical size — 25% sharper edges + glow
+const RENDER_SHARPNESS = 1.25;
 const PLAYER_SIZE = 32;
 const ENEMY_SIZE = 28;
 const PROJECTILE_SIZE = 6;
@@ -3718,6 +3720,11 @@ export default function Game() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // 25% sharper render: scale every frame's draw operations into the 1.25× backing store,
+    // and keep crisp pixels by disabling smoothing.
+    ctx.setTransform(RENDER_SHARPNESS, 0, 0, RENDER_SHARPNESS, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+
     // Apply screen shake effect
     const shake = screenShakeRef.current;
     const shakeActive = shake.duration > 0 && shake.intensity > 0;
@@ -4675,8 +4682,8 @@ export default function Game() {
         <div className="relative w-full flex justify-center" style={{ maxWidth: CANVAS_WIDTH }}>
           <canvas
             ref={canvasRef}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
+            width={CANVAS_WIDTH * RENDER_SHARPNESS}
+            height={CANVAS_HEIGHT * RENDER_SHARPNESS}
             className="border-2 rounded-sm w-full h-auto touch-none"
             style={{ 
               borderColor: "#ff00ff",
