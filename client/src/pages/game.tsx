@@ -5112,6 +5112,21 @@ export default function Game() {
             </div>
           </Card>
 
+          <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#00ff88" }}>
+            <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#00ff88" }}>
+              <Zap className="w-4 h-4" />
+              POWER-UPS
+            </h2>
+            <p className="text-[9px] mb-2" style={{ color: "#ffff00" }}>Killed enemies sometimes drop a power-up — fly over it to grab it!</p>
+            <div className="space-y-1 text-[10px]" style={{ color: "#aaa" }}>
+              <p><span style={{ color: "#ffff00" }}>SPEED BOOST:</span> 5 sec of faster movement</p>
+              <p><span style={{ color: "#88ffff" }}>SHIELD:</span> 5 sec of damage protection (stacks with Bud Angel)</p>
+              <p><span style={{ color: "#ff00ff" }}>RAPID FIRE:</span> 5 sec of faster shooting (stacks)</p>
+              <p><span style={{ color: "#ff0000" }}>EXTRA LIFE:</span> +1 life (capped at 3) — <span style={{ color: "#ff8800" }}>rarest drop</span></p>
+              <p className="mt-1" style={{ color: "#00ff88" }}>~20% drop chance per kill — keep racking up kills to fish for them.</p>
+            </div>
+          </Card>
+
           <Card className="p-4 border-2 bg-card/80" style={{ borderColor: "#ff00ff" }}>
             <h2 className="text-xs mb-2 flex items-center gap-2" style={{ color: "#ff00ff" }}>
               <Zap className="w-4 h-4" />
