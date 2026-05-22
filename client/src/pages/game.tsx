@@ -175,26 +175,37 @@ class SoundSystem {
   }
 
   shoot() {
-    this.playTone(800, 0.05, "square", 0.10);
+    this.playTone(800, 0.06, "square", 0.18);
   }
 
   hit() {
-    this.playTone(200, 0.1, "sawtooth", 0.125);
+    this.playTone(200, 0.14, "sawtooth", 0.22);
+    setTimeout(() => this.playTone(160, 0.08, "square", 0.16), 30);
   }
 
   explosion() {
-    this.playTone(100, 0.2, "sawtooth", 0.19);
-    setTimeout(() => this.playTone(80, 0.15, "sawtooth", 0.125), 50);
+    this.playTone(110, 0.28, "sawtooth", 0.34);
+    setTimeout(() => this.playTone(80, 0.22, "sawtooth", 0.28), 60);
+    setTimeout(() => this.playTone(60, 0.18, "square", 0.22), 120);
+  }
+
+  bigExplosion() {
+    this.playTone(70, 0.45, "sawtooth", 0.42);
+    setTimeout(() => this.playTone(140, 0.35, "square", 0.36), 40);
+    setTimeout(() => this.playTone(50, 0.4, "sawtooth", 0.38), 100);
+    setTimeout(() => this.playTone(90, 0.3, "square", 0.28), 200);
   }
 
   powerUp() {
-    this.playTone(523, 0.1, "sine", 0.125);
-    setTimeout(() => this.playTone(659, 0.1, "sine", 0.125), 100);
-    setTimeout(() => this.playTone(784, 0.15, "sine", 0.125), 200);
+    this.playTone(523, 0.12, "sine", 0.22);
+    setTimeout(() => this.playTone(659, 0.12, "sine", 0.22), 100);
+    setTimeout(() => this.playTone(784, 0.18, "sine", 0.24), 200);
+    setTimeout(() => this.playTone(1047, 0.2, "sine", 0.22), 320);
   }
 
   damage() {
-    this.playTone(150, 0.2, "square", 0.19);
+    this.playTone(150, 0.28, "square", 0.32);
+    setTimeout(() => this.playTone(90, 0.18, "sawtooth", 0.26), 50);
   }
 
   gameOver() {
@@ -299,6 +310,14 @@ export default function Game() {
   const formationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const gameSessionRef = useRef<number>(0); // Increments on each game start to invalidate old timeouts
   const starSpeedMultiplierRef = useRef<number>(1);
+
+  // Time-based bonus tracking
+  const livesLostThisGameRef = useRef<number>(0);
+  const bonus90GivenRef = useRef<boolean>(false);
+  const bonus240GivenRef = useRef<boolean>(false);
+  const sideShipUnlockedRef = useRef<boolean>(false);
+  const lastBonusRapidRef = useRef<number>(0);
+  const bonusNoticeRef = useRef<{ active: boolean; endTime: number; label: string }>({ active: false, endTime: 0, label: "" });
 
   const { data: scores = [] } = useQuery<Score[]>({
     queryKey: ["/api/scores"],
@@ -1453,6 +1472,48 @@ export default function Game() {
           isPlayerBullet: true,
         });
       }
+
+      // WINGMAN side ship (unlocked at 4:00) — fires double cannons from both sides
+      if (sideShipUnlockedRef.current) {
+        // Left wingman
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x - player.width / 2 - 4,
+          y: player.y + 4,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -11,
+          isPlayerBullet: true,
+        });
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x - player.width / 2 + 4,
+          y: player.y + 4,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -11,
+          isPlayerBullet: true,
+        });
+        // Right wingman
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x + player.width + player.width / 2 - 4,
+          y: player.y + 4,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -11,
+          isPlayerBullet: true,
+        });
+        projectilesRef.current.push({
+          id: generateId(),
+          x: player.x + player.width + player.width / 2 + 4,
+          y: player.y + 4,
+          width: PROJECTILE_SIZE,
+          height: PROJECTILE_SIZE * 2,
+          speed: -11,
+          isPlayerBullet: true,
+        });
+      }
     } else {
       // Enemy projectile with randomized speed
       // Base speed + difficulty + random variation
@@ -1534,11 +1595,11 @@ export default function Game() {
     hazardsRef.current.push(hazard);
   }, []);
 
-  const createExplosion = useCallback((x: number, y: number, color: string) => {
-    const particleCount = 16;
+  const createExplosion = useCallback((x: number, y: number, color: string, big: boolean = false) => {
+    const particleCount = big ? 40 : 18;
     for (let i = 0; i < particleCount; i++) {
-      const angle = (Math.PI * 2 * i) / particleCount;
-      const speed = 2.5 + Math.random() * 4;
+      const angle = (Math.PI * 2 * i) / particleCount + Math.random() * 0.3;
+      const speed = (big ? 3.5 : 2.5) + Math.random() * (big ? 6 : 4);
       particlesRef.current.push({
         x,
         y,
@@ -1547,10 +1608,30 @@ export default function Game() {
         life: 1,
         maxLife: 1,
         color,
-        size: 4 + Math.random() * 4,
+        size: (big ? 5 : 4) + Math.random() * (big ? 6 : 4),
       });
     }
-    soundSystem.explosion();
+    if (big) {
+      // Extra white-hot core particles
+      for (let i = 0; i < 12; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 3;
+        particlesRef.current.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1, maxLife: 1,
+          color: "#ffffff",
+          size: 3 + Math.random() * 4,
+        });
+      }
+      soundSystem.bigExplosion();
+      // White screen flash on big hits
+      damageFlashRef.current = { active: true, endTime: gameTimeRef.current + 120 };
+      screenShakeRef.current = { intensity: Math.max(screenShakeRef.current.intensity, 8), duration: 250 };
+    } else {
+      soundSystem.explosion();
+    }
   }, []);
 
   const spawnPowerUp = useCallback((x: number, y: number) => {
@@ -1717,6 +1798,13 @@ export default function Game() {
     formationTimeoutsRef.current = [];
     gameSessionRef.current++; // Invalidate any pending timeouts from previous session
     starSpeedMultiplierRef.current = 1;
+    // Reset time-based bonus tracking
+    livesLostThisGameRef.current = 0;
+    bonus90GivenRef.current = false;
+    bonus240GivenRef.current = false;
+    sideShipUnlockedRef.current = false;
+    lastBonusRapidRef.current = 0;
+    bonusNoticeRef.current = { active: false, endTime: 0, label: "" };
     setIsNewHighScore(false);
     
     setGameState({
@@ -1776,6 +1864,7 @@ export default function Game() {
   const handleLifeLost = useCallback(() => {
     weaponLevelRef.current = 0;
     rapidFireEndRef.current = 0; // reset rapid fire — will re-unlock at score 150
+    livesLostThisGameRef.current += 1;
   }, []);
 
   const update = useCallback((deltaTime: number) => {
@@ -1821,6 +1910,34 @@ export default function Game() {
 
     // Star speed increases with game progress
     starSpeedMultiplierRef.current = 1 + (gameTimeSec / 120); // Doubles every 2 minutes
+
+    // ─── TIME-BASED BONUSES ─────────────────────────────────────────────────
+    // 90 sec without losing a life → +1 free life + 10s rapid fire (one-time)
+    if (!bonus90GivenRef.current && gameTimeSec >= 90 && livesLostThisGameRef.current === 0) {
+      bonus90GivenRef.current = true;
+      rapidFireEndRef.current = Math.max(rapidFireEndRef.current, gameTimeRef.current + 10000);
+      setGameState(prev => ({ ...prev, lives: prev.lives + 1 }));
+      bonusNoticeRef.current = { active: true, endTime: gameTimeRef.current + 3000, label: "FLAWLESS! +1 LIFE & RAPID FIRE!" };
+      soundSystem.powerUp();
+    }
+    // 4:00 → unlock side wingman ship + 5s rapid fire (one-time)
+    if (!bonus240GivenRef.current && gameTimeSec >= 240) {
+      bonus240GivenRef.current = true;
+      sideShipUnlockedRef.current = true;
+      rapidFireEndRef.current = Math.max(rapidFireEndRef.current, gameTimeRef.current + 5000);
+      bonusNoticeRef.current = { active: true, endTime: gameTimeRef.current + 3000, label: "WINGMAN UNLOCKED!" };
+      soundSystem.powerUp();
+    }
+    // After 4:30, every 30s → 5s rapid fire burst
+    if (gameTimeSec >= 270 && gameTimeRef.current - lastBonusRapidRef.current >= 30000) {
+      lastBonusRapidRef.current = gameTimeRef.current;
+      rapidFireEndRef.current = Math.max(rapidFireEndRef.current, gameTimeRef.current + 5000);
+      bonusNoticeRef.current = { active: true, endTime: gameTimeRef.current + 2000, label: "RAPID FIRE BURST!" };
+      soundSystem.powerUp();
+    }
+    if (bonusNoticeRef.current.active && gameTimeRef.current > bonusNoticeRef.current.endTime) {
+      bonusNoticeRef.current.active = false;
+    }
     
     // Screen shake decay
     if (screenShakeRef.current.duration > 0) {
@@ -2156,11 +2273,11 @@ export default function Game() {
             boss.health--;
             soundSystem.hit();
             if (boss.health <= 0) {
-              // Boss defeated!
-              createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2, "#ff00ff");
-              createExplosion(boss.x + 20, boss.y + 20, "#ffff00");
-              createExplosion(boss.x + boss.width - 20, boss.y + 20, "#00ffff");
-              screenShakeRef.current = { intensity: 15, duration: 500 };
+              // Boss defeated! BIG explosion + flash
+              createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2, "#ff00ff", true);
+              createExplosion(boss.x + 20, boss.y + 20, "#ffff00", true);
+              createExplosion(boss.x + boss.width - 20, boss.y + 20, "#00ffff", true);
+              screenShakeRef.current = { intensity: 18, duration: 600 };
               
               // Big score bonus
               const bossPoints = 50;
@@ -2189,8 +2306,6 @@ export default function Game() {
             soundSystem.hit();
             if (enemy.health <= 0) {
               const enemyColor = strainColors[enemy.strain].fill;
-              createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemyColor);
-              spawnPowerUp(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
               
               // Combo system - kills within 1.5 seconds build combo
               const timeSinceLastKill = gameTimeRef.current - lastKillTimeRef.current;
@@ -2205,13 +2320,18 @@ export default function Game() {
               killStreakRef.current++;
               totalKillsRef.current++;
               
+              // BIG explosion on combo kills (3+)
+              const bigHit = comboCountRef.current >= 3;
+              createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemyColor, bigHit);
+              spawnPowerUp(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+              
               // Calculate points with combo multiplier
               const basePoints = enemy.points;
               const finalPoints = Math.round(basePoints * comboMultiplierRef.current);
               
-              // Screen shake on combo kills
-              if (comboCountRef.current >= 3) {
-                screenShakeRef.current = { intensity: 3 + comboCountRef.current, duration: 150 };
+              // Extra screen shake on big combos (createExplosion already shakes on bigHit)
+              if (comboCountRef.current >= 5) {
+                screenShakeRef.current = { intensity: 6 + comboCountRef.current, duration: 200 };
               }
               
               setGameState(prev => ({ 
@@ -3477,6 +3597,27 @@ export default function Game() {
           ctx.shadowBlur = 0;
         }
         drawPlayer(ctx, playerRef.current);
+
+        // WINGMAN side ships — small Dudley Buds flanking the player
+        if (sideShipUnlockedRef.current) {
+          const p = playerRef.current;
+          const wingSize = Math.floor(p.width * 0.6);
+          const wingY = p.y + 6;
+          // Left wingman
+          ctx.shadowColor = "#00ff00";
+          ctx.shadowBlur = 12;
+          drawPixelRect(ctx, p.x - p.width / 2 - 2, wingY + wingSize / 2, wingSize, wingSize / 2, "#22c55e");
+          drawPixelRect(ctx, p.x - p.width / 2 + 2, wingY + wingSize / 3, wingSize - 8, wingSize / 3, "#16a34a");
+          drawPixelRect(ctx, p.x - p.width / 2 + wingSize / 2 - 2, wingY + 2, 4, wingSize / 2, "#15803d");
+          // Sunglasses bar
+          drawPixelRect(ctx, p.x - p.width / 2 + 2, wingY + wingSize / 2 + 2, wingSize - 4, 2, "#000000");
+          // Right wingman
+          drawPixelRect(ctx, p.x + p.width + p.width / 2 - wingSize + 2, wingY + wingSize / 2, wingSize, wingSize / 2, "#22c55e");
+          drawPixelRect(ctx, p.x + p.width + p.width / 2 - wingSize + 6, wingY + wingSize / 3, wingSize - 8, wingSize / 3, "#16a34a");
+          drawPixelRect(ctx, p.x + p.width + p.width / 2 - wingSize / 2 - 2, wingY + 2, 4, wingSize / 2, "#15803d");
+          drawPixelRect(ctx, p.x + p.width + p.width / 2 - wingSize + 6, wingY + wingSize / 2 + 2, wingSize - 4, 2, "#000000");
+          ctx.shadowBlur = 0;
+        }
       }
       
       enemiesRef.current.forEach(enemy => drawEnemy(ctx, enemy));
@@ -3580,6 +3721,19 @@ export default function Game() {
         ctx.shadowBlur = 12;
         ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 80) * 0.2;
         ctx.fillText(machineGunPreviewRef.current.label || "WEAPON UPGRADED!", CANVAS_WIDTH / 2, 55);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+
+      // Time-based bonus notice
+      if (bonusNoticeRef.current.active) {
+        ctx.font = "7px 'Press Start 2P'";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ff00ff";
+        ctx.shadowColor = "#ff00ff";
+        ctx.shadowBlur = 16;
+        ctx.globalAlpha = 0.85 + Math.sin(Date.now() / 60) * 0.15;
+        ctx.fillText(bonusNoticeRef.current.label, CANVAS_WIDTH / 2, 75);
         ctx.globalAlpha = 1;
         ctx.shadowBlur = 0;
       }
