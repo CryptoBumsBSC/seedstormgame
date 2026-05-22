@@ -1238,6 +1238,7 @@ export default function Game() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   
   const [telegramId, setTelegramId] = useState<string | null>(null);
+  const [telegramInitData, setTelegramInitData] = useState<string>("");
   const [telegramUsername, setTelegramUsername] = useState<string | null>(null);
   const [telegramChecked, setTelegramChecked] = useState<boolean>(false);
   const [isBanned, setIsBanned] = useState<boolean>(false);
@@ -1254,12 +1255,20 @@ export default function Game() {
     mutationFn: async (data: { playerName: string; score: number; wave: number; playTime: number }) => {
       // Use Telegram endpoint if running in Telegram, otherwise use classic endpoint
       if (telegramId) {
-        const response = await apiRequest("POST", "/api/telegram/score", {
-          ...data,
-          telegramId,
-          usedBoosts: false,
+        const res = await fetch("/api/telegram/score", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Telegram-Init-Data": telegramInitData,
+          },
+          body: JSON.stringify({ ...data, telegramId, usedBoosts: false }),
+          credentials: "include",
         });
-        return response;
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`${res.status}: ${text}`);
+        }
+        return res;
       } else {
         const response = await apiRequest("POST", "/api/scores", data);
         return response;
@@ -1286,17 +1295,22 @@ export default function Game() {
       WebApp.ready();
       console.log("[SEED STORM] WebApp.initDataUnsafe:", JSON.stringify(WebApp.initDataUnsafe));
       const user = WebApp.initDataUnsafe?.user;
+      const initData = WebApp.initData || "";
       console.log("[SEED STORM] User data:", user ? JSON.stringify(user) : "NO USER DATA");
-      if (user) {
+      if (user && initData) {
         const id = user.id.toString();
         console.log("[SEED STORM] Setting telegramId to:", id);
         setTelegramId(id);
+        setTelegramInitData(initData);
         setTelegramUsername(user.username || user.first_name || "Player");
         
         // Register/update player in database
         fetch("/api/telegram/player", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Telegram-Init-Data": initData,
+          },
           body: JSON.stringify({
             telegramId: id,
             username: user.username || null,
@@ -1305,14 +1319,10 @@ export default function Game() {
           }),
         }).catch(console.error);
       } else {
-        console.log("[SEED STORM] No Telegram user data available - using browser test mode");
-        setTelegramId("browser_test");
-        setTelegramUsername("TestPlayer");
+        console.log("[SEED STORM] No Telegram user data available - running in web mode");
       }
     } catch (e) {
-      console.log("[SEED STORM] Not running in Telegram Mini App context - using browser test mode");
-      setTelegramId("browser_test");
-      setTelegramUsername("TestPlayer");
+      console.log("[SEED STORM] Not running in Telegram Mini App context - running in web mode");
     }
     setTelegramChecked(true);
   }, []);
@@ -1351,7 +1361,10 @@ export default function Game() {
     try {
       const response = await fetch("/api/telegram/avatar/select", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Telegram-Init-Data": telegramInitData,
+        },
         body: JSON.stringify({ telegramId, avatarType }),
       });
       
@@ -1366,7 +1379,7 @@ export default function Game() {
     } catch (error) {
       console.error("Avatar select error:", error);
     }
-  }, [telegramId, toast]);
+  }, [telegramId, telegramInitData, toast]);
 
   const initStars = useCallback(() => {
     starsRef.current = Array.from({ length: 100 }, () => ({
@@ -1840,7 +1853,10 @@ export default function Game() {
         try {
           const res = await fetch("/api/telegram/avatar/daily-reward", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-Telegram-Init-Data": telegramInitData,
+            },
             body: JSON.stringify({ telegramId }),
           });
           const data = await res.json();

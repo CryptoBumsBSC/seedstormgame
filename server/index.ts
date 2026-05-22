@@ -4,6 +4,9 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
+// Trust the first proxy so req.ip reflects the real client IP from
+// Replit's reverse proxy instead of the proxy's address.
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 declare module "http" {

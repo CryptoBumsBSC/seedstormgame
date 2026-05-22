@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertScoreSchema, insertPlayerSchema } from "@shared/schema";
@@ -8,6 +8,58 @@ import { validatePlayerName, validateScore, checkRateLimit, getClientIdentifier 
 import { isAdmin, requireAdmin, verifyTelegramWebhook, getTelegramWebhookSecret } from "./auth";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
+
+/**
+ * Verify Telegram Mini App initData using HMAC-SHA256.
+ * Returns the verified Telegram user ID, or null on failure.
+ */
+function verifyTelegramInitData(initData: string, botToken: string): { valid: boolean; userId?: string } {
+  if (!initData || !botToken) return { valid: false };
+  try {
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    if (!hash) return { valid: false };
+    params.delete('hash');
+    const sortedEntries = Array.from(params.entries()).sort(([a], [b]) => a.localeCompare(b));
+    const checkString = sortedEntries.map(([k, v]) => `${k}=${v}`).join('\n');
+    const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+    const computedHash = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex');
+    const hashBuf = Buffer.from(hash.padEnd(64, '0'), 'hex');
+    const computedBuf = Buffer.from(computedHash.padEnd(64, '0'), 'hex');
+    if (!crypto.timingSafeEqual(computedBuf, hashBuf)) return { valid: false };
+    const userStr = params.get('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return { valid: true, userId: user.id?.toString() };
+    }
+    return { valid: true };
+  } catch {
+    return { valid: false };
+  }
+}
+
+/**
+ * Verify that a request originates from the claimed Telegram user.
+ * Reads X-Telegram-Init-Data header and checks it with HMAC-SHA256.
+ * If TELEGRAM_BOT_TOKEN is not configured the check is skipped (dev mode).
+ */
+function checkTelegramAuth(req: Request, claimedTelegramId: string): { authorized: boolean; reason?: string } {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) return { authorized: true };
+  const initData = req.headers['x-telegram-init-data'] as string | undefined;
+  if (!initData) {
+    return { authorized: false, reason: "Missing Telegram authentication header" };
+  }
+  const result = verifyTelegramInitData(initData, botToken);
+  if (!result.valid) {
+    return { authorized: false, reason: "Invalid Telegram authentication" };
+  }
+  if (result.userId && result.userId !== claimedTelegramId) {
+    return { authorized: false, reason: "Telegram identity mismatch" };
+  }
+  return { authorized: true };
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -261,6 +313,10 @@ export async function registerRoutes(
       if (!telegramId) {
         return res.status(400).json({ error: "Missing telegramId" });
       }
+      const authCheck = checkTelegramAuth(req, telegramId);
+      if (!authCheck.authorized) {
+        return res.status(401).json({ error: authCheck.reason });
+      }
       const player = await storage.createOrUpdateTelegramPlayer({
         telegramId,
         username: username || null,
@@ -305,6 +361,10 @@ export async function registerRoutes(
     try {
       const { telegramId } = req.body;
       if (!telegramId) return res.status(400).json({ error: "Missing telegramId" });
+      const authCheck = checkTelegramAuth(req, telegramId.toString().trim());
+      if (!authCheck.authorized) {
+        return res.status(401).json({ error: authCheck.reason });
+      }
       const result = await storage.awardDailyHighScoreAvatar(telegramId.toString().trim());
       res.json(result);
     } catch (error) {
@@ -320,6 +380,10 @@ export async function registerRoutes(
       
       if (!telegramId) {
         return res.status(400).json({ error: "Missing telegramId" });
+      }
+      const authCheck = checkTelegramAuth(req, telegramId);
+      if (!authCheck.authorized) {
+        return res.status(401).json({ error: authCheck.reason });
       }
       
       const success = await storage.setSelectedAvatar(telegramId, avatarType || null);
@@ -345,6 +409,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid score data" });
       }
 
+      // Verify the request originates from the claimed Telegram user
+      const authCheck = checkTelegramAuth(req, telegramId);
+      if (!authCheck.authorized) {
+        return res.status(401).json({ error: authCheck.reason });
+      }
+
       // Rate limit per client IP
       const clientId = getClientIdentifier(req);
       const rateCheck = checkRateLimit(clientId);
@@ -354,30 +424,32 @@ export async function registerRoutes(
         });
       }
 
-      // Reject impossible scores for the reported play time
+      // Reject banned players
+      const banned = await storage.isPlayerBanned(telegramId);
+      if (banned) {
+        return res.status(403).json({ error: "Account is banned" });
+      }
+
+      // Validate score is plausible for reported play time
       const scoreCheck = validateScore(score, playTime || 0);
       if (!scoreCheck.valid) {
         return res.status(400).json({ error: scoreCheck.error });
       }
 
-      // Refuse names that fail moderation
-      const nameToCheck = playerName || 'PLAYER';
-      const nameCheck = validatePlayerName(nameToCheck);
+      // Validate player name (sanitize and check for prohibited content)
+      const sanitizedName = (playerName || 'PLAYER').slice(0, 10).toUpperCase();
+      const nameCheck = validatePlayerName(sanitizedName);
       if (!nameCheck.valid) {
         return res.status(400).json({ error: nameCheck.error });
       }
 
-      // Banned players can't submit
-      if (await storage.isPlayerBanned(telegramId)) {
-        return res.status(403).json({ error: "Player is banned" });
-      }
 
       const today = new Date().toISOString().split('T')[0];
       
       // Create daily score
       const dailyScore = await storage.createDailyScore({
         telegramId,
-        playerName: (playerName || 'PLAYER').slice(0, 10).toUpperCase(),
+        playerName: sanitizedName,
         score,
         wave,
         playTime: playTime || 0,
@@ -910,59 +982,6 @@ Tap below to start playing!`;
 
   // Setup midnight cron job for automatic prize distribution
   setupMidnightCron();
-
-  // Demo endpoint - seed test leaderboard data with avatars (admin only)
-  app.post("/api/demo/seed-avatars", async (req, res) => {
-    try {
-      if (!requireAdmin(req, res)) return;
-      const today = new Date().toISOString().split('T')[0];
-      const demoPlayers = [
-        { telegramId: "demo_1", name: "BLAZER420", score: 15000, wave: 12, avatar: "leaf", boosts: true },
-        { telegramId: "demo_2", name: "BUDMASTER", score: 12500, wave: 10, avatar: "dragon", boosts: true },
-        { telegramId: "demo_3", name: "SEEDKING", score: 10000, wave: 8, avatar: "crown", boosts: false },
-        { telegramId: "demo_4", name: "PURESTORM", score: 8500, wave: 7, avatar: "skull", boosts: false },
-        { telegramId: "demo_5", name: "GREENTHUMB", score: 7000, wave: 6, avatar: "fox", boosts: true },
-        { telegramId: "demo_6", name: "HIGHFLYER", score: 5500, wave: 5, avatar: "eagle", boosts: false },
-      ];
-      
-      for (const player of demoPlayers) {
-        // First create the player record in telegramPlayers table
-        await storage.createOrUpdateTelegramPlayer({
-          telegramId: player.telegramId,
-          username: player.name.toLowerCase(),
-          firstName: player.name,
-          lastName: null,
-        });
-        
-        // Purchase and set avatar for player
-        await storage.purchaseAvatar(player.telegramId, player.avatar as any);
-        await storage.setSelectedAvatar(player.telegramId, player.avatar as any);
-        
-        // Create daily score
-        await storage.createDailyScore({
-          telegramId: player.telegramId,
-          playerName: player.name,
-          score: player.score,
-          wave: player.wave,
-          playTime: 180,
-          usedBoosts: player.boosts,
-          date: today,
-        });
-        
-        // Update all-time scores
-        if (player.boosts) {
-          await storage.updateAllTimeBoostedScores(player.telegramId, player.name, player.score, player.wave, 180);
-        } else {
-          await storage.updateAllTimePureScores(player.telegramId, player.name, player.score, player.wave, 180);
-        }
-      }
-      
-      res.json({ success: true, message: "Demo data seeded with avatars" });
-    } catch (error) {
-      console.error("Demo seed error:", error);
-      res.status(500).json({ error: "Failed to seed demo data" });
-    }
-  });
 
   return httpServer;
 }

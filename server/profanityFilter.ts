@@ -86,6 +86,8 @@ export function validatePlayerName(name: string): { valid: boolean; error?: stri
 }
 
 const MAX_POINTS_PER_SECOND = 3;
+// Hard cap on reported play time to prevent artificially inflating allowable score
+const MAX_PLAY_TIME_MS = 7_200_000; // 2 hours
 
 export function validateScore(score: number, playTimeMs: number): { valid: boolean; error?: string } {
   if (score < 0) {
@@ -96,7 +98,10 @@ export function validateScore(score: number, playTimeMs: number): { valid: boole
     return { valid: false, error: "Play time too short" };
   }
   
-  const playTimeSeconds = playTimeMs / 1000;
+  // Clamp play time to the hard maximum so attackers cannot pick an
+  // arbitrarily large playTime to make any score appear valid.
+  const effectivePlayTimeMs = Math.min(playTimeMs, MAX_PLAY_TIME_MS);
+  const playTimeSeconds = effectivePlayTimeMs / 1000;
   const maxPossibleScore = Math.ceil(playTimeSeconds * MAX_POINTS_PER_SECOND);
   
   if (score > maxPossibleScore) {
@@ -107,23 +112,12 @@ export function validateScore(score: number, playTimeMs: number): { valid: boole
 }
 
 const rateLimitMap = new Map<string, number>();
-const RATE_LIMIT_MS = 3000; // 3 seconds between submissions (reduced from 10)
+const RATE_LIMIT_MS = 10_000; // 10 seconds between submissions
 
-export function getClientIdentifier(req: { ip?: string; headers?: Record<string, string | string[] | undefined>; socket?: { remoteAddress?: string } }): string {
-  const forwarded = req.headers?.['x-forwarded-for'];
-  if (forwarded) {
-    const firstIP = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0].trim();
-    if (firstIP && firstIP !== '127.0.0.1' && firstIP !== '::1') {
-      return firstIP;
-    }
-  }
-  
-  const realIP = req.headers?.['x-real-ip'];
-  if (realIP && typeof realIP === 'string') {
-    return realIP;
-  }
-  
-  return req.ip || req.socket?.remoteAddress || 'unknown-' + Date.now();
+export function getClientIdentifier(req: { ip?: string; socket?: { remoteAddress?: string } }): string {
+  // Use Express's req.ip which respects the trust proxy setting and cannot be
+  // spoofed by a client injecting arbitrary X-Forwarded-For / X-Real-IP headers.
+  return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
 export function checkRateLimit(identifier: string): { allowed: boolean; waitTime?: number } {
