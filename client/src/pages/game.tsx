@@ -3757,7 +3757,7 @@ export default function Game() {
       ctx.lineTo(CANVAS_WIDTH, RISK_ZONE_HEIGHT);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.font = "6px 'Press Start 2P'";
+      ctx.font = "8px 'Press Start 2P'";
       ctx.textAlign = "left";
       ctx.fillStyle = "#ffaa00";
       ctx.shadowColor = "#ffaa00";
@@ -3869,7 +3869,7 @@ export default function Game() {
         ctx.shadowColor = "#000000";
         ctx.shadowBlur = 3;
         ctx.fillStyle = "#000";
-        ctx.font = "bold 10px 'Press Start 2P'";
+        ctx.font = "bold 13px 'Press Start 2P'";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const icons: Record<string, string> = { speed: "S", shield: "D", rapid: "R", life: "+" };
@@ -3951,7 +3951,7 @@ export default function Game() {
             ctx.save();
             ctx.globalAlpha = 0.5;
             ctx.fillStyle = "#88ffff";
-            ctx.font = "6px 'Press Start 2P', monospace";
+            ctx.font = "8px 'Press Start 2P', monospace";
             ctx.textAlign = "center";
             ctx.fillText("BEST", gx + playerRef.current.width / 2, gy - 4);
             ctx.restore();
@@ -4052,7 +4052,7 @@ export default function Game() {
         ctx.fillRect(boss.x + 1, boss.y - 14, (boss.width - 2) * (boss.health / boss.maxHealth), 6);
         
         // Boss label
-        ctx.font = "6px 'Press Start 2P'";
+        ctx.font = "8px 'Press Start 2P'";
         ctx.fillStyle = "#ff0000";
         ctx.textAlign = "center";
         ctx.fillText("BOSS", boss.x + boss.width / 2, boss.y - 20);
@@ -4065,7 +4065,7 @@ export default function Game() {
       // Meteor shower warning indicator
       if (meteorShowerActiveRef.current) {
         ctx.fillStyle = "#ff6600";
-        ctx.font = "8px 'Press Start 2P'";
+        ctx.font = "10px 'Press Start 2P'";
         ctx.textAlign = "center";
         ctx.globalAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.3;
         ctx.fillText("SEED STORM!", CANVAS_WIDTH / 2, 20);
@@ -4075,7 +4075,7 @@ export default function Game() {
       // Combo display (top right area)
       if (comboCountRef.current >= 2) {
         const comboText = `${comboCountRef.current}x COMBO!`;
-        ctx.font = "7px 'Press Start 2P'";
+        ctx.font = "9px 'Press Start 2P'";
         ctx.textAlign = "right";
         ctx.fillStyle = "#ffff00";
         ctx.shadowColor = "#ff8800";
@@ -4083,7 +4083,7 @@ export default function Game() {
         ctx.globalAlpha = 0.8 + Math.sin(Date.now() / 80) * 0.2;
         ctx.fillText(comboText, CANVAS_WIDTH - 10, 35);
         // Multiplier display
-        ctx.font = "5px 'Press Start 2P'";
+        ctx.font = "7px 'Press Start 2P'";
         ctx.fillStyle = "#00ffff";
         ctx.fillText(`${comboMultiplierRef.current.toFixed(1)}x PTS`, CANVAS_WIDTH - 10, 45);
         ctx.globalAlpha = 1;
@@ -4092,7 +4092,7 @@ export default function Game() {
       
       // Weapon unlock notification
       if (machineGunPreviewRef.current.active) {
-        ctx.font = "6px 'Press Start 2P'";
+        ctx.font = "8px 'Press Start 2P'";
         ctx.textAlign = "center";
         ctx.fillStyle = "#ffff00";
         ctx.shadowColor = "#ffff00";
@@ -4105,7 +4105,7 @@ export default function Game() {
 
       // Time-based bonus notice
       if (bonusNoticeRef.current.active) {
-        ctx.font = "7px 'Press Start 2P'";
+        ctx.font = "9px 'Press Start 2P'";
         ctx.textAlign = "center";
         ctx.fillStyle = "#ff00ff";
         ctx.shadowColor = "#ff00ff";
@@ -4120,13 +4120,13 @@ export default function Game() {
       if (dailyBannerRef.current.active) {
         const mod = dailyModifierRef.current;
         ctx.textAlign = "center";
-        ctx.font = "11px 'Press Start 2P'";
+        ctx.font = "14px 'Press Start 2P'";
         ctx.fillStyle = mod.color;
         ctx.shadowColor = mod.color;
         ctx.shadowBlur = 20;
         ctx.globalAlpha = 0.85 + Math.sin(Date.now() / 80) * 0.15;
         ctx.fillText(mod.label, CANVAS_WIDTH / 2, 130);
-        ctx.font = "6px 'Press Start 2P'";
+        ctx.font = "8px 'Press Start 2P'";
         ctx.fillStyle = "#ffffff";
         ctx.shadowColor = mod.color;
         ctx.shadowBlur = 10;
@@ -4144,7 +4144,7 @@ export default function Game() {
         ctx.translate(CANVAS_WIDTH / 2, 180);
         ctx.scale(pulse, pulse);
         ctx.textAlign = "center";
-        ctx.font = "16px 'Press Start 2P'";
+        ctx.font = "21px 'Press Start 2P'";
         ctx.fillStyle = milestoneFlashRef.current.color;
         ctx.shadowColor = milestoneFlashRef.current.color;
         ctx.shadowBlur = 24;
@@ -4164,7 +4164,7 @@ export default function Game() {
         ctx.translate(CANVAS_WIDTH / 2, 220);
         ctx.scale(pulse, pulse);
         ctx.textAlign = "center";
-        ctx.font = "13px 'Press Start 2P'";
+        ctx.font = "17px 'Press Start 2P'";
         ctx.fillStyle = comboTitleFlashRef.current.color;
         ctx.shadowColor = comboTitleFlashRef.current.color;
         ctx.shadowBlur = 20;
@@ -4177,7 +4177,7 @@ export default function Game() {
       
       // Kill streak display (left side)
       if (killStreakRef.current >= 5) {
-        ctx.font = "6px 'Press Start 2P'";
+        ctx.font = "8px 'Press Start 2P'";
         ctx.textAlign = "left";
         ctx.fillStyle = "#00ff88";
         ctx.shadowColor = "#00ff88";
@@ -4188,7 +4188,7 @@ export default function Game() {
       
       // Bud Rage indicator (permanent power-up from boss kill)
       if (budRageActiveRef.current) {
-        ctx.font = "5px 'Press Start 2P'";
+        ctx.font = "7px 'Press Start 2P'";
         ctx.textAlign = "left";
         ctx.fillStyle = "#ff4444";
         ctx.shadowColor = "#ff0000";
@@ -4225,7 +4225,7 @@ export default function Game() {
       ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       
-      ctx.font = "16px 'Press Start 2P'";
+      ctx.font = "21px 'Press Start 2P'";
       ctx.fillStyle = "#00ffff";
       ctx.textAlign = "center";
       ctx.fillText("PAUSED", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
