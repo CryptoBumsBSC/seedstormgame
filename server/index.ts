@@ -4,8 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
-// Trust the first proxy so req.ip reflects the real client IP from
-// Replit's reverse proxy instead of the proxy's address.
+// Trust the first reverse proxy so req.ip reflects the real client address.
 app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
@@ -73,9 +72,7 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Set up Vite only in development, after API routes are registered.
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -83,10 +80,8 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Local/standalone server entry point. The Vercel conversion will expose
+  // the Express app through Vercel Functions rather than keeping this process alive.
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     {
